@@ -64,6 +64,18 @@ if ($prevActivityId) {
 $assignments = []; // member_id => role
 $warnings    = [];
 
+// Funções que sempre entram, sem rodízio: escala todo mundo que tem essa função
+foreach (MUSIC_ALWAYS_INCLUDE_ROLES as $role) {
+    $candidates = $pool[$role] ?? [];
+    if (empty($candidates)) {
+        $warnings[] = "$role: nenhum membro cadastrado nessa função.";
+        continue;
+    }
+    foreach ($candidates as $c) {
+        $assignments[$c['id']] = $role;
+    }
+}
+
 foreach (MUSIC_ROLE_COMPOSITION as $role => $needed) {
     $candidates = $pool[$role] ?? [];
 

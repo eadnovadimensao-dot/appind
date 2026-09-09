@@ -3,6 +3,7 @@
 // Usado por: pages/ministries/view.php, activity_create.php, auto_scale.php
 
 const MUSIC_ROLE_OPTIONS = [
+    'Pastor(a) da Base de Adoração',
     'Ministro(a) de Louvor',
     'Backing Vocal',
     'Guitarrista',
@@ -12,7 +13,7 @@ const MUSIC_ROLE_OPTIONS = [
     'Tecladista',
 ];
 
-// Quantas pessoas de cada função a escala ideal precisa
+// Quantas pessoas de cada função a escala ideal precisa (rodízio normal)
 const MUSIC_ROLE_COMPOSITION = [
     'Ministro(a) de Louvor' => 1,
     'Backing Vocal'         => 3,
@@ -21,6 +22,12 @@ const MUSIC_ROLE_COMPOSITION = [
     'Baterista'             => 1,
     'Violonista'            => 1,
     'Tecladista'            => 1,
+];
+
+// Funções que não entram no rodízio: todo membro marcado com essa função é
+// escalado sempre, em toda escala gerada automaticamente.
+const MUSIC_ALWAYS_INCLUDE_ROLES = [
+    'Pastor(a) da Base de Adoração',
 ];
 
 function is_music_ministry(string $name): bool {
