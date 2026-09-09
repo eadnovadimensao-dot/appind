@@ -25,5 +25,14 @@ const MUSIC_ROLE_COMPOSITION = [
 
 function is_music_ministry(string $name): bool {
     $n = mb_strtolower(trim($name));
-    return $n === 'música' || $n === 'musica';
+    // remove acentos comuns pra casar "música", "Música e Louvor", "Ministério de Musica" etc.
+    $n = strtr($n, [
+        'á'=>'a','à'=>'a','ã'=>'a','â'=>'a','ä'=>'a',
+        'é'=>'e','è'=>'e','ê'=>'e','ë'=>'e',
+        'í'=>'i','ì'=>'i','î'=>'i','ï'=>'i',
+        'ó'=>'o','ò'=>'o','õ'=>'o','ô'=>'o','ö'=>'o',
+        'ú'=>'u','ù'=>'u','û'=>'u','ü'=>'u',
+        'ç'=>'c',
+    ]);
+    return str_contains($n, 'music');
 }
