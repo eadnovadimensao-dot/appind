@@ -1,0 +1,370 @@
+@import url('https://fonts.googleapis.com/css2?family=Noto+Sans:ital,wght@0,300;0,400;0,500;0,600;1,400&display=swap');
+
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+:root {
+  --sb-bg:          #012a36;
+  --sb-w:           240px;
+  --sb-w-sm:        64px;
+  --sb-text:        rgba(255,255,255,0.55);
+  --sb-text-hover:  rgba(255,255,255,0.90);
+  --sb-text-on:     #ffffff;
+  --sb-hover:       rgba(255,255,255,0.06);
+  --sb-active:      rgba(255,255,255,0.11);
+  --sb-border:      rgba(255,255,255,0.08);
+
+  --accent:         #1D9E75;
+  --accent-dk:      #0F6E56;
+  --accent-lt:      #E1F5EE;
+
+  --content-bg:     #f0f0f0;
+  --card-bg:        #ffffff;
+  --card-radius:    10px;
+  --card-shadow:    0 1px 3px rgba(0,0,0,.07), 0 1px 2px rgba(0,0,0,.04);
+
+  --text:           #1a2332;
+  --text-muted:     #6b7280;
+  --border:         #e5e7eb;
+
+  --green:  #1D9E75;
+  --red:    #C0392B;
+  --amber:  #854F0B;
+  --blue:   #185FA5;
+
+  --ease: cubic-bezier(0.4, 0, 0.2, 1);
+  --t:    0.22s var(--ease);
+}
+
+html { scroll-behavior: smooth; }
+
+body {
+  font-family: 'Noto Sans', system-ui, sans-serif;
+  font-size: 14px;
+  line-height: 1.6;
+  color: var(--text);
+  background: var(--content-bg);
+  -webkit-font-smoothing: antialiased;
+}
+
+::-webkit-scrollbar { width: 4px; }
+::-webkit-scrollbar-track { background: transparent; }
+::-webkit-scrollbar-thumb { background: rgba(0,0,0,0.15); border-radius: 99px; }
+
+/* ── Layout ── */
+.app { display: flex; min-height: 100vh; }
+
+/* ── Sidebar ── */
+.sidebar {
+  width: var(--sb-w);
+  background: var(--sb-bg);
+  display: flex;
+  flex-direction: column;
+  position: sticky;
+  top: 0;
+  height: 100vh;
+  flex-shrink: 0;
+  overflow: hidden;
+  transition: width var(--t);
+  z-index: 50;
+}
+.sidebar.collapsed { width: var(--sb-w-sm); }
+
+.sb-header {
+  display: flex;
+  align-items: center;
+  padding: 0 14px;
+  height: 60px;
+  border-bottom: 1px solid var(--sb-border);
+  gap: 10px;
+  flex-shrink: 0;
+}
+.sb-logo-icon {
+  width: 32px; height: 32px;
+  border-radius: 8px;
+  background: var(--accent);
+  display: flex; align-items: center; justify-content: center;
+  font-size: 16px; color: white; flex-shrink: 0;
+}
+.sb-logo-text {
+  font-size: 14px; font-weight: 600;
+  color: var(--sb-text-on);
+  white-space: nowrap; overflow: hidden;
+  transition: opacity var(--t);
+}
+.sb-toggle {
+  background: none; border: none;
+  color: var(--sb-text); cursor: pointer;
+  padding: 7px; border-radius: 6px; line-height: 1;
+  transition: color var(--t), background var(--t);
+  display: flex; align-items: center; justify-content: center;
+  width: 100%; margin-top: 10px;
+}
+.sb-toggle:hover { color: var(--sb-text-on); background: var(--sb-hover); }
+.sb-toggle i { transition: transform var(--t); font-size: 16px; }
+.sidebar.collapsed .sb-toggle i { transform: rotate(180deg); }
+
+.sb-nav {
+  flex: 1; padding: 10px 8px;
+  display: flex; flex-direction: column; gap: 2px;
+  overflow-y: auto; overflow-x: hidden;
+}
+.sb-item {
+  display: flex; align-items: center; gap: 10px;
+  padding: 9px 10px; border-radius: 7px;
+  color: var(--sb-text); text-decoration: none;
+  white-space: nowrap;
+  transition: background var(--t), color var(--t);
+  font-size: 13.5px;
+}
+.sb-item:hover { background: var(--sb-hover); color: var(--sb-text-hover); }
+.sb-item.active { background: var(--sb-active); color: var(--sb-text-on); }
+.sb-item-icon { font-size: 18px; width: 22px; text-align: center; flex-shrink: 0; }
+.sb-item-label { font-size: 13.5px; overflow: hidden; }
+.sb-item-dot {
+  width: 4px; height: 4px; border-radius: 50%;
+  background: var(--accent); margin-left: auto; flex-shrink: 0;
+}
+
+.sidebar.collapsed .sb-logo-text,
+.sidebar.collapsed .sb-item-label,
+.sidebar.collapsed .sb-item-dot,
+.sidebar.collapsed .sb-church-name { display: none; }
+.sidebar.collapsed .sb-item { justify-content: center; }
+.sidebar.collapsed .sb-church-info { justify-content: center; }
+.sidebar.collapsed .sb-header { justify-content: center; padding: 0 10px; gap: 0; }
+.sidebar.collapsed .sb-logo-icon { display: flex; }
+
+.sb-footer {
+  border-top: 1px solid var(--sb-border);
+  padding: 12px 14px; flex-shrink: 0;
+}
+.sb-church-info { display: flex; align-items: center; justify-content: space-between; gap: 8px; }
+.sb-church-name { font-size: 12px; color: var(--sb-text); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.sb-avatar {
+  width: 30px; height: 30px; border-radius: 50%;
+  background: var(--accent); color: white;
+  font-size: 11px; font-weight: 600;
+  display: flex; align-items: center; justify-content: center; flex-shrink: 0;
+}
+
+/* ── Main ── */
+.main { flex: 1; display: flex; flex-direction: column; min-height: 100vh; overflow: hidden; }
+
+.topbar {
+  background: var(--card-bg);
+  border-bottom: 1px solid var(--border);
+  padding: 0 28px; height: 60px;
+  display: flex; align-items: center; justify-content: space-between;
+  flex-shrink: 0;
+}
+.topbar-title { font-size: 16px; font-weight: 500; color: var(--text); }
+.topbar-actions { display: flex; align-items: center; gap: 10px; }
+
+.page { padding: 28px; flex: 1; overflow-y: auto; }
+
+/* ── Cards ── */
+.card {
+  background: var(--card-bg);
+  border-radius: var(--card-radius);
+  box-shadow: var(--card-shadow);
+  padding: 20px 24px;
+}
+.card-title { font-size: 14px; font-weight: 500; color: var(--text); margin-bottom: 16px; }
+
+/* ── KPI Grid ── */
+.kpi-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(180px, 1fr)); gap: 16px; margin-bottom: 24px; }
+.kpi { background: var(--card-bg); border-radius: var(--card-radius); box-shadow: var(--card-shadow); padding: 20px; }
+.kpi-icon { font-size: 22px; margin-bottom: 8px; }
+.kpi-label { font-size: 12px; color: var(--text-muted); margin-bottom: 4px; }
+.kpi-value { font-size: 26px; font-weight: 500; color: var(--text); }
+
+/* ── Botões ── */
+.btn {
+  display: inline-flex; align-items: center; gap: 6px;
+  padding: 8px 16px; border-radius: 7px;
+  font-size: 13px; font-family: inherit;
+  cursor: pointer; border: none; font-weight: 500;
+  transition: background var(--t), opacity var(--t);
+  text-decoration: none;
+}
+.btn-primary { background: var(--accent); color: white; }
+.btn-primary:hover { background: var(--accent-dk); }
+.btn-secondary { background: transparent; color: var(--text); border: 1px solid var(--border); }
+.btn-secondary:hover { background: var(--content-bg); }
+
+/* ── Badges ── */
+.badge { display: inline-block; font-size: 11px; font-weight: 500; padding: 2px 8px; border-radius: 99px; }
+.badge-green  { background: #E1F5EE; color: #0F6E56; }
+.badge-blue   { background: #E6F1FB; color: #185FA5; }
+.badge-amber  { background: #FAEEDA; color: #854F0B; }
+.badge-gray   { background: #F1EFE8; color: #5F5E5A; }
+.badge-red    { background: #FCEBEB; color: #A32D2D; }
+
+/* ── Tabela ── */
+.table-wrap { overflow-x: auto; }
+table { width: 100%; border-collapse: collapse; font-size: 13px; }
+thead th { text-align: left; padding: 10px 12px; font-size: 11px; font-weight: 500; color: var(--text-muted); text-transform: uppercase; letter-spacing: .05em; border-bottom: 1px solid var(--border); }
+tbody td { padding: 12px 12px; border-bottom: 1px solid var(--border); color: var(--text); }
+tbody tr:last-child td { border-bottom: none; }
+tbody tr:hover td { background: #fafafa; }
+
+/* ── Formulário ── */
+.form-group { margin-bottom: 16px; }
+.form-label { display: block; font-size: 12px; font-weight: 500; color: var(--text-muted); margin-bottom: 5px; }
+.form-control {
+  width: 100%; padding: 9px 12px;
+  border: 1px solid var(--border); border-radius: 7px;
+  font-size: 13px; font-family: inherit; color: var(--text);
+  background: white; outline: none;
+  transition: border-color var(--t);
+}
+.form-control:focus { border-color: var(--accent); }
+.form-row { display: grid; grid-template-columns: repeat(auto-fit, minmax(240px, 1fr)); gap: 16px; }
+
+/* ── Avatar ── */
+.avatar {
+  width: 36px; height: 36px; border-radius: 50%;
+  background: var(--accent-lt); color: var(--accent-dk);
+  font-size: 12px; font-weight: 600;
+  display: flex; align-items: center; justify-content: center;
+  flex-shrink: 0;
+}
+
+/* ── Utilitários ── */
+.flex { display: flex; }
+.items-center { align-items: center; }
+.gap-8 { gap: 8px; }
+.gap-12 { gap: 12px; }
+.mb-24 { margin-bottom: 24px; }
+.text-muted { color: var(--text-muted); }
+.empty-state { text-align: center; padding: 40px; color: var(--text-muted); font-size: 13px; }
+
+/* ══════════════════════════════════════════
+   MOBILE RESPONSIVO  (≤ 768px)
+══════════════════════════════════════════ */
+@media (max-width: 900px) {
+
+  /* ── Sidebar vira overlay deslizante ── */
+  .sidebar {
+    position: fixed;
+    left: 0; top: 0;
+    height: 100vh;
+    width: var(--sb-w) !important;
+    transform: translateX(-100%);
+    transition: transform var(--t);
+    z-index: 200;
+  }
+  .sidebar.mobile-open {
+    transform: translateX(0);
+  }
+  /* Sidebar recolhida no mobile também some */
+  .sidebar.collapsed {
+    width: var(--sb-w) !important;
+    transform: translateX(-100%) !important;
+  }
+  /* Sidebar colapsada não colapsa no mobile — mostra completa quando aberta */
+  .sidebar.collapsed.mobile-open {
+    transform: translateX(0) !important;
+    width: var(--sb-w) !important;
+  }
+  .sidebar.collapsed .sb-logo-text,
+  .sidebar.collapsed .sb-item-label,
+  .sidebar.collapsed .sb-item-dot,
+  .sidebar.collapsed .sb-church-name { display: block !important; }
+  .sidebar.collapsed .sb-item { justify-content: flex-start !important; }
+  .sidebar.collapsed .sb-church-info { justify-content: space-between !important; }
+  .sidebar.collapsed .sb-header { justify-content: flex-start !important; padding: 0 14px !important; gap: 10px !important; }
+  .sidebar.collapsed .sb-logo-icon { display: flex !important; }
+
+  /* Overlay escuro atrás da sidebar */
+  .sb-overlay {
+    display: none;
+    position: fixed;
+    inset: 0;
+    background: rgba(0,0,0,0.45);
+    z-index: 199;
+  }
+  .sb-overlay.active { display: block; }
+
+  /* Ocultar botão de colapso no mobile */
+  .sb-toggle { display: none; }
+
+  /* ── Main ocupa tela toda ── */
+  .main { width: 100vw; min-width: 0; overflow-x: hidden; }
+
+  /* ── Topbar mobile ── */
+  .topbar {
+    padding: 0 16px;
+    position: sticky;
+    top: 0;
+    z-index: 100;
+  }
+  .topbar-title { font-size: 14px; }
+
+  /* Botão hamburguer */
+  .sb-hamburger {
+    display: flex !important;
+    align-items: center; justify-content: center;
+    width: 36px; height: 36px;
+    background: none; border: none;
+    cursor: pointer; border-radius: 7px;
+    color: var(--text); font-size: 20px;
+    flex-shrink: 0;
+    transition: background var(--t);
+  }
+  .sb-hamburger:hover { background: var(--content-bg); }
+
+  /* ── Página ── */
+  .page { padding: 16px; }
+
+  /* ── KPIs: 2 colunas no mobile ── */
+  .kpi-grid {
+    grid-template-columns: repeat(2, 1fr);
+    gap: 10px;
+  }
+  .kpi { padding: 14px; }
+  .kpi-value { font-size: 20px; }
+
+  /* ── Cards ── */
+  .card { padding: 14px 16px; }
+
+  /* ── Grids de 2 colunas → 1 coluna ── */
+  [style*="grid-template-columns:1fr 1fr"],
+  [style*="grid-template-columns: 1fr 1fr"] {
+    grid-template-columns: 1fr !important;
+  }
+  [style*="grid-template-columns:320px"],
+  [style*="grid-template-columns: 320px"],
+  [style*="grid-template-columns:340px"],
+  [style*="grid-template-columns: 340px"],
+  [style*="grid-template-columns:360px"] {
+    grid-template-columns: 1fr !important;
+  }
+
+  /* ── Tabelas → scroll horizontal ── */
+  .table-wrap {
+    overflow-x: auto;
+    -webkit-overflow-scrolling: touch;
+  }
+  table { min-width: 500px; }
+
+  /* ── Formulários ── */
+  .form-row {
+    grid-template-columns: 1fr !important;
+  }
+
+  /* ── Botões de ação na topbar ── */
+  .topbar-actions .btn span { display: none; }
+  .topbar-actions .btn { padding: 7px 10px; }
+
+  /* ── Ocultar texto de botões de ação nas tabelas ── */
+  .btn-icon-only span { display: none; }
+
+  /* ── Modais e cards de 2 colunas ── */
+  div[style*="display:grid"] {
+    /* Forçar 1 coluna para grids inline */
+  }
+}
+
+/* Hamburguer oculto no desktop */
+.sb-hamburger { display: none; }

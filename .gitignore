@@ -1,0 +1,9 @@
+/vendor/
+/composer.phar
+
+# Credenciais reais do banco - nunca commitar
+/config/database.php
+
+# Fotos de membros enviadas via sistema (dados de usuário, não código)
+/public/img/members/*
+!/public/img/members/.gitkeep
