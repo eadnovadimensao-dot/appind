@@ -202,7 +202,7 @@ if (!empty($activeSups)) {
                         $payload = json_encode([
                             'title' => "📋 Culto de $dateFormatted",
                             'body'  => "Você é o supervisor responsável pela ordem do culto.",
-                            'url'   => $respondUrl,
+                            'url'   => APP_URL . '/pages/services/index.php',
                             'tag'   => 'supervisor-' . $sunday,
                         ]);
                         foreach ($subscriptions as $sub) {

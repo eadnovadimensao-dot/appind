@@ -7,3 +7,6 @@
 # Fotos de membros enviadas via sistema (dados de usuário, não código)
 /public/img/members/*
 !/public/img/members/.gitkeep
+
+# Backups de banco de dados - contêm senhas, chaves e dados de membros
+/_db_backups/
