@@ -53,6 +53,16 @@ $statusLabels = [
 ];
 ?>
 
+<?php if (isset($_GET['deleted'])): ?>
+  <div style="background:#E1F5EE;border:1px solid var(--accent);border-radius:8px;padding:12px 16px;margin-bottom:16px;font-size:13px;color:#0F6E56">✓ Membro excluído com sucesso.</div>
+<?php elseif (($_GET['error'] ?? '') === 'linked'): ?>
+  <div style="background:#FCEBEB;border:1px solid #F09595;border-radius:8px;padding:12px 16px;margin-bottom:16px;font-size:13px;color:#A32D2D">
+    ✗ Não foi possível excluir: este membro tem registros vinculados no sistema (avisos criados, empréstimos, relatórios, etc.). Marque-o como <strong>Inativo</strong> em vez de excluir, pra manter o histórico.
+  </div>
+<?php elseif (($_GET['error'] ?? '') === 'notfound'): ?>
+  <div style="background:#FCEBEB;border:1px solid #F09595;border-radius:8px;padding:12px 16px;margin-bottom:16px;font-size:13px;color:#A32D2D">✗ Membro não encontrado ou fora do seu escopo de acesso.</div>
+<?php endif; ?>
+
 <!-- Filtros -->
 <form method="GET" style="display:flex;gap:10px;margin-bottom:20px;flex-wrap:wrap">
   <input
