@@ -92,7 +92,9 @@ function create_ministry_activity(
         }
 
         foreach ($scaledIds as $mid) {
-            $memberName = $db->query("SELECT name FROM members WHERE id=".(int)$mid)->fetchColumn();
+            $memberRow  = $db->query("SELECT name, phone FROM members WHERE id=".(int)$mid)->fetch();
+            $memberName = $memberRow['name']  ?? '';
+            $memberPhone= $memberRow['phone'] ?? '';
 
             $tokenRow = $db->prepare("SELECT confirm_token FROM ministry_activity_members WHERE activity_id=? AND member_id=?");
             $tokenRow->execute([$activityId, (int)$mid]);
@@ -155,6 +157,11 @@ function create_ministry_activity(
                         ])
                     );
                 }
+            }
+
+            // WhatsApp (Z-API)
+            if ($memberPhone) {
+                send_whatsapp($memberPhone, $tpl['title'] . "\n\n" . $fullContent, $churchId);
             }
 
             // E-mail
@@ -337,7 +344,9 @@ function notify_activity_rescheduled(
     foreach ($rows as $row) {
         $mid          = (int)$row['member_id'];
         $isPrayerRole = in_array(trim($row['role'] ?? ''), MUSIC_ALWAYS_INCLUDE_ROLES, true);
-        $memberName   = $db->query("SELECT name FROM members WHERE id=" . $mid)->fetchColumn();
+        $memberRow    = $db->query("SELECT name, phone FROM members WHERE id=" . $mid)->fetch();
+        $memberName   = $memberRow['name']  ?? '';
+        $memberPhone  = $memberRow['phone'] ?? '';
 
         if ($isPrayerRole) {
             $tpl = notification_template('scale_prayer_request', [
@@ -396,6 +405,11 @@ function notify_activity_rescheduled(
                     ])
                 );
             }
+        }
+
+        // WhatsApp (Z-API)
+        if ($memberPhone) {
+            send_whatsapp($memberPhone, $tpl['title'] . "\n\n" . $fullContent, $churchId);
         }
 
         $memberEmail = $db->query("SELECT email FROM members WHERE id=" . $mid)->fetchColumn();

@@ -21,6 +21,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         'church_name', 'church_initials', 'church_logo_url',
         'church_address', 'church_phone', 'church_email', 'church_website',
         'smtp_host', 'smtp_port', 'smtp_user', 'smtp_pass',
+        'zapi_instance_id', 'zapi_token', 'zapi_client_token',
         'primary_color', 'accent_color',
     ];
 
@@ -235,6 +236,35 @@ require_once __DIR__ . '/../includes/layout.php';
                placeholder="••••••••"
                value="<?= htmlspecialchars($s['smtp_pass'] ?? '') ?>">
       </div>
+    </div>
+  </div>
+
+  <!-- WhatsApp -->
+  <div class="card" style="margin-bottom:16px">
+    <p class="card-title">WhatsApp (Z-API)</p>
+    <p style="font-size:12px;color:var(--text-muted);margin-bottom:12px">
+      Notificações de escala do ministério enviadas por WhatsApp além de e-mail/push. Pegue esses dados no painel do
+      <a href="https://www.z-api.io" target="_blank" rel="noopener">Z-API</a> depois de conectar o número (QR code). Deixe em branco pra não enviar por WhatsApp.
+    </p>
+    <div class="form-row">
+      <div class="form-group">
+        <label class="form-label">Instance ID</label>
+        <input type="text" name="zapi_instance_id" class="form-control"
+               placeholder="Ex: 3C9A1B2D..."
+               value="<?= htmlspecialchars($s['zapi_instance_id'] ?? '') ?>">
+      </div>
+      <div class="form-group">
+        <label class="form-label">Token</label>
+        <input type="password" name="zapi_token" class="form-control"
+               placeholder="••••••••"
+               value="<?= htmlspecialchars($s['zapi_token'] ?? '') ?>">
+      </div>
+    </div>
+    <div class="form-group" style="margin-bottom:0">
+      <label class="form-label">Client-Token <span style="font-weight:400;color:var(--text-muted)">(se o painel do Z-API pedir — em Segurança/Tokens)</span></label>
+      <input type="password" name="zapi_client_token" class="form-control"
+             placeholder="••••••••"
+             value="<?= htmlspecialchars($s['zapi_client_token'] ?? '') ?>">
     </div>
   </div>
 

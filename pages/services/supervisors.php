@@ -78,7 +78,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 
 // Buscar supervisores
 $supervisors = $db->query("
-    SELECT s.*, m.name AS member_name,
+    SELECT s.*, m.name AS member_name, m.phone AS member_phone,
            GROUP_CONCAT(c.name ORDER BY c.name SEPARATOR ', ') AS cells
     FROM supervisors s
     JOIN members m ON m.id = s.member_id
@@ -221,6 +221,16 @@ if (!empty($activeSups)) {
                         }
                     }
                 }
+            }
+
+            // WhatsApp (Z-API)
+            $supPhone = $activeSups[$lastIdx]['member_phone'] ?? '';
+            if ($supPhone) {
+                send_whatsapp(
+                    $supPhone,
+                    $tpl['title'] . "\n\n" . $tpl['content'] . "\n\n🔗 " . APP_URL . '/pages/services/index.php',
+                    $churchId
+                );
             }
         }
     }
