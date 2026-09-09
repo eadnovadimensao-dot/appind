@@ -1,6 +1,7 @@
 <?php
 require_once __DIR__ . "/../../config/database.php";
 require_once __DIR__ . "/../../includes/auth.php";
+require_once __DIR__ . "/../../includes/music_roles.php";
 auth_check();
 
 $db = db();
@@ -20,6 +21,7 @@ if (!$mn) { header('Location: /pages/ministries/index.php'); exit; }
 $pageTitle  = $mn['name'];
 $activePage = 'ministries';
 $churchId   = $mn['church_id'];
+$isMusic    = is_music_ministry($mn['name']);
 // Buscar todos os líderes do ministério
 $leadersStmt = $db->prepare("
     SELECT m.id, m.name, m.photo_url,
@@ -190,7 +192,16 @@ $actTypeLabels = [
         </div>
         <div style="flex:1;min-width:160px">
           <label class="form-label">Função (fixa)</label>
-          <input type="text" name="role" class="form-control" placeholder="Ex: Guitarrista, Ministro de Louvor…">
+          <?php if ($isMusic): ?>
+            <select name="role" class="form-control">
+              <option value="">Selecione…</option>
+              <?php foreach (MUSIC_ROLE_OPTIONS as $opt): ?>
+                <option value="<?= htmlspecialchars($opt) ?>"><?= htmlspecialchars($opt) ?></option>
+              <?php endforeach; ?>
+            </select>
+          <?php else: ?>
+            <input type="text" name="role" class="form-control" placeholder="Ex: Guitarrista, Ministro de Louvor…">
+          <?php endif; ?>
         </div>
         <button type="submit" class="btn btn-primary" style="margin-bottom:16px">Vincular</button>
       </form>
@@ -218,8 +229,17 @@ $actTypeLabels = [
             <form method="POST" action="/pages/ministries/update_member_role.php" id="role-edit-<?= $m['id'] ?>" style="display:none;gap:4px;margin-top:4px">
               <input type="hidden" name="ministry_id" value="<?= $id ?>">
               <input type="hidden" name="member_id" value="<?= $m['id'] ?>">
-              <input type="text" name="role" class="form-control" value="<?= htmlspecialchars($m['role'] ?? '') ?>"
-                     placeholder="Ex: Guitarrista…" style="font-size:12px;padding:4px 8px">
+              <?php if ($isMusic): ?>
+                <select name="role" class="form-control" style="font-size:12px;padding:4px 8px">
+                  <option value="">Selecione…</option>
+                  <?php foreach (MUSIC_ROLE_OPTIONS as $opt): ?>
+                    <option value="<?= htmlspecialchars($opt) ?>" <?= ($m['role'] ?? '')===$opt ? 'selected' : '' ?>><?= htmlspecialchars($opt) ?></option>
+                  <?php endforeach; ?>
+                </select>
+              <?php else: ?>
+                <input type="text" name="role" class="form-control" value="<?= htmlspecialchars($m['role'] ?? '') ?>"
+                       placeholder="Ex: Guitarrista…" style="font-size:12px;padding:4px 8px">
+              <?php endif; ?>
               <button type="submit" class="btn btn-secondary" style="font-size:11px;padding:4px 8px">Salvar</button>
             </form>
           </div>

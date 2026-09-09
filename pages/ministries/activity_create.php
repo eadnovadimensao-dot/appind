@@ -1,6 +1,7 @@
 <?php
 require_once __DIR__ . '/../../config/database.php';
 require_once __DIR__ . '/../../includes/auth.php';
+require_once __DIR__ . '/../../includes/music_roles.php';
 auth_check();
 
 $db         = db();
@@ -19,6 +20,7 @@ $mn = $stmt->fetch();
 if (!$mn) { header('Location: /pages/ministries/index.php'); exit; }
 
 $churchId = $mn['church_id']; // usa a church_id DO MINISTÉRIO, não do usuário
+$isMusic  = is_music_ministry($mn['name']);
 
 // Membros do ministério filtrados pela mesma filial
 $members = $db->prepare("
@@ -323,7 +325,15 @@ require_once __DIR__ . '/../../includes/layout.php';
 
   <!-- Escala -->
   <div class="card" style="margin-bottom:24px">
-    <p class="card-title">Escala — quem vai participar</p>
+    <div style="display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:8px;margin-bottom:8px">
+      <p class="card-title" style="margin:0">Escala — quem vai participar</p>
+      <?php if ($isMusic): ?>
+        <button type="button" id="auto-scale-btn" class="btn btn-secondary" style="font-size:12px">🎲 Gerar automaticamente</button>
+      <?php endif; ?>
+    </div>
+    <?php if ($isMusic): ?>
+      <div id="auto-scale-warnings" style="display:none;background:#FFF7E6;border:1px solid #F0D595;border-radius:8px;padding:10px 14px;margin-bottom:12px;font-size:12px;color:#8A5A00"></div>
+    <?php endif; ?>
     <?php if (empty($members)): ?>
       <p style="font-size:13px;color:var(--text-muted)">
         Nenhum membro vinculado ao ministério ainda.
@@ -392,6 +402,59 @@ document.getElementById('songs-wrap')?.addEventListener('click', function(e) {
   if (e.target.classList.contains('remove-song-btn')) {
     e.target.closest('.song-row').remove();
   }
+});
+
+// Gerar escala automaticamente (só ministério de Música)
+document.getElementById('auto-scale-btn')?.addEventListener('click', function() {
+  const btn = this;
+  const ministryId = $ministryId;
+  const activityType = document.querySelector('select[name="activity_type"]').value;
+  const warnBox = document.getElementById('auto-scale-warnings');
+  warnBox.style.display = 'none';
+  btn.disabled = true;
+  btn.textContent = 'Gerando…';
+
+  fetch('/pages/ministries/auto_scale.php?ministry_id=' + ministryId + '&activity_type=' + activityType)
+    .then(r => r.json())
+    .then(data => {
+      btn.disabled = false;
+      btn.textContent = '🎲 Gerar automaticamente';
+
+      if (data.error) {
+        warnBox.textContent = data.error;
+        warnBox.style.display = 'block';
+        return;
+      }
+
+      // Desmarca tudo primeiro
+      document.querySelectorAll('.scale-cb').forEach(cb => {
+        cb.checked = false;
+        const roleInput = document.getElementById('role' + cb.dataset.id);
+        if (roleInput) roleInput.style.display = 'none';
+      });
+
+      // Marca e preenche os sorteados
+      Object.entries(data.assignments).forEach(([memberId, role]) => {
+        const cb = document.querySelector('.scale-cb[data-id="' + memberId + '"]');
+        const roleInput = document.getElementById('role' + memberId);
+        if (cb) cb.checked = true;
+        if (roleInput) {
+          roleInput.value = role;
+          roleInput.style.display = 'block';
+        }
+      });
+
+      if (data.warnings && data.warnings.length) {
+        warnBox.innerHTML = '⚠️ ' + data.warnings.join('<br>⚠️ ');
+        warnBox.style.display = 'block';
+      }
+    })
+    .catch(() => {
+      btn.disabled = false;
+      btn.textContent = '🎲 Gerar automaticamente';
+      warnBox.textContent = 'Não foi possível gerar a escala. Tente novamente.';
+      warnBox.style.display = 'block';
+    });
 });
 JS;
 require_once __DIR__ . '/../../includes/layout-footer.php';
