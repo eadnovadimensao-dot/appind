@@ -22,7 +22,7 @@ $churchId = $mn['church_id']; // usa a church_id DO MINISTÉRIO, não do usuári
 
 // Membros do ministério filtrados pela mesma filial
 $members = $db->prepare("
-    SELECT m.id, m.name FROM member_ministries mm
+    SELECT m.id, m.name, mm.role AS default_role FROM member_ministries mm
     JOIN members m ON m.id = mm.member_id
     WHERE mm.ministry_id = ? AND m.church_id = ?
     ORDER BY m.name
@@ -31,14 +31,18 @@ $members->execute([$ministryId, $churchId]);
 $members = $members->fetchAll();
 
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
-    $title       = trim($_POST['title']         ?? '');
-    $description = trim($_POST['description']   ?? '');
-    $date        = trim($_POST['activity_date'] ?? '');
-    $timeStart   = trim($_POST['time_start']    ?? '') ?: null;
-    $timeEnd     = trim($_POST['time_end']      ?? '') ?: null;
-    $location    = trim($_POST['location']      ?? '');
-    $scaledIds   = $_POST['scaled_ids'] ?? [];
-    $roles       = $_POST['roles']      ?? [];
+    $title        = trim($_POST['title']         ?? '');
+    $description  = trim($_POST['description']   ?? '');
+    $date         = trim($_POST['activity_date'] ?? '');
+    $timeStart    = trim($_POST['time_start']    ?? '') ?: null;
+    $timeEnd      = trim($_POST['time_end']      ?? '') ?: null;
+    $location     = trim($_POST['location']      ?? '');
+    $activityType = ($_POST['activity_type'] ?? 'culto') === 'ensaio' ? 'ensaio' : 'culto';
+    $scaledIds    = $_POST['scaled_ids'] ?? [];
+    $roles        = $_POST['roles']      ?? [];
+    $songTitles   = $_POST['song_title'] ?? [];
+    $songKeys     = $_POST['song_key']   ?? [];
+    $songLinks    = $_POST['song_link']  ?? [];
 
     if ($title === '') $errors[] = 'Título é obrigatório.';
     if ($date  === '') $errors[] = 'Data é obrigatória.';
@@ -46,20 +50,38 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     if (empty($errors)) {
         $stmt = $db->prepare("
             INSERT INTO ministry_activities
-              (ministry_id, church_id, title, description, activity_date, time_start, time_end, location, status)
-            VALUES (:ministry_id,:church_id,:title,:description,:date,:time_start,:time_end,:location,'scheduled')
+              (ministry_id, church_id, activity_type, title, description, activity_date, time_start, time_end, location, status)
+            VALUES (:ministry_id,:church_id,:activity_type,:title,:description,:date,:time_start,:time_end,:location,'scheduled')
         ");
         $stmt->execute([
-            ':ministry_id' => $ministryId,
-            ':church_id'   => $churchId,
-            ':title'       => $title,
-            ':description' => $description ?: null,
-            ':date'        => $date,
-            ':time_start'  => $timeStart,
-            ':time_end'    => $timeEnd,
-            ':location'    => $location ?: null,
+            ':ministry_id'   => $ministryId,
+            ':church_id'     => $churchId,
+            ':activity_type' => $activityType,
+            ':title'         => $title,
+            ':description'   => $description ?: null,
+            ':date'          => $date,
+            ':time_start'    => $timeStart,
+            ':time_end'      => $timeEnd,
+            ':location'      => $location ?: null,
         ]);
         $activityId = $db->lastInsertId();
+
+        // Repertório
+        if (!empty($songTitles)) {
+            $sg = $db->prepare("INSERT INTO ministry_activity_songs (activity_id, title, key_tone, reference_link, position) VALUES (?,?,?,?,?)");
+            $pos = 0;
+            foreach ($songTitles as $i => $songTitle) {
+                $songTitle = trim($songTitle);
+                if ($songTitle === '') continue;
+                $sg->execute([
+                    $activityId,
+                    $songTitle,
+                    trim($songKeys[$i]  ?? '') ?: null,
+                    trim($songLinks[$i] ?? '') ?: null,
+                    $pos++,
+                ]);
+            }
+        }
 
         // Escalar membros e notificar
         if (!empty($scaledIds)) {
@@ -232,8 +254,16 @@ require_once __DIR__ . '/../../includes/layout.php';
       <div class="form-group">
         <label class="form-label">Título *</label>
         <input type="text" name="title" class="form-control"
-               placeholder="Ex: Ensaio, Culto de domingo, Treinamento…"
+               placeholder="Ex: Ensaio de quinta, Culto de domingo…"
                value="<?= htmlspecialchars($_POST['title'] ?? '') ?>" required>
+      </div>
+      <div class="form-group">
+        <label class="form-label">Tipo</label>
+        <select name="activity_type" class="form-control">
+          <?php $selType = $_POST['activity_type'] ?? 'culto'; ?>
+          <option value="culto"  <?= $selType==='culto'  ? 'selected' : '' ?>>Culto</option>
+          <option value="ensaio" <?= $selType==='ensaio' ? 'selected' : '' ?>>Ensaio</option>
+        </select>
       </div>
       <div class="form-group">
         <label class="form-label">Local</label>
@@ -266,6 +296,31 @@ require_once __DIR__ . '/../../includes/layout.php';
     </div>
   </div>
 
+  <!-- Repertório -->
+  <div class="card" style="margin-bottom:16px">
+    <p class="card-title">Repertório</p>
+    <div id="songs-wrap">
+      <?php
+        $songTitlesPost = $_POST['song_title'] ?? [];
+        $songKeysPost   = $_POST['song_key']   ?? [];
+        $songLinksPost  = $_POST['song_link']  ?? [];
+        $songCount      = max(count($songTitlesPost), 1);
+        for ($i = 0; $i < $songCount; $i++):
+      ?>
+        <div class="song-row" style="display:flex;gap:8px;margin-bottom:8px;flex-wrap:wrap">
+          <input type="text" name="song_title[]" class="form-control" placeholder="Música"
+                 style="flex:2;min-width:140px" value="<?= htmlspecialchars($songTitlesPost[$i] ?? '') ?>">
+          <input type="text" name="song_key[]" class="form-control" placeholder="Tom (ex: G)"
+                 style="flex:1;min-width:70px" value="<?= htmlspecialchars($songKeysPost[$i] ?? '') ?>">
+          <input type="text" name="song_link[]" class="form-control" placeholder="Link (cifra/YouTube…)"
+                 style="flex:2;min-width:140px" value="<?= htmlspecialchars($songLinksPost[$i] ?? '') ?>">
+          <button type="button" class="btn btn-secondary remove-song-btn" style="flex-shrink:0">×</button>
+        </div>
+      <?php endfor; ?>
+    </div>
+    <button type="button" id="add-song-btn" class="btn btn-secondary" style="font-size:12px">+ Adicionar música</button>
+  </div>
+
   <!-- Escala -->
   <div class="card" style="margin-bottom:24px">
     <p class="card-title">Escala — quem vai participar</p>
@@ -293,7 +348,7 @@ require_once __DIR__ . '/../../includes/layout.php';
                      class="form-control role-input" id="role<?= $m['id'] ?>"
                      placeholder="Função (ex: vocal, guitarra…)"
                      style="margin-top:4px;font-size:12px;padding:5px 8px;display:<?= in_array($m['id'], $_POST['scaled_ids']??[]) ? 'block' : 'none' ?>"
-                     value="<?= htmlspecialchars($_POST['roles'][$m['id']] ?? '') ?>">
+                     value="<?= htmlspecialchars($_POST['roles'][$m['id']] ?? $m['default_role'] ?? '') ?>">
             </div>
           </div>
         <?php endforeach; ?>
@@ -309,13 +364,34 @@ require_once __DIR__ . '/../../includes/layout.php';
 
 <?php
 $extraJs = <<<JS
-// Mostrar/ocultar campo de função ao marcar/desmarcar
+// Mostrar/ocultar campo de função ao marcar/desmarcar (mantém o valor pré-preenchido)
 document.querySelectorAll('.scale-cb').forEach(cb => {
   cb.addEventListener('change', function() {
     const roleInput = document.getElementById('role' + this.dataset.id);
     roleInput.style.display = this.checked ? 'block' : 'none';
-    if (!this.checked) roleInput.value = '';
   });
+});
+
+// Repertório — adicionar/remover músicas dinamicamente
+let songIdx = document.querySelectorAll('.song-row').length;
+document.getElementById('add-song-btn')?.addEventListener('click', function() {
+  const wrap = document.getElementById('songs-wrap');
+  const row = document.createElement('div');
+  row.className = 'song-row';
+  row.style.cssText = 'display:flex;gap:8px;margin-bottom:8px;flex-wrap:wrap';
+  row.innerHTML = `
+    <input type="text" name="song_title[]" class="form-control" placeholder="Música" style="flex:2;min-width:140px">
+    <input type="text" name="song_key[]" class="form-control" placeholder="Tom (ex: G)" style="flex:1;min-width:70px">
+    <input type="text" name="song_link[]" class="form-control" placeholder="Link (cifra/YouTube…)" style="flex:2;min-width:140px">
+    <button type="button" class="btn btn-secondary remove-song-btn" style="flex-shrink:0">×</button>
+  `;
+  wrap.appendChild(row);
+  songIdx++;
+});
+document.getElementById('songs-wrap')?.addEventListener('click', function(e) {
+  if (e.target.classList.contains('remove-song-btn')) {
+    e.target.closest('.song-row').remove();
+  }
 });
 JS;
 require_once __DIR__ . '/../../includes/layout-footer.php';

@@ -34,12 +34,23 @@ $scaled = $db->prepare("
 $scaled->execute([$id]);
 $scaled = $scaled->fetchAll();
 
+// Repertório
+$songs = $db->prepare("SELECT * FROM ministry_activity_songs WHERE activity_id = ? ORDER BY position, id");
+$songs->execute([$id]);
+$songs = $songs->fetchAll();
+
 $statusLabels = [
     'scheduled' => ['label'=>'Agendada',  'badge'=>'badge-blue'],
     'done'      => ['label'=>'Realizada', 'badge'=>'badge-green'],
     'cancelled' => ['label'=>'Cancelada', 'badge'=>'badge-gray'],
 ];
 $st = $statusLabels[$act['status']] ?? ['label'=>$act['status'],'badge'=>'badge-gray'];
+
+$actTypeLabels = [
+    'ensaio' => ['label'=>'Ensaio', 'badge'=>'badge-gray'],
+    'culto'  => ['label'=>'Culto',  'badge'=>'badge-blue'],
+];
+$at = $actTypeLabels[$act['activity_type']] ?? null;
 ?>
 
 <div style="margin-bottom:16px">
@@ -55,6 +66,9 @@ $st = $statusLabels[$act['status']] ?? ['label'=>$act['status'],'badge'=>'badge-
       <div style="display:flex;align-items:center;gap:10px;margin-bottom:6px">
         <h1 style="font-size:18px;font-weight:500"><?= htmlspecialchars($act['title']) ?></h1>
         <span class="badge <?= $st['badge'] ?>"><?= $st['label'] ?></span>
+        <?php if ($at): ?>
+          <span class="badge <?= $at['badge'] ?>"><?= $at['label'] ?></span>
+        <?php endif; ?>
       </div>
       <div style="font-size:13px;color:var(--text-muted);display:flex;flex-wrap:wrap;gap:12px">
         <span>📅 <?= date('d/m/Y', strtotime($act['activity_date'])) ?>
@@ -82,6 +96,48 @@ $st = $statusLabels[$act['status']] ?? ['label'=>$act['status'],'badge'=>'badge-
       <a href="/pages/ministries/view.php?id=<?= $act['ministry_id'] ?>" class="btn btn-secondary">Voltar</a>
     </div>
   </div>
+</div>
+
+<!-- Repertório -->
+<div class="card" style="padding:0;margin-bottom:16px">
+  <div style="padding:14px 18px;border-bottom:1px solid var(--border)">
+    <p style="font-weight:500;font-size:14px">Repertório <span style="color:var(--text-muted);font-weight:400">(<?= count($songs) ?>)</span></p>
+  </div>
+  <?php if (empty($songs)): ?>
+    <div class="empty-state" style="padding:24px">Nenhuma música adicionada.</div>
+  <?php else: ?>
+    <?php foreach ($songs as $sg): ?>
+      <div style="display:flex;align-items:center;gap:10px;padding:10px 18px;border-bottom:1px solid var(--border)">
+        <div style="flex:1;min-width:0">
+          <span style="font-size:13px;font-weight:500"><?= htmlspecialchars($sg['title']) ?></span>
+          <?php if ($sg['key_tone']): ?>
+            <span class="badge badge-gray" style="font-size:10px;margin-left:6px">Tom: <?= htmlspecialchars($sg['key_tone']) ?></span>
+          <?php endif; ?>
+          <?php if ($sg['reference_link']): ?>
+            <div style="font-size:12px;margin-top:2px">
+              <a href="<?= htmlspecialchars($sg['reference_link']) ?>" target="_blank" rel="noopener" style="color:var(--accent);text-decoration:none">🔗 Referência</a>
+            </div>
+          <?php endif; ?>
+        </div>
+        <a href="/pages/ministries/song_delete.php?song_id=<?= $sg['id'] ?>&activity_id=<?= $id ?>"
+           style="font-size:18px;color:var(--text-muted);text-decoration:none;line-height:1"
+           data-confirm="Remover <?= htmlspecialchars($sg['title']) ?> do repertório?">×</a>
+      </div>
+    <?php endforeach; ?>
+  <?php endif; ?>
+  <form method="POST" action="/pages/ministries/song_add.php" style="display:flex;gap:8px;align-items:flex-end;flex-wrap:wrap;padding:12px 18px;background:#fafafa">
+    <input type="hidden" name="activity_id" value="<?= $id ?>">
+    <div style="flex:2;min-width:140px">
+      <input type="text" name="title" class="form-control" placeholder="Música" required>
+    </div>
+    <div style="flex:1;min-width:70px">
+      <input type="text" name="key_tone" class="form-control" placeholder="Tom (ex: G)">
+    </div>
+    <div style="flex:2;min-width:140px">
+      <input type="text" name="reference_link" class="form-control" placeholder="Link (cifra/YouTube…)">
+    </div>
+    <button type="submit" class="btn btn-primary">+ Adicionar</button>
+  </form>
 </div>
 
 <!-- Escala -->

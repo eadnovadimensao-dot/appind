@@ -35,7 +35,7 @@ require_once __DIR__ . '/../../includes/layout.php';
 
 // Membros
 $members = $db->prepare("
-    SELECT m.id, m.name, m.phone, m.status, mm.joined_at
+    SELECT m.id, m.name, m.phone, m.status, mm.joined_at, mm.role
     FROM member_ministries mm
     JOIN members m ON m.id = mm.member_id
     WHERE mm.ministry_id = ?
@@ -83,6 +83,11 @@ $actStatusLabels = [
     'scheduled' => ['label'=>'Agendada',  'badge'=>'badge-blue'],
     'done'      => ['label'=>'Realizada', 'badge'=>'badge-green'],
     'cancelled' => ['label'=>'Cancelada', 'badge'=>'badge-gray'],
+];
+
+$actTypeLabels = [
+    'ensaio' => ['label'=>'Ensaio', 'badge'=>'badge-gray'],
+    'culto'  => ['label'=>'Culto',  'badge'=>'badge-blue'],
 ];
 ?>
 
@@ -183,6 +188,10 @@ $actStatusLabels = [
             <?php endforeach; ?>
           </select>
         </div>
+        <div style="flex:1;min-width:160px">
+          <label class="form-label">Função (fixa)</label>
+          <input type="text" name="role" class="form-control" placeholder="Ex: Guitarrista, Ministro de Louvor…">
+        </div>
         <button type="submit" class="btn btn-primary" style="margin-bottom:16px">Vincular</button>
       </form>
     </div>
@@ -195,13 +204,24 @@ $actStatusLabels = [
       ?>
         <div style="display:flex;align-items:center;gap:10px;padding:10px 18px;border-bottom:1px solid var(--border)">
           <div class="avatar"><?= $initials ?></div>
-          <div style="flex:1">
+          <div style="flex:1;min-width:0">
             <a href="/pages/members/view.php?id=<?= $m['id'] ?>" style="font-size:13px;font-weight:500;color:var(--text);text-decoration:none">
               <?= htmlspecialchars($m['name']) ?>
             </a>
             <?php if ($m['joined_at']): ?>
               <div style="font-size:11px;color:var(--text-muted)">desde <?= date('d/m/Y', strtotime($m['joined_at'])) ?></div>
             <?php endif; ?>
+            <div class="role-view" id="role-view-<?= $m['id'] ?>" style="font-size:11px;color:var(--text-muted);margin-top:2px;cursor:pointer"
+                 onclick="document.getElementById('role-view-<?= $m['id'] ?>').style.display='none';document.getElementById('role-edit-<?= $m['id'] ?>').style.display='flex'">
+              🎵 <?= $m['role'] ? htmlspecialchars($m['role']) : 'Definir função…' ?> ✎
+            </div>
+            <form method="POST" action="/pages/ministries/update_member_role.php" id="role-edit-<?= $m['id'] ?>" style="display:none;gap:4px;margin-top:4px">
+              <input type="hidden" name="ministry_id" value="<?= $id ?>">
+              <input type="hidden" name="member_id" value="<?= $m['id'] ?>">
+              <input type="text" name="role" class="form-control" value="<?= htmlspecialchars($m['role'] ?? '') ?>"
+                     placeholder="Ex: Guitarrista…" style="font-size:12px;padding:4px 8px">
+              <button type="submit" class="btn btn-secondary" style="font-size:11px;padding:4px 8px">Salvar</button>
+            </form>
           </div>
           <span class="badge <?= $st['badge'] ?>"><?= $st['label'] ?></span>
           <a href="/pages/ministries/remove_member.php?ministry_id=<?= $id ?>&member_id=<?= $m['id'] ?>"
@@ -226,7 +246,12 @@ $actStatusLabels = [
            style="display:block;padding:12px 18px;border-bottom:1px solid var(--border);text-decoration:none;color:var(--text)">
           <div style="display:flex;justify-content:space-between;align-items:flex-start;gap:8px">
             <div>
-              <div style="font-size:13px;font-weight:500"><?= htmlspecialchars($act['title']) ?></div>
+              <div style="display:flex;align-items:center;gap:6px">
+                <span style="font-size:13px;font-weight:500"><?= htmlspecialchars($act['title']) ?></span>
+                <?php $at = $actTypeLabels[$act['activity_type']] ?? null; if ($at): ?>
+                  <span class="badge <?= $at['badge'] ?>" style="font-size:10px"><?= $at['label'] ?></span>
+                <?php endif; ?>
+              </div>
               <div style="font-size:12px;color:var(--text-muted);margin-top:2px">
                 📅 <?= date('d/m/Y', strtotime($act['activity_date'])) ?>
                 <?= $act['time_start'] ? ' às ' . substr($act['time_start'],0,5) : '' ?>
@@ -251,7 +276,12 @@ $actStatusLabels = [
         ?>
           <a href="/pages/ministries/activity_view.php?id=<?= $act['id'] ?>"
              style="display:flex;justify-content:space-between;align-items:center;padding:7px 0;border-bottom:1px solid var(--border);text-decoration:none;color:var(--text);font-size:13px">
-            <span><?= htmlspecialchars($act['title']) ?> · <?= date('d/m/Y', strtotime($act['activity_date'])) ?></span>
+            <span>
+              <?= htmlspecialchars($act['title']) ?> · <?= date('d/m/Y', strtotime($act['activity_date'])) ?>
+              <?php $at = $actTypeLabels[$act['activity_type']] ?? null; if ($at): ?>
+                <span class="badge <?= $at['badge'] ?>" style="font-size:10px"><?= $at['label'] ?></span>
+              <?php endif; ?>
+            </span>
             <span class="badge <?= $as['badge'] ?>"><?= $as['label'] ?></span>
           </a>
         <?php endforeach; ?>
