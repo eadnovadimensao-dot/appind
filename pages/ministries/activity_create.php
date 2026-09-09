@@ -2,6 +2,7 @@
 require_once __DIR__ . '/../../config/database.php';
 require_once __DIR__ . '/../../includes/auth.php';
 require_once __DIR__ . '/../../includes/music_roles.php';
+require_once __DIR__ . '/../../includes/ministry_activity.php';
 auth_check();
 
 $db         = db();
@@ -22,6 +23,9 @@ if (!$mn) { header('Location: /pages/ministries/index.php'); exit; }
 $churchId = $mn['church_id']; // usa a church_id DO MINISTÉRIO, não do usuário
 $isMusic  = is_music_ministry($mn['name']);
 
+$days = ['monday'=>'Segunda-feira','tuesday'=>'Terça-feira','wednesday'=>'Quarta-feira',
+         'thursday'=>'Quinta-feira','friday'=>'Sexta-feira','saturday'=>'Sábado','sunday'=>'Domingo'];
+
 // Membros do ministério filtrados pela mesma filial
 $members = $db->prepare("
     SELECT m.id, m.name, mm.role AS default_role FROM member_ministries mm
@@ -39,237 +43,51 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     $timeStart    = trim($_POST['time_start']    ?? '') ?: null;
     $timeEnd      = trim($_POST['time_end']      ?? '') ?: null;
     $location     = trim($_POST['location']      ?? '');
-    $activityType = ($_POST['activity_type'] ?? 'culto') === 'ensaio' ? 'ensaio' : 'culto';
-    $scaledIds    = $_POST['scaled_ids'] ?? [];
-    $roles        = $_POST['roles']      ?? [];
-    $songTitles   = $_POST['song_title'] ?? [];
-    $songKeys     = $_POST['song_key']   ?? [];
-    $songLinks    = $_POST['song_link']  ?? [];
+    $activityType   = ($_POST['activity_type'] ?? 'culto') === 'ensaio' ? 'ensaio' : 'culto';
+    $scaledIds      = $_POST['scaled_ids'] ?? [];
+    $roles          = $_POST['roles']      ?? [];
+    $songTitles     = $_POST['song_title'] ?? [];
+    $songKeys       = $_POST['song_key']   ?? [];
+    $songLinks      = $_POST['song_link']  ?? [];
+    $autoRehearsal  = isset($_POST['auto_rehearsal']);
 
     if ($title === '') $errors[] = 'Título é obrigatório.';
     if ($date  === '') $errors[] = 'Data é obrigatória.';
 
     if (empty($errors)) {
-        $stmt = $db->prepare("
-            INSERT INTO ministry_activities
-              (ministry_id, church_id, activity_type, title, description, activity_date, time_start, time_end, location, status)
-            VALUES (:ministry_id,:church_id,:activity_type,:title,:description,:date,:time_start,:time_end,:location,'scheduled')
-        ");
-        $stmt->execute([
-            ':ministry_id'   => $ministryId,
-            ':church_id'     => $churchId,
-            ':activity_type' => $activityType,
-            ':title'         => $title,
-            ':description'   => $description ?: null,
-            ':date'          => $date,
-            ':time_start'    => $timeStart,
-            ':time_end'      => $timeEnd,
-            ':location'      => $location ?: null,
-        ]);
-        $activityId = $db->lastInsertId();
-
-        // Repertório
-        if (!empty($songTitles)) {
-            $sg = $db->prepare("INSERT INTO ministry_activity_songs (activity_id, title, key_tone, reference_link, position) VALUES (?,?,?,?,?)");
-            $pos = 0;
-            foreach ($songTitles as $i => $songTitle) {
-                $songTitle = trim($songTitle);
-                if ($songTitle === '') continue;
-                $sg->execute([
-                    $activityId,
-                    $songTitle,
-                    trim($songKeys[$i]  ?? '') ?: null,
-                    trim($songLinks[$i] ?? '') ?: null,
-                    $pos++,
-                ]);
-            }
+        $songs = [];
+        foreach ($songTitles as $i => $t) {
+            $songs[] = ['title' => $t, 'key_tone' => $songKeys[$i] ?? '', 'reference_link' => $songLinks[$i] ?? ''];
         }
 
-        // Escalar membros e notificar
-        if (!empty($scaledIds)) {
-            $ss = $db->prepare("INSERT IGNORE INTO ministry_activity_members (activity_id, member_id, role, status, confirm_token, token_expires_at, notified_at) VALUES (?,?,?,'pending',?,?,NOW())");
-            foreach ($scaledIds as $mid) {
-                $role  = trim($roles[$mid] ?? '');
-                $token = bin2hex(random_bytes(32));
-                $expires = date('Y-m-d H:i:s', strtotime($date . ' -2 days'));
-                $ss->execute([$activityId, (int)$mid, $role ?: null, $token, $expires]);
+        $activityId = create_ministry_activity(
+            $db, $mn, $ministryId, $churchId, $activityType, $title, $description,
+            $date, $timeStart, $timeEnd, $location, $scaledIds, $roles, $songs, auth_member_id()
+        );
+
+        // ── Ensaio automático: mesma equipe e repertório, no dia de reunião do ministério ──
+        if ($activityType === 'culto' && $autoRehearsal && !empty($mn['meeting_day']) && !empty($scaledIds)) {
+            $rehearsalDate = previous_weekday_before($date, $mn['meeting_day']);
+
+            $existing = $db->prepare("
+                SELECT id FROM ministry_activities
+                WHERE ministry_id = ? AND activity_type = 'ensaio' AND activity_date = ? AND status != 'cancelled'
+            ");
+            $existing->execute([$ministryId, $rehearsalDate]);
+
+            if (!$existing->fetchColumn()) {
+                $rTimeStart = $mn['meeting_time'] ?: null;
+                $rTimeEnd   = $rTimeStart ? date('H:i:s', strtotime($rTimeStart . ' +2 hours')) : null;
+
+                create_ministry_activity(
+                    $db, $mn, $ministryId, $churchId, 'ensaio',
+                    'Ensaio · ' . $title, $description,
+                    $rehearsalDate, $rTimeStart, $rTimeEnd, $location,
+                    $scaledIds, $roles, $songs, auth_member_id()
+                );
             }
-
-            // Preparar envio de push (mesma lib usada em services/index.php e communication/create.php)
-            $webPush = null;
-            $vapidPublic  = setting('vapid_public_key', '', $churchId);
-            $vapidPrivate = setting('vapid_private_key', '', $churchId);
-            $pushAutoload = __DIR__ . '/../../vendor/autoload.php';
-            if ($vapidPublic && $vapidPrivate && file_exists($pushAutoload)) {
-                require_once $pushAutoload;
-                $webPush = new \Minishlink\WebPush\WebPush([
-                    'VAPID' => [
-                        'subject'    => setting('vapid_subject', 'mailto:admin@igrejanovadimensao.com.br', $churchId),
-                        'publicKey'  => $vapidPublic,
-                        'privateKey' => $vapidPrivate,
-                    ],
-                ]);
-            }
-
-            // Notificar cada membro escalado com links de one-click
-            foreach ($scaledIds as $mid) {
-                $memberName = $db->query("SELECT name FROM members WHERE id=".(int)$mid)->fetchColumn();
-
-                // Buscar token gerado
-                $tokenRow = $db->prepare("SELECT confirm_token FROM ministry_activity_members WHERE activity_id=? AND member_id=?");
-                $tokenRow->execute([$activityId, (int)$mid]);
-                $token = $tokenRow->fetchColumn();
-
-                $confirmUrl = APP_URL . '/respond.php?token=' . $token . '&action=confirm';
-                $refuseUrl  = APP_URL . '/respond.php?token=' . $token . '&action=refuse';
-                $prazo      = date('d/m/Y', strtotime($date . ' -2 days'));
-
-                $tpl = notification_template('scale_invited', [
-                    'nome'       => $memberName,
-                    'ministerio' => $mn['name'],
-                    'data'       => date('d/m/Y (l)', strtotime($date)),
-                    'prazo'      => $prazo,
-                ], $churchId);
-
-                $fullContent = $tpl['content']
-                    . "\n\n✅ Confirmar presença: $confirmUrl"
-                    . "\n❌ Não posso ir: $refuseUrl";
-
-                $db->prepare("
-                    INSERT INTO announcements (church_id, title, content, type, target_type, target_id, channels, status, created_by, sent_at)
-                    VALUES (?,?,?,'general','member',?,'internal,push','sent',?,NOW())
-                ")->execute([
-                    $churchId,
-                    $tpl['title'],
-                    $fullContent,
-                    (int)$mid,
-                    auth_member_id()
-                ]);
-
-                // Enviar push de verdade se o membro tiver inscrição ativa
-                if ($webPush) {
-                    $subsStmt = $db->prepare("SELECT * FROM push_subscriptions WHERE member_id = ?");
-                    $subsStmt->execute([(int)$mid]);
-                    foreach ($subsStmt->fetchAll() as $sub) {
-                        $webPush->queueNotification(
-                            \Minishlink\WebPush\Subscription::create([
-                                'endpoint'        => $sub['endpoint'],
-                                'keys'            => ['p256dh' => $sub['p256dh'], 'auth' => $sub['auth_key']],
-                                'contentEncoding' => 'aesgcm',
-                            ]),
-                            json_encode([
-                                'title' => $tpl['title'],
-                                'body'  => "{$mn['name']} · " . date('d/m/Y', strtotime($date)),
-                                'url'   => $confirmUrl,
-                                'tag'   => 'scale-' . $activityId,
-                            ])
-                        );
-                    }
-                }
-
-                // Enviar e-mail se o membro tiver e-mail cadastrado
-                $memberEmail = $db->query("SELECT email FROM members WHERE id=".(int)$mid)->fetchColumn();
-                if ($memberEmail) {
-                    $accentColor  = setting('accent_color',  '#1D9E75', $churchId);
-                    $primaryColor = setting('primary_color', '#012a36', $churchId);
-                    $dateFormatted = date('d/m/Y', strtotime($date));
-                    $dayName = ['Sunday'=>'Domingo','Monday'=>'Segunda-feira','Tuesday'=>'Terça-feira',
-                                'Wednesday'=>'Quarta-feira','Thursday'=>'Quinta-feira',
-                                'Friday'=>'Sexta-feira','Saturday'=>'Sábado'][date('l', strtotime($date))] ?? '';
-
-                    $emailBody = "
-                    <div style='text-align:center;margin-bottom:28px'>
-                      <div style='font-size:48px;margin-bottom:12px'>🎵</div>
-                      <h1 style='font-size:22px;font-weight:600;color:#1a2332;margin:0 0 8px'>{$tpl['title']}</h1>
-                      <p style='color:#6b7280;font-size:15px;margin:0'>Olá, <strong style='color:#1a2332'>{$memberName}</strong>! Você foi escalado(a).</p>
-                    </div>
-
-                    <table width='100%' cellpadding='0' cellspacing='0' style='background:#f9fafb;border-radius:12px;margin-bottom:28px'>
-                      <tr><td style='padding:20px'>
-                        <table width='100%' cellpadding='0' cellspacing='0'>
-                          <tr>
-                            <td style='padding:6px 0'>
-                              <span style='font-size:11px;color:#9ca3af;text-transform:uppercase;letter-spacing:.06em'>Ministério</span><br>
-                              <strong style='color:#1a2332;font-size:15px'>" . htmlspecialchars($mn['name']) . "</strong>
-                            </td>
-                          </tr>
-                          <tr><td style='padding:6px 0;border-top:1px solid #e5e7eb'>
-                            <span style='font-size:11px;color:#9ca3af;text-transform:uppercase;letter-spacing:.06em'>Atividade</span><br>
-                            <strong style='color:#1a2332;font-size:15px'>" . htmlspecialchars($title) . "</strong>
-                          </td></tr>
-                          <tr><td style='padding:6px 0;border-top:1px solid #e5e7eb'>
-                            <span style='font-size:11px;color:#9ca3af;text-transform:uppercase;letter-spacing:.06em'>Data</span><br>
-                            <strong style='color:#1a2332;font-size:15px'>{$dayName}, {$dateFormatted}</strong>
-                          </td></tr>
-                          " . ($timeStart ? "<tr><td style='padding:6px 0;border-top:1px solid #e5e7eb'>
-                            <span style='font-size:11px;color:#9ca3af;text-transform:uppercase;letter-spacing:.06em'>Horário</span><br>
-                            <strong style='color:#1a2332;font-size:15px'>" . substr($timeStart,0,5) . "</strong>
-                          </td></tr>" : "") . "
-                        </table>
-                      </td></tr>
-                    </table>
-
-                    <p style='color:#6b7280;font-size:14px;text-align:center;margin-bottom:20px'>
-                      ⏰ Prazo para responder: <strong style='color:#1a2332'>{$prazo}</strong>
-                    </p>
-
-                    <table width='100%' cellpadding='0' cellspacing='0' style='margin-bottom:16px'>
-                      <tr>
-                        <td style='padding-right:6px'>
-                          <a href='{$confirmUrl}' style='display:block;text-align:center;background:{$accentColor};color:white;padding:14px;border-radius:10px;text-decoration:none;font-size:15px;font-weight:600'>
-                            ✅ Confirmar presença
-                          </a>
-                        </td>
-                        <td style='padding-left:6px'>
-                          <a href='{$refuseUrl}' style='display:block;text-align:center;background:#f3f4f6;color:#374151;padding:14px;border-radius:10px;text-decoration:none;font-size:15px;font-weight:600'>
-                            ❌ Não posso ir
-                          </a>
-                        </td>
-                      </tr>
-                    </table>
-
-                    <p style='color:#9ca3af;font-size:12px;text-align:center;margin:0'>
-                      Sua resposta ajuda a equipe a se organizar melhor. Obrigado! 🙏
-                    </p>";
-
-                    $html = email_template(
-                        "Você foi escalado(a) para {$mn['name']} em {$dateFormatted}",
-                        $emailBody,
-                        $churchId
-                    );
-
-                    send_email($memberEmail, $memberName, $tpl['title'], $html, $churchId);
-                }
-            }
-
-            // Disparar todos os pushes enfileirados e limpar inscrições expiradas
-            if ($webPush) {
-                foreach ($webPush->flush() as $report) {
-                    if ($report->isSubscriptionExpired()) {
-                        $db->prepare("DELETE FROM push_subscriptions WHERE endpoint = ?")
-                           ->execute([$report->getRequest()->getUri()->__toString()]);
-                    }
-                }
-            }
-        }
-
-        // ── Integração automática com a agenda ──
-        // Buscar location_id pelo nome do campo location (texto livre → tenta casar com locations)
-        $locId = null;
-        if ($location) {
-            $locStmt = $db->prepare("SELECT id FROM locations WHERE church_id = ? AND name LIKE ? LIMIT 1");
-            $locStmt->execute([$churchId, '%' . $location . '%']);
-            $locRow = $locStmt->fetch();
-            $locId  = $locRow ? $locRow['id'] : null;
-        }
-        if ($timeEnd) { // só insere na agenda se tiver horário de fim
-            $db->prepare("
-                INSERT INTO agenda_events
-                  (church_id, title, description, location_id, event_date, time_start, time_end,
-                   ministry_id, ministry_activity_id, status, type, color)
-                VALUES (?,?,?,?,?,?,?,?,'approved','ministry_activity','#185FA5')
-            ")->execute([$churchId, $title, $description?:null, $locId, $date,
-                         $timeStart, $timeEnd, $ministryId, $activityId]);
+            // Se já existe um ensaio nesse dia, não duplica — a equipe pode ser
+            // ajustada manualmente na tela do ensaio existente.
         }
 
         header('Location: /pages/ministries/view.php?id=' . $ministryId . '&saved=1');
@@ -381,6 +199,12 @@ require_once __DIR__ . '/../../includes/layout.php';
     <?php if ($isMusic): ?>
       <div id="auto-scale-warnings" style="display:none;background:#FFF7E6;border:1px solid #F0D595;border-radius:8px;padding:10px 14px;margin-bottom:12px;font-size:12px;color:#8A5A00"></div>
     <?php endif; ?>
+    <?php if (!empty($mn['meeting_day'])): ?>
+      <label id="auto-rehearsal-row" style="display:<?= $selType==='culto'?'flex':'none' ?>;align-items:center;gap:8px;cursor:pointer;font-size:13px;margin-bottom:12px;background:#F9FAFB;border-radius:8px;padding:10px 12px">
+        <input type="checkbox" name="auto_rehearsal" value="1" <?= !isset($_POST['activity_type']) || isset($_POST['auto_rehearsal']) ? 'checked' : '' ?>>
+        Criar ensaio automaticamente (<?= $days[$mn['meeting_day']] ?? $mn['meeting_day'] ?><?= $mn['meeting_time'] ? ' às ' . substr($mn['meeting_time'],0,5) : '' ?>) com a mesma equipe e repertório
+      </label>
+    <?php endif; ?>
     <?php if (empty($members)): ?>
       <p style="font-size:13px;color:var(--text-muted)">
         Nenhum membro vinculado ao ministério ainda.
@@ -421,6 +245,12 @@ require_once __DIR__ . '/../../includes/layout.php';
 
 <?php
 $extraJs = <<<JS
+// Mostrar/ocultar o checkbox de ensaio automático conforme o Tipo selecionado
+document.querySelector('select[name="activity_type"]')?.addEventListener('change', function() {
+  const row = document.getElementById('auto-rehearsal-row');
+  if (row) row.style.display = this.value === 'culto' ? 'flex' : 'none';
+});
+
 // Mostrar/ocultar campo de função ao marcar/desmarcar (mantém o valor pré-preenchido)
 document.querySelectorAll('.scale-cb').forEach(cb => {
   cb.addEventListener('change', function() {

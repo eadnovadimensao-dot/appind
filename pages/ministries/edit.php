@@ -77,7 +77,7 @@ require_once __DIR__ . '/../../includes/layout.php';
     </div>
     <div class="form-row">
       <div class="form-group">
-        <label class="form-label">Dia de reunião</label>
+        <label class="form-label">Dia de reunião / ensaio</label>
         <select name="meeting_day" class="form-control">
           <option value="">Selecione</option>
           <?php foreach ($days as $k => $v): ?>
@@ -90,6 +90,9 @@ require_once __DIR__ . '/../../includes/layout.php';
         <input type="time" name="meeting_time" class="form-control" value="<?= $mn['meeting_time'] ? substr($mn['meeting_time'],0,5) : '' ?>">
       </div>
     </div>
+    <p style="font-size:12px;color:var(--text-muted);margin-top:-8px;margin-bottom:16px">
+      Se definido, toda escala de Culto criada gera automaticamente um Ensaio neste dia, com a mesma equipe.
+    </p>
     <div class="form-group" style="margin-bottom:0">
       <label style="display:flex;align-items:center;gap:8px;cursor:pointer;font-size:13px">
         <input type="checkbox" name="active" value="1" <?= $mn['active']?'checked':''?>>
