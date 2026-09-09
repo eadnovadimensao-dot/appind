@@ -95,6 +95,22 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 $ss->execute([$activityId, (int)$mid, $role ?: null, $token, $expires]);
             }
 
+            // Preparar envio de push (mesma lib usada em services/index.php e communication/create.php)
+            $webPush = null;
+            $vapidPublic  = setting('vapid_public_key', '', $churchId);
+            $vapidPrivate = setting('vapid_private_key', '', $churchId);
+            $pushAutoload = __DIR__ . '/../../vendor/autoload.php';
+            if ($vapidPublic && $vapidPrivate && file_exists($pushAutoload)) {
+                require_once $pushAutoload;
+                $webPush = new \Minishlink\WebPush\WebPush([
+                    'VAPID' => [
+                        'subject'    => setting('vapid_subject', 'mailto:admin@igrejanovadimensao.com.br', $churchId),
+                        'publicKey'  => $vapidPublic,
+                        'privateKey' => $vapidPrivate,
+                    ],
+                ]);
+            }
+
             // Notificar cada membro escalado com links de one-click
             foreach ($scaledIds as $mid) {
                 $memberName = $db->query("SELECT name FROM members WHERE id=".(int)$mid)->fetchColumn();
@@ -129,6 +145,27 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                     (int)$mid,
                     auth_member_id()
                 ]);
+
+                // Enviar push de verdade se o membro tiver inscrição ativa
+                if ($webPush) {
+                    $subsStmt = $db->prepare("SELECT * FROM push_subscriptions WHERE member_id = ?");
+                    $subsStmt->execute([(int)$mid]);
+                    foreach ($subsStmt->fetchAll() as $sub) {
+                        $webPush->queueNotification(
+                            \Minishlink\WebPush\Subscription::create([
+                                'endpoint'        => $sub['endpoint'],
+                                'keys'            => ['p256dh' => $sub['p256dh'], 'auth' => $sub['auth_key']],
+                                'contentEncoding' => 'aesgcm',
+                            ]),
+                            json_encode([
+                                'title' => $tpl['title'],
+                                'body'  => "{$mn['name']} · " . date('d/m/Y', strtotime($date)),
+                                'url'   => $confirmUrl,
+                                'tag'   => 'scale-' . $activityId,
+                            ])
+                        );
+                    }
+                }
 
                 // Enviar e-mail se o membro tiver e-mail cadastrado
                 $memberEmail = $db->query("SELECT email FROM members WHERE id=".(int)$mid)->fetchColumn();
@@ -202,6 +239,16 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                     );
 
                     send_email($memberEmail, $memberName, $tpl['title'], $html, $churchId);
+                }
+            }
+
+            // Disparar todos os pushes enfileirados e limpar inscrições expiradas
+            if ($webPush) {
+                foreach ($webPush->flush() as $report) {
+                    if ($report->isSubscriptionExpired()) {
+                        $db->prepare("DELETE FROM push_subscriptions WHERE endpoint = ?")
+                           ->execute([$report->getRequest()->getUri()->__toString()]);
+                    }
                 }
             }
         }

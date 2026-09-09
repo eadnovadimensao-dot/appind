@@ -25,7 +25,7 @@ $pageTitle = $act['title'];
 
 // Escala
 $scaled = $db->prepare("
-    SELECT m.id, m.name, m.phone, mam.role, mam.confirmed
+    SELECT m.id, m.name, m.phone, mam.role, mam.confirmed, mam.status, mam.refuse_reason
     FROM ministry_activity_members mam
     JOIN members m ON m.id = mam.member_id
     WHERE mam.activity_id = ?
@@ -155,12 +155,20 @@ $at = $actTypeLabels[$act['activity_type']] ?? null;
             <th>Nome</th>
             <th>Função</th>
             <th>Telefone</th>
-            <th>Confirmado</th>
+            <th>Resposta do membro</th>
           </tr>
         </thead>
         <tbody>
+          <?php
+            $respStatusLabels = [
+                'pending'   => ['label'=>'Pendente',      'badge'=>'badge-gray'],
+                'confirmed' => ['label'=>'✓ Confirmado',  'badge'=>'badge-green'],
+                'refused'   => ['label'=>'✗ Recusou',     'badge'=>'badge-red'],
+            ];
+          ?>
           <?php foreach ($scaled as $s):
             $initials = strtoupper(implode('', array_map(fn($p) => $p[0], array_slice(explode(' ',$s['name']),0,2))));
+            $rs = $respStatusLabels[$s['status'] ?? 'pending'] ?? $respStatusLabels['pending'];
           ?>
             <tr>
               <td>
@@ -174,11 +182,17 @@ $at = $actTypeLabels[$act['activity_type']] ?? null;
               <td style="color:var(--text-muted)"><?= htmlspecialchars($s['role'] ?? '—') ?></td>
               <td style="color:var(--text-muted)"><?= htmlspecialchars($s['phone'] ?? '—') ?></td>
               <td>
-                <a href="/pages/ministries/activity_confirm.php?activity_id=<?= $id ?>&member_id=<?= $s['id'] ?>&confirmed=<?= $s['confirmed'] ? 0 : 1 ?>"
-                   class="badge <?= $s['confirmed'] ? 'badge-green' : 'badge-gray' ?>"
-                   style="cursor:pointer;text-decoration:none">
-                  <?= $s['confirmed'] ? '✓ Confirmado' : 'Pendente' ?>
+                <a href="/pages/ministries/activity_confirm.php?activity_id=<?= $id ?>&member_id=<?= $s['id'] ?>&confirmed=<?= $s['status']==='confirmed' ? 0 : 1 ?>"
+                   class="badge <?= $rs['badge'] ?>"
+                   style="cursor:pointer;text-decoration:none"
+                   title="Clique pra marcar/desmarcar manualmente (sobrescreve a resposta do membro)">
+                  <?= $rs['label'] ?>
                 </a>
+                <?php if ($s['status'] === 'refused' && $s['refuse_reason']): ?>
+                  <div style="font-size:11px;color:var(--text-muted);margin-top:4px;max-width:220px">
+                    💬 <?= htmlspecialchars($s['refuse_reason']) ?>
+                  </div>
+                <?php endif; ?>
               </td>
             </tr>
           <?php endforeach; ?>
