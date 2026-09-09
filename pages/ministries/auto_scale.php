@@ -79,6 +79,16 @@ foreach (MUSIC_ALWAYS_INCLUDE_ROLES as $role) {
 foreach (MUSIC_ROLE_COMPOSITION as $role => $needed) {
     $candidates = $pool[$role] ?? [];
 
+    // Ministros de louvor que não foram escalados como o ministro da semana
+    // entram também na disputa pelas vagas de Backing Vocal.
+    if ($role === 'Backing Vocal') {
+        $extraMinistros = array_filter(
+            $pool['Ministro(a) de Louvor'] ?? [],
+            fn($c) => !isset($assignments[$c['id']])
+        );
+        $candidates = array_merge($candidates, array_values($extraMinistros));
+    }
+
     $fresh  = array_values(array_filter($candidates, fn($c) => !in_array($c['id'], $prevMemberIds, true)));
     $recent = array_values(array_filter($candidates, fn($c) =>  in_array($c['id'], $prevMemberIds, true)));
 
