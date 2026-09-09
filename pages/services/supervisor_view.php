@@ -31,20 +31,18 @@ if ($serviceId) {
 }
 
 if (!$service) {
-    // Admin pode ver qualquer culto
-    if (!auth_can('manage_members')) {
-        header('Location: /pages/services/index.php');
-        exit;
-    }
+    // Sem culto encontrado (id inválido, ou nenhum culto futuro pro supervisor) — não há o que exibir
+    header('Location: /pages/services/index.php');
+    exit;
 }
 
 // Itens do culto
 $items = $db->prepare("
     SELECT si.*, m.name AS responsible_name
     FROM service_items si
-    LEFT JOIN members m ON m.id = si.responsible_id
+    LEFT JOIN members m ON m.id = si.member_id
     WHERE si.service_id = ?
-    ORDER BY si.order_num ASC
+    ORDER BY si.position ASC
 ");
 $items->execute([$service['id']]);
 $items = $items->fetchAll();
@@ -67,7 +65,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         $itemNotes   = $_POST['item_notes']  ?? [];
         $itemDurs    = $_POST['item_dur']    ?? [];
 
-        $si = $db->prepare("INSERT INTO service_items (service_id, order_num, name, type, responsible_id, notes, duration_minutes) VALUES (?,?,?,?,?,?,?)");
+        $si = $db->prepare("INSERT INTO service_items (service_id, position, title, type, member_id, description, duration) VALUES (?,?,?,?,?,?,?)");
         foreach ($itemNames as $i => $name) {
             if (trim($name) === '') continue;
             $si->execute([
@@ -193,7 +191,7 @@ $itemTypes = [
         <div class="item-row" style="padding:12px 18px;border-bottom:1px solid var(--border);display:grid;grid-template-columns:auto 1fr 160px 160px 80px auto;gap:10px;align-items:center">
           <div style="cursor:grab;color:var(--text-muted);font-size:18px;padding:0 4px">⠿</div>
           <input type="text" name="item_name[]" class="form-control" style="font-size:13px"
-                 placeholder="Nome do item…" value="<?= htmlspecialchars($item['name']) ?>">
+                 placeholder="Nome do item…" value="<?= htmlspecialchars($item['title'] ?? '') ?>">
           <select name="item_type[]" class="form-control" style="font-size:13px">
             <?php foreach ($itemTypes as $k => $v): ?>
               <option value="<?= $k ?>" <?= $item['type']===$k?'selected':''?>><?= $v ?></option>
@@ -202,13 +200,13 @@ $itemTypes = [
           <select name="item_resp[]" class="form-control" style="font-size:13px">
             <option value="">Responsável…</option>
             <?php foreach ($members as $m): ?>
-              <option value="<?= $m['id'] ?>" <?= $item['responsible_id']==$m['id']?'selected':''?>>
+              <option value="<?= $m['id'] ?>" <?= $item['member_id']==$m['id']?'selected':''?>>
                 <?= htmlspecialchars($m['name']) ?>
               </option>
             <?php endforeach; ?>
           </select>
           <input type="number" name="item_dur[]" class="form-control" style="font-size:13px"
-                 placeholder="min" min="1" max="120" value="<?= $item['duration_minutes'] ?>">
+                 placeholder="min" min="1" max="120" value="<?= $item['duration'] ?? '' ?>">
           <button type="button" onclick="this.closest('.item-row').remove()"
                   style="background:none;border:none;color:var(--text-muted);cursor:pointer;font-size:18px;padding:0 4px">×</button>
         </div>
