@@ -98,11 +98,80 @@ if (!$row) {
     $leadersQ->execute([$token]);
     $leaderIds = array_column($leadersQ->fetchAll(), 'member_id');
 
+    $manageUrl = APP_URL . '/pages/ministries/activity_view.php?id=' . $row['activity_id'];
+    $leaderContent = $tpl['content'] . "\n\n🔗 Substituir na escala: " . $manageUrl;
+
+    // Push em lote (mesma lib usada em outros fluxos de notificação)
+    $webPush = null;
+    $vapidPublic  = setting('vapid_public_key', '', $row['church_id']);
+    $vapidPrivate = setting('vapid_private_key', '', $row['church_id']);
+    $pushAutoload = __DIR__ . '/vendor/autoload.php';
+    if ($vapidPublic && $vapidPrivate && file_exists($pushAutoload)) {
+        require_once $pushAutoload;
+        $webPush = new \Minishlink\WebPush\WebPush([
+            'VAPID' => [
+                'subject'    => setting('vapid_subject', 'mailto:admin@igrejanovadimensao.com.br', $row['church_id']),
+                'publicKey'  => $vapidPublic,
+                'privateKey' => $vapidPrivate,
+            ],
+        ]);
+    }
+
     foreach ($leaderIds as $lid) {
         $db->prepare("
             INSERT INTO announcements (church_id, title, content, type, target_type, target_id, channels, status, created_by, sent_at)
-            VALUES (?,?,?,'general','member',?,'internal','sent',?,NOW())
-        ")->execute([$row['church_id'], $tpl['title'], $tpl['content'], $lid, $row['member_id']]);
+            VALUES (?,?,?,'general','member',?,'internal,push','sent',?,NOW())
+        ")->execute([$row['church_id'], $tpl['title'], $leaderContent, $lid, $row['member_id']]);
+
+        $leader = $db->query("SELECT name, phone, email FROM members WHERE id=" . (int)$lid)->fetch();
+
+        if ($webPush) {
+            $subs = $db->prepare("SELECT * FROM push_subscriptions WHERE member_id=?");
+            $subs->execute([$lid]);
+            foreach ($subs->fetchAll() as $sub) {
+                $webPush->queueNotification(
+                    \Minishlink\WebPush\Subscription::create([
+                        'endpoint'        => $sub['endpoint'],
+                        'keys'            => ['p256dh' => $sub['p256dh'], 'auth' => $sub['auth_key']],
+                        'contentEncoding' => 'aesgcm',
+                    ]),
+                    json_encode([
+                        'title' => $tpl['title'],
+                        'body'  => $row['member_name'] . ' não poderá participar em ' . date('d/m/Y', strtotime($row['activity_date'])),
+                        'url'   => $manageUrl,
+                        'tag'   => 'refusal-' . $row['activity_id'],
+                    ])
+                );
+            }
+        }
+
+        if (!empty($leader['phone'])) {
+            send_whatsapp($leader['phone'], $tpl['title'] . "\n\n" . $leaderContent, $row['church_id']);
+        }
+
+        if (!empty($leader['email'])) {
+            $emailBody = "
+            <div style='text-align:center;margin-bottom:24px'>
+              <div style='font-size:48px;margin-bottom:12px'>❌</div>
+              <h1 style='font-size:20px;font-weight:600;color:#1a2332;margin:0 0 8px'>" . htmlspecialchars($tpl['title']) . "</h1>
+              <p style='color:#6b7280;font-size:14px;margin:0;white-space:pre-line'>" . nl2br(htmlspecialchars($tpl['content'])) . "</p>
+            </div>
+            <p style='text-align:center;margin:0'>
+              <a href='{$manageUrl}' style='display:inline-block;background:#1D9E75;color:white;padding:12px 20px;border-radius:10px;text-decoration:none;font-size:14px;font-weight:600'>
+                Substituir na escala
+              </a>
+            </p>";
+            $html = email_template($tpl['title'], $emailBody, $row['church_id']);
+            send_email($leader['email'], $leader['name'], $tpl['title'], $html, $row['church_id']);
+        }
+    }
+
+    if ($webPush) {
+        foreach ($webPush->flush() as $report) {
+            if ($report->isSubscriptionExpired()) {
+                $db->prepare("DELETE FROM push_subscriptions WHERE endpoint=?")->execute([$report->getRequest()->getUri()->__toString()]);
+            }
+        }
     }
 
     $success = "Entendemos, {$row['member_name']}. Obrigado por avisar! 🙏";

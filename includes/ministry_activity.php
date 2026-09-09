@@ -5,6 +5,220 @@
 require_once __DIR__ . '/music_roles.php';
 
 /**
+ * Notifica UM membro já escalado (announcement interno, push real, WhatsApp e e-mail) —
+ * convite de escala normal, ou pedido de oração se a função for "sempre inclui".
+ * Reaproveitado por create_ministry_activity() (em lote) e activity_add_member.php
+ * (substituição avulsa). Se $webPush for null, cria e descarrega um cliente só pra essa
+ * pessoa; se vier de fora (lote), só enfileira — quem chamou é responsável pelo flush().
+ */
+function notify_scale_invitation(
+    PDO $db,
+    array $mn,
+    int $activityId,
+    string $title,
+    string $date,
+    ?string $timeStart,
+    int $mid,
+    string $role,
+    int $churchId,
+    int $notifiedBy,
+    ?\Minishlink\WebPush\WebPush $webPush = null
+): void {
+    $ownWebPush = false;
+    if ($webPush === null) {
+        $vapidPublic  = setting('vapid_public_key', '', $churchId);
+        $vapidPrivate = setting('vapid_private_key', '', $churchId);
+        $pushAutoload = __DIR__ . '/../vendor/autoload.php';
+        if ($vapidPublic && $vapidPrivate && file_exists($pushAutoload)) {
+            require_once $pushAutoload;
+            $webPush = new \Minishlink\WebPush\WebPush([
+                'VAPID' => [
+                    'subject'    => setting('vapid_subject', 'mailto:admin@igrejanovadimensao.com.br', $churchId),
+                    'publicKey'  => $vapidPublic,
+                    'privateKey' => $vapidPrivate,
+                ],
+            ]);
+            $ownWebPush = true;
+        }
+    }
+
+    $memberRow   = $db->query("SELECT name, phone, email FROM members WHERE id=" . $mid)->fetch();
+    $memberName  = $memberRow['name']  ?? '';
+    $memberPhone = $memberRow['phone'] ?? '';
+    $memberEmail = $memberRow['email'] ?? '';
+
+    $tokenRow = $db->prepare("SELECT confirm_token FROM ministry_activity_members WHERE activity_id=? AND member_id=?");
+    $tokenRow->execute([$activityId, $mid]);
+    $token = $tokenRow->fetchColumn();
+
+    $confirmUrl = APP_URL . '/respond.php?token=' . $token . '&action=confirm';
+    $refuseUrl  = APP_URL . '/respond.php?token=' . $token . '&action=refuse';
+    $prazo      = date('d/m/Y', strtotime($date . ' -2 days'));
+
+    $isPrayerRole = in_array(trim($role), MUSIC_ALWAYS_INCLUDE_ROLES, true);
+
+    if ($isPrayerRole) {
+        $tpl = notification_template('scale_prayer_request', [
+            'nome'       => $memberName,
+            'ministerio' => $mn['name'],
+            'data'       => date('d/m/Y (l)', strtotime($date)),
+        ], $churchId);
+        $fullContent = $tpl['content'];
+    } else {
+        $tpl = notification_template('scale_invited', [
+            'nome'       => $memberName,
+            'ministerio' => $mn['name'],
+            'data'       => date('d/m/Y (l)', strtotime($date)),
+            'prazo'      => $prazo,
+        ], $churchId);
+        $fullContent = $tpl['content']
+            . "\n\n✅ Confirmar presença: $confirmUrl"
+            . "\n❌ Não posso ir: $refuseUrl";
+    }
+
+    $db->prepare("
+        INSERT INTO announcements (church_id, title, content, type, target_type, target_id, channels, status, created_by, sent_at)
+        VALUES (?,?,?,'general','member',?,'internal,push','sent',?,NOW())
+    ")->execute([$churchId, $tpl['title'], $fullContent, $mid, $notifiedBy]);
+
+    if ($webPush) {
+        $subsStmt = $db->prepare("SELECT * FROM push_subscriptions WHERE member_id = ?");
+        $subsStmt->execute([$mid]);
+        foreach ($subsStmt->fetchAll() as $sub) {
+            $webPush->queueNotification(
+                \Minishlink\WebPush\Subscription::create([
+                    'endpoint'        => $sub['endpoint'],
+                    'keys'            => ['p256dh' => $sub['p256dh'], 'auth' => $sub['auth_key']],
+                    'contentEncoding' => 'aesgcm',
+                ]),
+                json_encode([
+                    'title' => $tpl['title'],
+                    'body'  => "{$mn['name']} · " . date('d/m/Y', strtotime($date)),
+                    'url'   => $isPrayerRole ? APP_URL . '/pages/ministries/activity_view.php?id=' . $activityId : $confirmUrl,
+                    'tag'   => 'scale-' . $activityId,
+                ])
+            );
+        }
+    }
+
+    if ($memberPhone) {
+        send_whatsapp($memberPhone, $tpl['title'] . "\n\n" . $fullContent, $churchId);
+    }
+
+    if ($memberEmail) {
+        $accentColor   = setting('accent_color',  '#1D9E75', $churchId);
+        $dateFormatted = date('d/m/Y', strtotime($date));
+        $dayName = ['Sunday'=>'Domingo','Monday'=>'Segunda-feira','Tuesday'=>'Terça-feira',
+                    'Wednesday'=>'Quarta-feira','Thursday'=>'Quinta-feira',
+                    'Friday'=>'Sexta-feira','Saturday'=>'Sábado'][date('l', strtotime($date))] ?? '';
+
+        if ($isPrayerRole) {
+            $emailBody = "
+            <div style='text-align:center;margin-bottom:28px'>
+              <div style='font-size:48px;margin-bottom:12px'>🙏</div>
+              <h1 style='font-size:22px;font-weight:600;color:#1a2332;margin:0 0 8px'>{$tpl['title']}</h1>
+              <p style='color:#6b7280;font-size:15px;margin:0'>Olá, <strong style='color:#1a2332'>{$memberName}</strong>!</p>
+            </div>
+
+            <table width='100%' cellpadding='0' cellspacing='0' style='background:#f9fafb;border-radius:12px;margin-bottom:28px'>
+              <tr><td style='padding:20px'>
+                <table width='100%' cellpadding='0' cellspacing='0'>
+                  <tr>
+                    <td style='padding:6px 0'>
+                      <span style='font-size:11px;color:#9ca3af;text-transform:uppercase;letter-spacing:.06em'>Ministério</span><br>
+                      <strong style='color:#1a2332;font-size:15px'>" . htmlspecialchars($mn['name']) . "</strong>
+                    </td>
+                  </tr>
+                  <tr><td style='padding:6px 0;border-top:1px solid #e5e7eb'>
+                    <span style='font-size:11px;color:#9ca3af;text-transform:uppercase;letter-spacing:.06em'>Atividade</span><br>
+                    <strong style='color:#1a2332;font-size:15px'>" . htmlspecialchars($title) . "</strong>
+                  </td></tr>
+                  <tr><td style='padding:6px 0;border-top:1px solid #e5e7eb'>
+                    <span style='font-size:11px;color:#9ca3af;text-transform:uppercase;letter-spacing:.06em'>Data</span><br>
+                    <strong style='color:#1a2332;font-size:15px'>{$dayName}, {$dateFormatted}</strong>
+                  </td></tr>
+                </table>
+              </td></tr>
+            </table>
+
+            <p style='color:#6b7280;font-size:14px;text-align:center;line-height:1.6;white-space:pre-line'>" . htmlspecialchars($tpl['content']) . "</p>";
+        } else {
+            $emailBody = "
+            <div style='text-align:center;margin-bottom:28px'>
+              <div style='font-size:48px;margin-bottom:12px'>🎵</div>
+              <h1 style='font-size:22px;font-weight:600;color:#1a2332;margin:0 0 8px'>{$tpl['title']}</h1>
+              <p style='color:#6b7280;font-size:15px;margin:0'>Olá, <strong style='color:#1a2332'>{$memberName}</strong>! Você foi escalado(a).</p>
+            </div>
+
+            <table width='100%' cellpadding='0' cellspacing='0' style='background:#f9fafb;border-radius:12px;margin-bottom:28px'>
+              <tr><td style='padding:20px'>
+                <table width='100%' cellpadding='0' cellspacing='0'>
+                  <tr>
+                    <td style='padding:6px 0'>
+                      <span style='font-size:11px;color:#9ca3af;text-transform:uppercase;letter-spacing:.06em'>Ministério</span><br>
+                      <strong style='color:#1a2332;font-size:15px'>" . htmlspecialchars($mn['name']) . "</strong>
+                    </td>
+                  </tr>
+                  <tr><td style='padding:6px 0;border-top:1px solid #e5e7eb'>
+                    <span style='font-size:11px;color:#9ca3af;text-transform:uppercase;letter-spacing:.06em'>Atividade</span><br>
+                    <strong style='color:#1a2332;font-size:15px'>" . htmlspecialchars($title) . "</strong>
+                  </td></tr>
+                  <tr><td style='padding:6px 0;border-top:1px solid #e5e7eb'>
+                    <span style='font-size:11px;color:#9ca3af;text-transform:uppercase;letter-spacing:.06em'>Data</span><br>
+                    <strong style='color:#1a2332;font-size:15px'>{$dayName}, {$dateFormatted}</strong>
+                  </td></tr>
+                  " . ($timeStart ? "<tr><td style='padding:6px 0;border-top:1px solid #e5e7eb'>
+                    <span style='font-size:11px;color:#9ca3af;text-transform:uppercase;letter-spacing:.06em'>Horário</span><br>
+                    <strong style='color:#1a2332;font-size:15px'>" . substr($timeStart,0,5) . "</strong>
+                  </td></tr>" : "") . "
+                </table>
+              </td></tr>
+            </table>
+
+            <p style='color:#6b7280;font-size:14px;text-align:center;margin-bottom:20px'>
+              ⏰ Prazo para responder: <strong style='color:#1a2332'>{$prazo}</strong>
+            </p>
+
+            <table width='100%' cellpadding='0' cellspacing='0' style='margin-bottom:16px'>
+              <tr>
+                <td style='padding-right:6px'>
+                  <a href='{$confirmUrl}' style='display:block;text-align:center;background:{$accentColor};color:white;padding:14px;border-radius:10px;text-decoration:none;font-size:15px;font-weight:600'>
+                    ✅ Confirmar presença
+                  </a>
+                </td>
+                <td style='padding-left:6px'>
+                  <a href='{$refuseUrl}' style='display:block;text-align:center;background:#f3f4f6;color:#374151;padding:14px;border-radius:10px;text-decoration:none;font-size:15px;font-weight:600'>
+                    ❌ Não posso ir
+                  </a>
+                </td>
+              </tr>
+            </table>
+
+            <p style='color:#9ca3af;font-size:12px;text-align:center;margin:0'>
+              Sua resposta ajuda a equipe a se organizar melhor. Obrigado! 🙏
+            </p>";
+        }
+
+        $html = email_template(
+            $tpl['title'] . " · {$mn['name']} em {$dateFormatted}",
+            $emailBody,
+            $churchId
+        );
+
+        send_email($memberEmail, $memberName, $tpl['title'], $html, $churchId);
+    }
+
+    if ($ownWebPush && $webPush) {
+        foreach ($webPush->flush() as $report) {
+            if ($report->isSubscriptionExpired()) {
+                $db->prepare("DELETE FROM push_subscriptions WHERE endpoint = ?")
+                   ->execute([$report->getRequest()->getUri()->__toString()]);
+            }
+        }
+    }
+}
+
+/**
  * Cria uma atividade de ministério, escala os membros informados, salva o
  * repertório e notifica cada escalado (anúncio interno, push real e e-mail).
  * Também integra com a agenda quando há horário de término.
@@ -75,7 +289,7 @@ function create_ministry_activity(
             $ss->execute([$activityId, (int)$mid, $role ?: null, $token, $expires]);
         }
 
-        // Preparar envio de push (mesma lib usada em services/index.php e communication/create.php)
+        // Preparar envio de push em lote (mesma lib usada em services/index.php e communication/create.php)
         $webPush = null;
         $vapidPublic  = setting('vapid_public_key', '', $churchId);
         $vapidPrivate = setting('vapid_private_key', '', $churchId);
@@ -92,182 +306,10 @@ function create_ministry_activity(
         }
 
         foreach ($scaledIds as $mid) {
-            $memberRow  = $db->query("SELECT name, phone FROM members WHERE id=".(int)$mid)->fetch();
-            $memberName = $memberRow['name']  ?? '';
-            $memberPhone= $memberRow['phone'] ?? '';
-
-            $tokenRow = $db->prepare("SELECT confirm_token FROM ministry_activity_members WHERE activity_id=? AND member_id=?");
-            $tokenRow->execute([$activityId, (int)$mid]);
-            $token = $tokenRow->fetchColumn();
-
-            $confirmUrl = APP_URL . '/respond.php?token=' . $token . '&action=confirm';
-            $refuseUrl  = APP_URL . '/respond.php?token=' . $token . '&action=refuse';
-            $prazo      = date('d/m/Y', strtotime($date . ' -2 days'));
-
-            // Funções "sempre inclui" (ex: Pastor(a) da Base de Adoração) recebem um
-            // pedido de oração pela equipe em vez do convite com confirmar/recusar presença.
-            $isPrayerRole = in_array(trim($roles[$mid] ?? ''), MUSIC_ALWAYS_INCLUDE_ROLES, true);
-
-            if ($isPrayerRole) {
-                $tpl = notification_template('scale_prayer_request', [
-                    'nome'       => $memberName,
-                    'ministerio' => $mn['name'],
-                    'data'       => date('d/m/Y (l)', strtotime($date)),
-                ], $churchId);
-                $fullContent = $tpl['content'];
-            } else {
-                $tpl = notification_template('scale_invited', [
-                    'nome'       => $memberName,
-                    'ministerio' => $mn['name'],
-                    'data'       => date('d/m/Y (l)', strtotime($date)),
-                    'prazo'      => $prazo,
-                ], $churchId);
-                $fullContent = $tpl['content']
-                    . "\n\n✅ Confirmar presença: $confirmUrl"
-                    . "\n❌ Não posso ir: $refuseUrl";
-            }
-
-            $db->prepare("
-                INSERT INTO announcements (church_id, title, content, type, target_type, target_id, channels, status, created_by, sent_at)
-                VALUES (?,?,?,'general','member',?,'internal,push','sent',?,NOW())
-            ")->execute([
-                $churchId,
-                $tpl['title'],
-                $fullContent,
-                (int)$mid,
-                $createdBy
-            ]);
-
-            // Push real
-            if ($webPush) {
-                $subsStmt = $db->prepare("SELECT * FROM push_subscriptions WHERE member_id = ?");
-                $subsStmt->execute([(int)$mid]);
-                foreach ($subsStmt->fetchAll() as $sub) {
-                    $webPush->queueNotification(
-                        \Minishlink\WebPush\Subscription::create([
-                            'endpoint'        => $sub['endpoint'],
-                            'keys'            => ['p256dh' => $sub['p256dh'], 'auth' => $sub['auth_key']],
-                            'contentEncoding' => 'aesgcm',
-                        ]),
-                        json_encode([
-                            'title' => $tpl['title'],
-                            'body'  => "{$mn['name']} · " . date('d/m/Y', strtotime($date)),
-                            'url'   => $isPrayerRole ? APP_URL . '/pages/ministries/activity_view.php?id=' . $activityId : $confirmUrl,
-                            'tag'   => 'scale-' . $activityId,
-                        ])
-                    );
-                }
-            }
-
-            // WhatsApp (Z-API)
-            if ($memberPhone) {
-                send_whatsapp($memberPhone, $tpl['title'] . "\n\n" . $fullContent, $churchId);
-            }
-
-            // E-mail
-            $memberEmail = $db->query("SELECT email FROM members WHERE id=".(int)$mid)->fetchColumn();
-            if ($memberEmail) {
-                $accentColor   = setting('accent_color',  '#1D9E75', $churchId);
-                $dateFormatted = date('d/m/Y', strtotime($date));
-                $dayName = ['Sunday'=>'Domingo','Monday'=>'Segunda-feira','Tuesday'=>'Terça-feira',
-                            'Wednesday'=>'Quarta-feira','Thursday'=>'Quinta-feira',
-                            'Friday'=>'Sexta-feira','Saturday'=>'Sábado'][date('l', strtotime($date))] ?? '';
-
-                if ($isPrayerRole) {
-                    $emailBody = "
-                    <div style='text-align:center;margin-bottom:28px'>
-                      <div style='font-size:48px;margin-bottom:12px'>🙏</div>
-                      <h1 style='font-size:22px;font-weight:600;color:#1a2332;margin:0 0 8px'>{$tpl['title']}</h1>
-                      <p style='color:#6b7280;font-size:15px;margin:0'>Olá, <strong style='color:#1a2332'>{$memberName}</strong>!</p>
-                    </div>
-
-                    <table width='100%' cellpadding='0' cellspacing='0' style='background:#f9fafb;border-radius:12px;margin-bottom:28px'>
-                      <tr><td style='padding:20px'>
-                        <table width='100%' cellpadding='0' cellspacing='0'>
-                          <tr>
-                            <td style='padding:6px 0'>
-                              <span style='font-size:11px;color:#9ca3af;text-transform:uppercase;letter-spacing:.06em'>Ministério</span><br>
-                              <strong style='color:#1a2332;font-size:15px'>" . htmlspecialchars($mn['name']) . "</strong>
-                            </td>
-                          </tr>
-                          <tr><td style='padding:6px 0;border-top:1px solid #e5e7eb'>
-                            <span style='font-size:11px;color:#9ca3af;text-transform:uppercase;letter-spacing:.06em'>Atividade</span><br>
-                            <strong style='color:#1a2332;font-size:15px'>" . htmlspecialchars($title) . "</strong>
-                          </td></tr>
-                          <tr><td style='padding:6px 0;border-top:1px solid #e5e7eb'>
-                            <span style='font-size:11px;color:#9ca3af;text-transform:uppercase;letter-spacing:.06em'>Data</span><br>
-                            <strong style='color:#1a2332;font-size:15px'>{$dayName}, {$dateFormatted}</strong>
-                          </td></tr>
-                        </table>
-                      </td></tr>
-                    </table>
-
-                    <p style='color:#6b7280;font-size:14px;text-align:center;line-height:1.6;white-space:pre-line'>" . htmlspecialchars($tpl['content']) . "</p>";
-                } else {
-                    $emailBody = "
-                    <div style='text-align:center;margin-bottom:28px'>
-                      <div style='font-size:48px;margin-bottom:12px'>🎵</div>
-                      <h1 style='font-size:22px;font-weight:600;color:#1a2332;margin:0 0 8px'>{$tpl['title']}</h1>
-                      <p style='color:#6b7280;font-size:15px;margin:0'>Olá, <strong style='color:#1a2332'>{$memberName}</strong>! Você foi escalado(a).</p>
-                    </div>
-
-                    <table width='100%' cellpadding='0' cellspacing='0' style='background:#f9fafb;border-radius:12px;margin-bottom:28px'>
-                      <tr><td style='padding:20px'>
-                        <table width='100%' cellpadding='0' cellspacing='0'>
-                          <tr>
-                            <td style='padding:6px 0'>
-                              <span style='font-size:11px;color:#9ca3af;text-transform:uppercase;letter-spacing:.06em'>Ministério</span><br>
-                              <strong style='color:#1a2332;font-size:15px'>" . htmlspecialchars($mn['name']) . "</strong>
-                            </td>
-                          </tr>
-                          <tr><td style='padding:6px 0;border-top:1px solid #e5e7eb'>
-                            <span style='font-size:11px;color:#9ca3af;text-transform:uppercase;letter-spacing:.06em'>Atividade</span><br>
-                            <strong style='color:#1a2332;font-size:15px'>" . htmlspecialchars($title) . "</strong>
-                          </td></tr>
-                          <tr><td style='padding:6px 0;border-top:1px solid #e5e7eb'>
-                            <span style='font-size:11px;color:#9ca3af;text-transform:uppercase;letter-spacing:.06em'>Data</span><br>
-                            <strong style='color:#1a2332;font-size:15px'>{$dayName}, {$dateFormatted}</strong>
-                          </td></tr>
-                          " . ($timeStart ? "<tr><td style='padding:6px 0;border-top:1px solid #e5e7eb'>
-                            <span style='font-size:11px;color:#9ca3af;text-transform:uppercase;letter-spacing:.06em'>Horário</span><br>
-                            <strong style='color:#1a2332;font-size:15px'>" . substr($timeStart,0,5) . "</strong>
-                          </td></tr>" : "") . "
-                        </table>
-                      </td></tr>
-                    </table>
-
-                    <p style='color:#6b7280;font-size:14px;text-align:center;margin-bottom:20px'>
-                      ⏰ Prazo para responder: <strong style='color:#1a2332'>{$prazo}</strong>
-                    </p>
-
-                    <table width='100%' cellpadding='0' cellspacing='0' style='margin-bottom:16px'>
-                      <tr>
-                        <td style='padding-right:6px'>
-                          <a href='{$confirmUrl}' style='display:block;text-align:center;background:{$accentColor};color:white;padding:14px;border-radius:10px;text-decoration:none;font-size:15px;font-weight:600'>
-                            ✅ Confirmar presença
-                          </a>
-                        </td>
-                        <td style='padding-left:6px'>
-                          <a href='{$refuseUrl}' style='display:block;text-align:center;background:#f3f4f6;color:#374151;padding:14px;border-radius:10px;text-decoration:none;font-size:15px;font-weight:600'>
-                            ❌ Não posso ir
-                          </a>
-                        </td>
-                      </tr>
-                    </table>
-
-                    <p style='color:#9ca3af;font-size:12px;text-align:center;margin:0'>
-                      Sua resposta ajuda a equipe a se organizar melhor. Obrigado! 🙏
-                    </p>";
-                }
-
-                $html = email_template(
-                    $tpl['title'] . " · {$mn['name']} em {$dateFormatted}",
-                    $emailBody,
-                    $churchId
-                );
-
-                send_email($memberEmail, $memberName, $tpl['title'], $html, $churchId);
-            }
+            notify_scale_invitation(
+                $db, $mn, $activityId, $title, $date, $timeStart,
+                (int)$mid, trim($roles[$mid] ?? ''), $churchId, $createdBy, $webPush
+            );
         }
 
         // Disparar todos os pushes enfileirados e limpar inscrições expiradas

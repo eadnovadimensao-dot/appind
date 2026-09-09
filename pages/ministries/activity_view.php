@@ -1,6 +1,7 @@
 <?php
 require_once __DIR__ . "/../../config/database.php";
 require_once __DIR__ . "/../../includes/auth.php";
+require_once __DIR__ . "/../../includes/music_roles.php";
 auth_check();
 $db       = db();
 $churchId = current_church_id();
@@ -22,6 +23,7 @@ require_once __DIR__ . '/../../includes/layout.php';
 
 
 $pageTitle = $act['title'];
+$isMusic   = is_music_ministry($act['ministry_name']);
 
 // Escala
 $scaled = $db->prepare("
@@ -33,6 +35,18 @@ $scaled = $db->prepare("
 ");
 $scaled->execute([$id]);
 $scaled = $scaled->fetchAll();
+
+// Membros do ministério que ainda não estão nessa escala (pra substituição/adição)
+$available = $db->prepare("
+    SELECT m.id, m.name, mm.role AS default_role
+    FROM member_ministries mm
+    JOIN members m ON m.id = mm.member_id
+    WHERE mm.ministry_id = ? AND m.church_id = ?
+      AND m.id NOT IN (SELECT member_id FROM ministry_activity_members WHERE activity_id = ?)
+    ORDER BY m.name
+");
+$available->execute([$act['ministry_id'], $act['church_id'], $id]);
+$available = $available->fetchAll();
 
 // Repertório
 $songs = $db->prepare("SELECT * FROM ministry_activity_songs WHERE activity_id = ? ORDER BY position, id");
@@ -145,7 +159,42 @@ $at = $actTypeLabels[$act['activity_type']] ?? null;
 <div class="card" style="padding:0">
   <div style="padding:14px 18px;border-bottom:1px solid var(--border);display:flex;justify-content:space-between;align-items:center">
     <p style="font-weight:500;font-size:14px">Escala <span style="color:var(--text-muted);font-weight:400">(<?= count($scaled) ?> pessoas)</span></p>
+    <?php if ($act['status'] === 'scheduled' && !empty($available)): ?>
+      <button onclick="var f=document.getElementById('add-scale-form');f.style.display=f.style.display==='none'?'flex':'none'"
+              class="btn btn-secondary" style="font-size:12px;padding:5px 12px">+ Adicionar / Substituir</button>
+    <?php endif; ?>
   </div>
+  <?php if ($act['status'] === 'scheduled' && !empty($available)): ?>
+    <form method="POST" action="/pages/ministries/activity_add_member.php" id="add-scale-form"
+          style="display:none;gap:8px;align-items:flex-end;flex-wrap:wrap;padding:12px 18px;border-bottom:1px solid var(--border);background:#fafafa">
+      <input type="hidden" name="activity_id" value="<?= $id ?>">
+      <div style="flex:1;min-width:180px">
+        <label class="form-label">Membro</label>
+        <select name="member_id" class="form-control" id="add-scale-member" onchange="document.getElementById('add-scale-role').value=this.selectedOptions[0].dataset.role||''">
+          <option value="">Selecione…</option>
+          <?php foreach ($available as $av): ?>
+            <option value="<?= $av['id'] ?>" data-role="<?= htmlspecialchars($av['default_role'] ?? '') ?>">
+              <?= htmlspecialchars($av['name']) ?><?= $av['default_role'] ? ' · ' . htmlspecialchars($av['default_role']) : '' ?>
+            </option>
+          <?php endforeach; ?>
+        </select>
+      </div>
+      <div style="flex:1;min-width:160px">
+        <label class="form-label">Função</label>
+        <?php if ($isMusic): ?>
+          <select name="role" class="form-control" id="add-scale-role">
+            <option value="">Selecione…</option>
+            <?php foreach (MUSIC_ROLE_OPTIONS as $opt): ?>
+              <option value="<?= htmlspecialchars($opt) ?>"><?= htmlspecialchars($opt) ?></option>
+            <?php endforeach; ?>
+          </select>
+        <?php else: ?>
+          <input type="text" name="role" class="form-control" id="add-scale-role" placeholder="Função…">
+        <?php endif; ?>
+      </div>
+      <button type="submit" class="btn btn-primary" style="margin-bottom:16px">Escalar</button>
+    </form>
+  <?php endif; ?>
   <?php if (empty($scaled)): ?>
     <div class="empty-state" style="padding:24px">Nenhuma pessoa escalada.</div>
   <?php else: ?>
