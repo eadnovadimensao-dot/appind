@@ -86,6 +86,7 @@ $at = $actTypeLabels[$act['activity_type']] ?? null;
     <!-- Ações de status -->
     <div style="display:flex;gap:8px;flex-wrap:wrap">
       <?php if ($act['status'] === 'scheduled'): ?>
+        <a href="/pages/ministries/activity_edit.php?id=<?= $id ?>" class="btn btn-secondary">✎ Editar</a>
         <a href="/pages/ministries/activity_status.php?id=<?= $id ?>&status=done"
            class="btn btn-primary"
            data-confirm="Marcar esta atividade como realizada?">✓ Realizada</a>

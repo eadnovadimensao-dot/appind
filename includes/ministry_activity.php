@@ -296,6 +296,151 @@ function create_ministry_activity(
 }
 
 /**
+ * Notifica quem já está escalado que a atividade foi remarcada (nova data/horário/local).
+ * Membros normais recebem token novo e voltam pra 'pending' (precisam confirmar de
+ * novo pra nova data); funções "sempre inclui" (ex: Pastor da Base) só recebem o aviso
+ * com a nova data, sem precisar responder. Usado por activity_edit.php quando a data muda.
+ */
+function notify_activity_rescheduled(
+    PDO $db,
+    array $mn,
+    int $activityId,
+    string $title,
+    string $newDate,
+    ?string $timeStart,
+    ?string $location,
+    int $churchId,
+    int $editedBy
+): void {
+    $scaled = $db->prepare("SELECT member_id, role FROM ministry_activity_members WHERE activity_id = ?");
+    $scaled->execute([$activityId]);
+    $rows = $scaled->fetchAll();
+    if (empty($rows)) return;
+
+    $webPush = null;
+    $vapidPublic  = setting('vapid_public_key', '', $churchId);
+    $vapidPrivate = setting('vapid_private_key', '', $churchId);
+    $pushAutoload = __DIR__ . '/../vendor/autoload.php';
+    if ($vapidPublic && $vapidPrivate && file_exists($pushAutoload)) {
+        require_once $pushAutoload;
+        $webPush = new \Minishlink\WebPush\WebPush([
+            'VAPID' => [
+                'subject'    => setting('vapid_subject', 'mailto:admin@igrejanovadimensao.com.br', $churchId),
+                'publicKey'  => $vapidPublic,
+                'privateKey' => $vapidPrivate,
+            ],
+        ]);
+    }
+
+    $viewUrl = APP_URL . '/pages/ministries/activity_view.php?id=' . $activityId;
+
+    foreach ($rows as $row) {
+        $mid          = (int)$row['member_id'];
+        $isPrayerRole = in_array(trim($row['role'] ?? ''), MUSIC_ALWAYS_INCLUDE_ROLES, true);
+        $memberName   = $db->query("SELECT name FROM members WHERE id=" . $mid)->fetchColumn();
+
+        if ($isPrayerRole) {
+            $tpl = notification_template('scale_prayer_request', [
+                'nome'       => $memberName,
+                'ministerio' => $mn['name'],
+                'data'       => date('d/m/Y (l)', strtotime($newDate)),
+            ], $churchId);
+            $fullContent = $tpl['content'];
+            $ctaUrl      = $viewUrl;
+        } else {
+            // Nova data invalida a resposta anterior — gera token novo e volta pra pendente
+            $newToken   = bin2hex(random_bytes(32));
+            $newExpires = date('Y-m-d H:i:s', strtotime($newDate . ' -2 days'));
+            $db->prepare("
+                UPDATE ministry_activity_members
+                SET status='pending', confirmed=0, refuse_reason=NULL, responded_at=NULL,
+                    confirm_token=?, token_expires_at=?, notified_at=NOW()
+                WHERE activity_id=? AND member_id=?
+            ")->execute([$newToken, $newExpires, $activityId, $mid]);
+
+            $confirmUrl = APP_URL . '/respond.php?token=' . $newToken . '&action=confirm';
+            $refuseUrl  = APP_URL . '/respond.php?token=' . $newToken . '&action=refuse';
+
+            $tpl = notification_template('scale_rescheduled', [
+                'nome'       => $memberName,
+                'ministerio' => $mn['name'],
+                'data'       => date('d/m/Y (l)', strtotime($newDate)),
+                'prazo'      => date('d/m/Y', strtotime($newDate . ' -2 days')),
+            ], $churchId);
+            $fullContent = $tpl['content']
+                . "\n\n✅ Confirmar presença: $confirmUrl"
+                . "\n❌ Não posso ir: $refuseUrl";
+            $ctaUrl = $confirmUrl;
+        }
+
+        $db->prepare("
+            INSERT INTO announcements (church_id, title, content, type, target_type, target_id, channels, status, created_by, sent_at)
+            VALUES (?,?,?,'general','member',?,'internal,push','sent',?,NOW())
+        ")->execute([$churchId, $tpl['title'], $fullContent, $mid, $editedBy]);
+
+        if ($webPush) {
+            $subsStmt = $db->prepare("SELECT * FROM push_subscriptions WHERE member_id = ?");
+            $subsStmt->execute([$mid]);
+            foreach ($subsStmt->fetchAll() as $sub) {
+                $webPush->queueNotification(
+                    \Minishlink\WebPush\Subscription::create([
+                        'endpoint'        => $sub['endpoint'],
+                        'keys'            => ['p256dh' => $sub['p256dh'], 'auth' => $sub['auth_key']],
+                        'contentEncoding' => 'aesgcm',
+                    ]),
+                    json_encode([
+                        'title' => $tpl['title'],
+                        'body'  => "{$mn['name']} · " . date('d/m/Y', strtotime($newDate)),
+                        'url'   => $ctaUrl,
+                        'tag'   => 'reschedule-' . $activityId,
+                    ])
+                );
+            }
+        }
+
+        $memberEmail = $db->query("SELECT email FROM members WHERE id=" . $mid)->fetchColumn();
+        if ($memberEmail) {
+            $emailBody = "
+            <div style='text-align:center;margin-bottom:24px'>
+              <div style='font-size:48px;margin-bottom:12px'>🔄</div>
+              <h1 style='font-size:20px;font-weight:600;color:#1a2332;margin:0 0 8px'>" . htmlspecialchars($tpl['title']) . "</h1>
+              <p style='color:#6b7280;font-size:14px;margin:0;white-space:pre-line'>" . nl2br(htmlspecialchars($tpl['content'])) . "</p>
+            </div>";
+
+            if (!$isPrayerRole) {
+                $emailBody .= "
+                <table width='100%' cellpadding='0' cellspacing='0' style='margin-top:20px'>
+                  <tr>
+                    <td style='padding-right:6px'>
+                      <a href='{$confirmUrl}' style='display:block;text-align:center;background:" . htmlspecialchars(setting('accent_color', '#1D9E75', $churchId)) . ";color:white;padding:14px;border-radius:10px;text-decoration:none;font-size:15px;font-weight:600'>
+                        ✅ Confirmar presença
+                      </a>
+                    </td>
+                    <td style='padding-left:6px'>
+                      <a href='{$refuseUrl}' style='display:block;text-align:center;background:#f3f4f6;color:#374151;padding:14px;border-radius:10px;text-decoration:none;font-size:15px;font-weight:600'>
+                        ❌ Não posso ir
+                      </a>
+                    </td>
+                  </tr>
+                </table>";
+            }
+
+            $html = email_template($tpl['title'] . " · {$mn['name']}", $emailBody, $churchId);
+            send_email($memberEmail, $memberName, $tpl['title'], $html, $churchId);
+        }
+    }
+
+    if ($webPush) {
+        foreach ($webPush->flush() as $report) {
+            if ($report->isSubscriptionExpired()) {
+                $db->prepare("DELETE FROM push_subscriptions WHERE endpoint = ?")
+                   ->execute([$report->getRequest()->getUri()->__toString()]);
+            }
+        }
+    }
+}
+
+/**
  * Data (Y-m-d) da última ocorrência de $weekday estritamente ANTES de $baseDate.
  * $weekday: 'monday'..'sunday'. Usado pra achar "a sexta-feira antes deste domingo".
  */

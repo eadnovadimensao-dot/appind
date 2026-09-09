@@ -8,6 +8,7 @@ $churchId = current_church_id();
 
 $typeLabels = [
     'scale_invited'       => '🎵 Convite de escala',
+    'scale_rescheduled'   => '🔄 Escala remarcada (nova data)',
     'scale_prayer_request'=> '🙏 Pedido de oração (funções sem rodízio)',
     'scale_confirmed'     => '✅ Confirmação de escala',
     'scale_refused'       => '❌ Recusa de escala',
@@ -21,6 +22,7 @@ $typeLabels = [
 
 $typeVars = [
     'scale_invited'       => '{nome}, {ministerio}, {data}, {prazo}',
+    'scale_rescheduled'   => '{nome}, {ministerio}, {data}, {prazo}',
     'scale_prayer_request'=> '{nome}, {ministerio}, {data}',
     'scale_confirmed'     => '{nome}, {ministerio}, {data}',
     'scale_refused'       => '{nome}, {ministerio}, {data}, {motivo}',
