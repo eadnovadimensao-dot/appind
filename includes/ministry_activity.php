@@ -2,6 +2,7 @@
 // Criação + notificação de atividades de ministério (culto/ensaio/etc).
 // Extraído de pages/ministries/activity_create.php pra poder ser reaproveitado
 // na geração automática do ensaio-espelho de uma escala de culto.
+require_once __DIR__ . '/music_roles.php';
 
 /**
  * Cria uma atividade de ministério, escala os membros informados, salva o
@@ -101,16 +102,28 @@ function create_ministry_activity(
             $refuseUrl  = APP_URL . '/respond.php?token=' . $token . '&action=refuse';
             $prazo      = date('d/m/Y', strtotime($date . ' -2 days'));
 
-            $tpl = notification_template('scale_invited', [
-                'nome'       => $memberName,
-                'ministerio' => $mn['name'],
-                'data'       => date('d/m/Y (l)', strtotime($date)),
-                'prazo'      => $prazo,
-            ], $churchId);
+            // Funções "sempre inclui" (ex: Pastor(a) da Base de Adoração) recebem um
+            // pedido de oração pela equipe em vez do convite com confirmar/recusar presença.
+            $isPrayerRole = in_array(trim($roles[$mid] ?? ''), MUSIC_ALWAYS_INCLUDE_ROLES, true);
 
-            $fullContent = $tpl['content']
-                . "\n\n✅ Confirmar presença: $confirmUrl"
-                . "\n❌ Não posso ir: $refuseUrl";
+            if ($isPrayerRole) {
+                $tpl = notification_template('scale_prayer_request', [
+                    'nome'       => $memberName,
+                    'ministerio' => $mn['name'],
+                    'data'       => date('d/m/Y (l)', strtotime($date)),
+                ], $churchId);
+                $fullContent = $tpl['content'];
+            } else {
+                $tpl = notification_template('scale_invited', [
+                    'nome'       => $memberName,
+                    'ministerio' => $mn['name'],
+                    'data'       => date('d/m/Y (l)', strtotime($date)),
+                    'prazo'      => $prazo,
+                ], $churchId);
+                $fullContent = $tpl['content']
+                    . "\n\n✅ Confirmar presença: $confirmUrl"
+                    . "\n❌ Não posso ir: $refuseUrl";
+            }
 
             $db->prepare("
                 INSERT INTO announcements (church_id, title, content, type, target_type, target_id, channels, status, created_by, sent_at)
@@ -137,7 +150,7 @@ function create_ministry_activity(
                         json_encode([
                             'title' => $tpl['title'],
                             'body'  => "{$mn['name']} · " . date('d/m/Y', strtotime($date)),
-                            'url'   => $confirmUrl,
+                            'url'   => $isPrayerRole ? APP_URL . '/pages/ministries/activity_view.php?id=' . $activityId : $confirmUrl,
                             'tag'   => 'scale-' . $activityId,
                         ])
                     );
@@ -153,63 +166,95 @@ function create_ministry_activity(
                             'Wednesday'=>'Quarta-feira','Thursday'=>'Quinta-feira',
                             'Friday'=>'Sexta-feira','Saturday'=>'Sábado'][date('l', strtotime($date))] ?? '';
 
-                $emailBody = "
-                <div style='text-align:center;margin-bottom:28px'>
-                  <div style='font-size:48px;margin-bottom:12px'>🎵</div>
-                  <h1 style='font-size:22px;font-weight:600;color:#1a2332;margin:0 0 8px'>{$tpl['title']}</h1>
-                  <p style='color:#6b7280;font-size:15px;margin:0'>Olá, <strong style='color:#1a2332'>{$memberName}</strong>! Você foi escalado(a).</p>
-                </div>
+                if ($isPrayerRole) {
+                    $emailBody = "
+                    <div style='text-align:center;margin-bottom:28px'>
+                      <div style='font-size:48px;margin-bottom:12px'>🙏</div>
+                      <h1 style='font-size:22px;font-weight:600;color:#1a2332;margin:0 0 8px'>{$tpl['title']}</h1>
+                      <p style='color:#6b7280;font-size:15px;margin:0'>Olá, <strong style='color:#1a2332'>{$memberName}</strong>!</p>
+                    </div>
 
-                <table width='100%' cellpadding='0' cellspacing='0' style='background:#f9fafb;border-radius:12px;margin-bottom:28px'>
-                  <tr><td style='padding:20px'>
-                    <table width='100%' cellpadding='0' cellspacing='0'>
+                    <table width='100%' cellpadding='0' cellspacing='0' style='background:#f9fafb;border-radius:12px;margin-bottom:28px'>
+                      <tr><td style='padding:20px'>
+                        <table width='100%' cellpadding='0' cellspacing='0'>
+                          <tr>
+                            <td style='padding:6px 0'>
+                              <span style='font-size:11px;color:#9ca3af;text-transform:uppercase;letter-spacing:.06em'>Ministério</span><br>
+                              <strong style='color:#1a2332;font-size:15px'>" . htmlspecialchars($mn['name']) . "</strong>
+                            </td>
+                          </tr>
+                          <tr><td style='padding:6px 0;border-top:1px solid #e5e7eb'>
+                            <span style='font-size:11px;color:#9ca3af;text-transform:uppercase;letter-spacing:.06em'>Atividade</span><br>
+                            <strong style='color:#1a2332;font-size:15px'>" . htmlspecialchars($title) . "</strong>
+                          </td></tr>
+                          <tr><td style='padding:6px 0;border-top:1px solid #e5e7eb'>
+                            <span style='font-size:11px;color:#9ca3af;text-transform:uppercase;letter-spacing:.06em'>Data</span><br>
+                            <strong style='color:#1a2332;font-size:15px'>{$dayName}, {$dateFormatted}</strong>
+                          </td></tr>
+                        </table>
+                      </td></tr>
+                    </table>
+
+                    <p style='color:#6b7280;font-size:14px;text-align:center;line-height:1.6;white-space:pre-line'>" . htmlspecialchars($tpl['content']) . "</p>";
+                } else {
+                    $emailBody = "
+                    <div style='text-align:center;margin-bottom:28px'>
+                      <div style='font-size:48px;margin-bottom:12px'>🎵</div>
+                      <h1 style='font-size:22px;font-weight:600;color:#1a2332;margin:0 0 8px'>{$tpl['title']}</h1>
+                      <p style='color:#6b7280;font-size:15px;margin:0'>Olá, <strong style='color:#1a2332'>{$memberName}</strong>! Você foi escalado(a).</p>
+                    </div>
+
+                    <table width='100%' cellpadding='0' cellspacing='0' style='background:#f9fafb;border-radius:12px;margin-bottom:28px'>
+                      <tr><td style='padding:20px'>
+                        <table width='100%' cellpadding='0' cellspacing='0'>
+                          <tr>
+                            <td style='padding:6px 0'>
+                              <span style='font-size:11px;color:#9ca3af;text-transform:uppercase;letter-spacing:.06em'>Ministério</span><br>
+                              <strong style='color:#1a2332;font-size:15px'>" . htmlspecialchars($mn['name']) . "</strong>
+                            </td>
+                          </tr>
+                          <tr><td style='padding:6px 0;border-top:1px solid #e5e7eb'>
+                            <span style='font-size:11px;color:#9ca3af;text-transform:uppercase;letter-spacing:.06em'>Atividade</span><br>
+                            <strong style='color:#1a2332;font-size:15px'>" . htmlspecialchars($title) . "</strong>
+                          </td></tr>
+                          <tr><td style='padding:6px 0;border-top:1px solid #e5e7eb'>
+                            <span style='font-size:11px;color:#9ca3af;text-transform:uppercase;letter-spacing:.06em'>Data</span><br>
+                            <strong style='color:#1a2332;font-size:15px'>{$dayName}, {$dateFormatted}</strong>
+                          </td></tr>
+                          " . ($timeStart ? "<tr><td style='padding:6px 0;border-top:1px solid #e5e7eb'>
+                            <span style='font-size:11px;color:#9ca3af;text-transform:uppercase;letter-spacing:.06em'>Horário</span><br>
+                            <strong style='color:#1a2332;font-size:15px'>" . substr($timeStart,0,5) . "</strong>
+                          </td></tr>" : "") . "
+                        </table>
+                      </td></tr>
+                    </table>
+
+                    <p style='color:#6b7280;font-size:14px;text-align:center;margin-bottom:20px'>
+                      ⏰ Prazo para responder: <strong style='color:#1a2332'>{$prazo}</strong>
+                    </p>
+
+                    <table width='100%' cellpadding='0' cellspacing='0' style='margin-bottom:16px'>
                       <tr>
-                        <td style='padding:6px 0'>
-                          <span style='font-size:11px;color:#9ca3af;text-transform:uppercase;letter-spacing:.06em'>Ministério</span><br>
-                          <strong style='color:#1a2332;font-size:15px'>" . htmlspecialchars($mn['name']) . "</strong>
+                        <td style='padding-right:6px'>
+                          <a href='{$confirmUrl}' style='display:block;text-align:center;background:{$accentColor};color:white;padding:14px;border-radius:10px;text-decoration:none;font-size:15px;font-weight:600'>
+                            ✅ Confirmar presença
+                          </a>
+                        </td>
+                        <td style='padding-left:6px'>
+                          <a href='{$refuseUrl}' style='display:block;text-align:center;background:#f3f4f6;color:#374151;padding:14px;border-radius:10px;text-decoration:none;font-size:15px;font-weight:600'>
+                            ❌ Não posso ir
+                          </a>
                         </td>
                       </tr>
-                      <tr><td style='padding:6px 0;border-top:1px solid #e5e7eb'>
-                        <span style='font-size:11px;color:#9ca3af;text-transform:uppercase;letter-spacing:.06em'>Atividade</span><br>
-                        <strong style='color:#1a2332;font-size:15px'>" . htmlspecialchars($title) . "</strong>
-                      </td></tr>
-                      <tr><td style='padding:6px 0;border-top:1px solid #e5e7eb'>
-                        <span style='font-size:11px;color:#9ca3af;text-transform:uppercase;letter-spacing:.06em'>Data</span><br>
-                        <strong style='color:#1a2332;font-size:15px'>{$dayName}, {$dateFormatted}</strong>
-                      </td></tr>
-                      " . ($timeStart ? "<tr><td style='padding:6px 0;border-top:1px solid #e5e7eb'>
-                        <span style='font-size:11px;color:#9ca3af;text-transform:uppercase;letter-spacing:.06em'>Horário</span><br>
-                        <strong style='color:#1a2332;font-size:15px'>" . substr($timeStart,0,5) . "</strong>
-                      </td></tr>" : "") . "
                     </table>
-                  </td></tr>
-                </table>
 
-                <p style='color:#6b7280;font-size:14px;text-align:center;margin-bottom:20px'>
-                  ⏰ Prazo para responder: <strong style='color:#1a2332'>{$prazo}</strong>
-                </p>
-
-                <table width='100%' cellpadding='0' cellspacing='0' style='margin-bottom:16px'>
-                  <tr>
-                    <td style='padding-right:6px'>
-                      <a href='{$confirmUrl}' style='display:block;text-align:center;background:{$accentColor};color:white;padding:14px;border-radius:10px;text-decoration:none;font-size:15px;font-weight:600'>
-                        ✅ Confirmar presença
-                      </a>
-                    </td>
-                    <td style='padding-left:6px'>
-                      <a href='{$refuseUrl}' style='display:block;text-align:center;background:#f3f4f6;color:#374151;padding:14px;border-radius:10px;text-decoration:none;font-size:15px;font-weight:600'>
-                        ❌ Não posso ir
-                      </a>
-                    </td>
-                  </tr>
-                </table>
-
-                <p style='color:#9ca3af;font-size:12px;text-align:center;margin:0'>
-                  Sua resposta ajuda a equipe a se organizar melhor. Obrigado! 🙏
-                </p>";
+                    <p style='color:#9ca3af;font-size:12px;text-align:center;margin:0'>
+                      Sua resposta ajuda a equipe a se organizar melhor. Obrigado! 🙏
+                    </p>";
+                }
 
                 $html = email_template(
-                    "Você foi escalado(a) para {$mn['name']} em {$dateFormatted}",
+                    $tpl['title'] . " · {$mn['name']} em {$dateFormatted}",
                     $emailBody,
                     $churchId
                 );
