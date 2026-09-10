@@ -73,6 +73,8 @@ function notify_scale_invitation(
 
     $isPrayerRole = in_array(trim($role), MUSIC_ALWAYS_INCLUDE_ROLES, true);
 
+    $whatsappButtons = null;
+
     if ($isPrayerRole) {
         $tpl = notification_template('scale_prayer_request', [
             'nome'       => $memberName,
@@ -90,6 +92,10 @@ function notify_scale_invitation(
         $fullContent = $tpl['content']
             . "\n\n✅ Confirmar presença: $confirmUrl"
             . "\n❌ Não posso ir: $refuseUrl";
+        $whatsappButtons = [
+            ['label' => '✅ Confirmar presença', 'url' => $confirmUrl],
+            ['label' => '❌ Não posso ir',       'url' => $refuseUrl],
+        ];
     }
 
     $db->prepare("
@@ -118,7 +124,8 @@ function notify_scale_invitation(
     }
 
     if ($memberPhone) {
-        queue_whatsapp($memberPhone, $tpl['title'] . "\n\n" . $fullContent, $churchId);
+        $waText = $whatsappButtons ? ($tpl['title'] . "\n\n" . $tpl['content']) : ($tpl['title'] . "\n\n" . $fullContent);
+        queue_whatsapp($memberPhone, $waText, $churchId, $whatsappButtons);
     }
 
     if ($memberEmail) {
@@ -406,6 +413,8 @@ function notify_activity_rescheduled(
         $memberName   = $memberRow['name']  ?? '';
         $memberPhone  = $memberRow['phone'] ?? '';
 
+        $whatsappButtons = null;
+
         if ($isPrayerRole) {
             $tpl = notification_template('scale_prayer_request', [
                 'nome'       => $memberName,
@@ -438,6 +447,10 @@ function notify_activity_rescheduled(
                 . "\n\n✅ Confirmar presença: $confirmUrl"
                 . "\n❌ Não posso ir: $refuseUrl";
             $ctaUrl = $confirmUrl;
+            $whatsappButtons = [
+                ['label' => '✅ Confirmar presença', 'url' => $confirmUrl],
+                ['label' => '❌ Não posso ir',       'url' => $refuseUrl],
+            ];
         }
 
         $db->prepare("
@@ -467,7 +480,8 @@ function notify_activity_rescheduled(
 
         // WhatsApp (Z-API)
         if ($memberPhone) {
-            queue_whatsapp($memberPhone, $tpl['title'] . "\n\n" . $fullContent, $churchId);
+            $waText = $whatsappButtons ? ($tpl['title'] . "\n\n" . $tpl['content']) : ($tpl['title'] . "\n\n" . $fullContent);
+            queue_whatsapp($memberPhone, $waText, $churchId, $whatsappButtons);
         }
 
         $memberEmail = $db->query("SELECT email FROM members WHERE id=" . $mid)->fetchColumn();
