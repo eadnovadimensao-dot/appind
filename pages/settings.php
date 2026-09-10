@@ -268,6 +268,25 @@ require_once __DIR__ . '/../includes/layout.php';
     </div>
   </div>
 
+  <!-- Cadastro público -->
+  <div class="card" style="margin-bottom:16px">
+    <p class="card-title">Cadastro público de membros</p>
+    <p style="font-size:12px;color:var(--text-muted);margin-bottom:12px">
+      Link pra compartilhar com visitantes/interessados — eles preenchem os próprios dados,
+      que caem numa fila de revisão em <a href="/pages/members/signups.php">Membros → Cadastros pendentes</a>
+      antes de virar cadastro de verdade.
+    </p>
+    <div class="form-group" style="margin-bottom:0">
+      <label class="form-label">Link de cadastro</label>
+      <div style="display:flex;gap:8px">
+        <input type="text" id="signup-link" class="form-control" readonly
+               value="https://<?= htmlspecialchars($_SERVER['HTTP_HOST'] ?? 'app.igrejanovadimensao.com.br') ?>/cadastro.php">
+        <button type="button" class="btn btn-secondary" style="flex-shrink:0"
+                onclick="navigator.clipboard.writeText(document.getElementById('signup-link').value).then(()=>{this.textContent='Copiado!';setTimeout(()=>this.textContent='Copiar',1500)})">Copiar</button>
+      </div>
+    </div>
+  </div>
+
   <!-- Cores -->
   <div class="card" style="margin-bottom:24px">
     <p class="card-title">Cores do sistema</p>

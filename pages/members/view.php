@@ -69,7 +69,9 @@ function fdate($d) { return $d ? date('d/m/Y', strtotime($d)) : '—'; }
       </div>
     </div>
     <div style="display:flex;gap:8px">
-      <a href="/pages/members/edit.php?id=<?= $m['id'] ?>" class="btn btn-primary">Editar</a>
+      <?php if (auth_can('manage_members')): ?>
+        <a href="/pages/members/edit.php?id=<?= $m['id'] ?>" class="btn btn-primary">Editar</a>
+      <?php endif; ?>
       <a href="/pages/members/index.php" class="btn btn-secondary">Voltar</a>
     </div>
   </div>

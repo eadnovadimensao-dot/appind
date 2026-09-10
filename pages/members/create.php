@@ -2,6 +2,7 @@
 require_once __DIR__ . '/../../config/database.php';
 require_once __DIR__ . '/../../includes/auth.php';
 auth_check();
+auth_require('manage_members');
 
 $db       = db();
 $churchId = current_church_id();
@@ -11,6 +12,33 @@ $cells      = $db->query("SELECT id, name FROM cells WHERE church_id = $churchId
 $ministries = $db->query("SELECT id, name FROM ministries WHERE church_id = $churchId AND active = 1 ORDER BY name")->fetchAll();
 $families   = $db->query("SELECT id, name FROM families WHERE church_id = $churchId ORDER BY name")->fetchAll();
 $branches   = get_branches();
+
+// Vindo de um cadastro público pendente: pré-preenche o formulário com o que
+// a pessoa enviou, pra admin só conferir/completar antes de aprovar.
+$signup = null;
+if (!empty($_GET['from_signup']) && $_SERVER['REQUEST_METHOD'] !== 'POST') {
+    $sg = $db->prepare("SELECT * FROM member_signups WHERE id = ? AND status = 'pending'");
+    $sg->execute([(int)$_GET['from_signup']]);
+    $signup = $sg->fetch();
+    if ($signup) {
+        $_POST = [
+            'name'             => $signup['name'],
+            'phone'            => $signup['phone'],
+            'email'            => $signup['email'] ?? '',
+            'birth_date'       => $signup['birth_date'] ?? '',
+            'gender'           => $signup['gender'] ?? '',
+            'marital_status'   => $signup['marital_status'] ?? '',
+            'address'          => $signup['address'] ?? '',
+            'neighborhood'     => $signup['neighborhood'] ?? '',
+            'city'             => $signup['city'] ?? '',
+            'zip_code'         => $signup['zip_code'] ?? '',
+            'cell_id'          => $signup['cell_interest_id'] ?? '',
+            'notes'            => $signup['notes'] ?? '',
+            'status'           => 'visitor',
+            'church_id'        => $signup['church_id'],
+        ];
+    }
+}
 
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     $name       = trim($_POST['name']       ?? '');
@@ -39,11 +67,18 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     if ($name === '')  $errors[] = 'Nome é obrigatório.';
     if ($phone === '') $errors[] = 'Telefone é obrigatório.';
 
+    // Filial escolhida no formulário (precisa validar contra as filiais da sede)
+    $branchIds     = array_column($branches, 'id');
+    $selectedChurch = (int)($_POST['church_id'] ?? $churchId);
+    $insertChurchId = in_array($selectedChurch, $branchIds, true) ? $selectedChurch : $churchId;
+
+    $signupId = (int)($_POST['signup_id'] ?? 0);
+
     if (empty($errors)) {
         // Criar nova família se solicitado
         if ($newFamily !== '') {
             $sf = $db->prepare("INSERT INTO families (church_id, name) VALUES (?, ?)");
-            $sf->execute([$churchId, $newFamily]);
+            $sf->execute([$insertChurchId, $newFamily]);
             $familyId = $db->lastInsertId();
         }
 
@@ -58,7 +93,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                :address,:neighborhood,:city,:zip,:notes,:family_id,:family_role)
         ");
         $stmt->execute([
-            ':church_id'=>$churchId,':name'=>$name,':phone'=>$phone,
+            ':church_id'=>$insertChurchId,':name'=>$name,':phone'=>$phone,
             ':email'=>$email?:null,':cpf'=>$cpf?:null,
             ':birth_date'=>$birthDate?:null,':gender'=>$gender?:null,':marital'=>$marital?:null,
             ':status'=>$status,':cell_id'=>$cellId,':join_date'=>$joinDate,
@@ -67,8 +102,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             ':city'=>$city?:null,':zip'=>$zip?:null,':notes'=>$notes?:null,
             ':family_id'=>$familyId,':family_role'=>$familyRole,
         ]);
-        $churchId  = (int)($_POST['church_id'] ?? $churchId);
-        $memberId  = $db->lastInsertId();
+        $memberId = $db->lastInsertId();
 
         // Vincular ministérios
         if (!empty($ministryIds)) {
@@ -78,15 +112,31 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             }
         }
 
+        // Veio de um cadastro público pendente: marca como aprovado
+        if ($signupId > 0) {
+            $db->prepare("
+                UPDATE member_signups
+                SET status = 'approved', reviewed_by = ?, reviewed_at = NOW(), approved_member_id = ?
+                WHERE id = ? AND status = 'pending'
+            ")->execute([auth_member_id(), $memberId, $signupId]);
+        }
+
         header('Location: /pages/members/index.php?saved=1');
         exit;
     }
 }
 
-$pageTitle  = 'Novo membro';
+$pageTitle  = $signup ? 'Revisar cadastro · ' . $signup['name'] : 'Novo membro';
 $activePage = 'members';
 require_once __DIR__ . '/../../includes/layout.php';
 ?>
+
+<?php if ($signup): ?>
+  <div style="background:#EAF6F0;border:1px solid #9AD8BC;border-radius:8px;padding:12px 16px;margin-bottom:20px;font-size:13px;color:#0F6B44">
+    📝 Este formulário veio de um cadastro público. Confira os dados, complete o que faltar
+    (célula, ministérios, status) e salve pra aprovar — ou <a href="/pages/members/signups.php" style="color:#0F6B44;text-decoration:underline">volte à lista</a> sem aprovar.
+  </div>
+<?php endif; ?>
 
 <?php if (!empty($errors)): ?>
   <div style="background:#FCEBEB;border:1px solid #F09595;border-radius:8px;padding:12px 16px;margin-bottom:20px;font-size:13px;color:#A32D2D">
@@ -95,6 +145,7 @@ require_once __DIR__ . '/../../includes/layout.php';
 <?php endif; ?>
 
 <form method="POST" style="width:100%">
+  <?php if ($signup): ?><input type="hidden" name="signup_id" value="<?= $signup['id'] ?>"><?php endif; ?>
 
   <!-- Dados pessoais -->
   <div class="card" style="margin-bottom:16px">

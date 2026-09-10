@@ -4,11 +4,30 @@ require_once __DIR__ . '/../../includes/auth.php';
 auth_check();
 $pageTitle    = 'Membros';
 $activePage   = 'members';
-$topbarAction = ['href' => '/pages/members/create.php', 'label' => 'Novo membro'];
+$canManageMembers = auth_can('manage_members');
+if ($canManageMembers) {
+    $topbarAction = ['href' => '/pages/members/create.php', 'label' => 'Novo membro'];
+}
 require_once __DIR__ . '/../../includes/layout.php';
 
 $db       = db();
 $churchId = current_church_id();
+
+// Cadastros públicos aguardando revisão
+$pendingSignups = 0;
+if ($canManageMembers) {
+    if ($churchId === SEDE_ID && auth_role() === 'supermaster') {
+        $pendingSignups = (int)$db->query("
+            SELECT COUNT(*) FROM member_signups s
+            LEFT JOIN churches ch ON ch.id = s.church_id
+            WHERE s.status = 'pending' AND (ch.id = " . SEDE_ID . " OR ch.parent_id = " . SEDE_ID . ")
+        ")->fetchColumn();
+    } else {
+        $stmt = $db->prepare("SELECT COUNT(*) FROM member_signups WHERE status = 'pending' AND church_id = ?");
+        $stmt->execute([$churchId]);
+        $pendingSignups = (int)$stmt->fetchColumn();
+    }
+}
 
 // Filtros
 $search   = trim($_GET['q']         ?? '');
@@ -61,6 +80,15 @@ $statusLabels = [
   </div>
 <?php elseif (($_GET['error'] ?? '') === 'notfound'): ?>
   <div style="background:#FCEBEB;border:1px solid #F09595;border-radius:8px;padding:12px 16px;margin-bottom:16px;font-size:13px;color:#A32D2D">✗ Membro não encontrado ou fora do seu escopo de acesso.</div>
+<?php endif; ?>
+
+<?php if ($pendingSignups > 0): ?>
+  <a href="/pages/members/signups.php" style="text-decoration:none">
+    <div style="background:#FEF3C7;border:1px solid #FCD34D;border-radius:8px;padding:12px 16px;margin-bottom:16px;font-size:13px;color:#854F0B;display:flex;align-items:center;justify-content:space-between">
+      <span>📝 <?= $pendingSignups ?> cadastro(s) público(s) aguardando revisão</span>
+      <span style="font-weight:500">Revisar →</span>
+    </div>
+  </a>
 <?php endif; ?>
 
 <!-- Filtros -->
@@ -126,7 +154,9 @@ $statusLabels = [
     <div class="empty-state">
       <p style="font-size:32px;margin-bottom:8px">👥</p>
       <p>Nenhum membro encontrado.</p>
-      <a href="/pages/members/create.php" class="btn btn-primary" style="margin-top:16px">+ Cadastrar primeiro membro</a>
+      <?php if ($canManageMembers): ?>
+        <a href="/pages/members/create.php" class="btn btn-primary" style="margin-top:16px">+ Cadastrar primeiro membro</a>
+      <?php endif; ?>
     </div>
   <?php else: ?>
     <div class="table-wrap">
@@ -172,7 +202,9 @@ $statusLabels = [
               </td>
               <td style="text-align:right">
                 <a href="/pages/members/view.php?id=<?= $m['id'] ?>" class="btn btn-secondary" style="font-size:12px;padding:5px 12px">Ver</a>
-                <a href="/pages/members/edit.php?id=<?= $m['id'] ?>" class="btn btn-secondary" style="font-size:12px;padding:5px 12px">Editar</a>
+                <?php if ($canManageMembers): ?>
+                  <a href="/pages/members/edit.php?id=<?= $m['id'] ?>" class="btn btn-secondary" style="font-size:12px;padding:5px 12px">Editar</a>
+                <?php endif; ?>
               </td>
             </tr>
           <?php endforeach; ?>
