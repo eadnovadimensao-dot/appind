@@ -2,8 +2,6 @@
 require_once __DIR__ . "/../../config/database.php";
 require_once __DIR__ . "/../../includes/auth.php";
 auth_check();
-require_once __DIR__ . '/../../includes/auth.php';
-auth_check();
 
 $db         = db();
 $churchId   = CHURCH_ID;
@@ -65,7 +63,7 @@ $conditions = ['good'=>['label'=>'Bom','badge'=>'badge-green'],
                'fair'=>['label'=>'Regular','badge'=>'badge-amber'],
                'poor'=>['label'=>'Ruim','badge'=>'badge-red']];
 
-$canManage = auth_can('all') || auth_can('manage_own_ministry');
+$canManage = auth_can_manage_ministry($ministryId);
 ?>
 
 <div style="margin-bottom:16px;display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:10px">

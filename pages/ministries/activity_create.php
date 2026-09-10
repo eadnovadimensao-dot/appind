@@ -7,6 +7,7 @@ auth_check();
 
 $db         = db();
 $ministryId = (int)($_GET['ministry_id'] ?? 0);
+auth_require_ministry($ministryId);
 $errors     = [];
 
 // Buscar ministério de qualquer filial da sede

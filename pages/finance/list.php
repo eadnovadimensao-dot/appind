@@ -1,7 +1,7 @@
 <?php
 require_once __DIR__ . '/../../config/database.php';
 require_once __DIR__ . '/../../includes/auth.php';
-auth_check();
+auth_require('manage_finance');
 $pageTitle    = 'Lançamentos';
 $activePage   = 'finance';
 $topbarAction = ['href' => '/pages/finance/create.php', 'label' => 'Novo lançamento'];

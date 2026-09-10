@@ -11,6 +11,7 @@ $stmt = $db->prepare("SELECT * FROM cells WHERE id = ? AND church_id = ?");
 $stmt->execute([$cellId, $churchId]);
 $cell = $stmt->fetch();
 if (!$cell) { header('Location: /pages/cells/index.php'); exit; }
+auth_require_cell($cellId);
 
 $pageTitle = 'Relatório · ' . $cell['name'];
 

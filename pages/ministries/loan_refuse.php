@@ -1,7 +1,7 @@
 <?php
 require_once __DIR__ . '/../../config/database.php';
 require_once __DIR__ . '/../../includes/auth.php';
-auth_require('manage_own_ministry');
+auth_check();
 
 $db       = db();
 $churchId = current_church_id();
@@ -20,6 +20,7 @@ $stmt = $db->prepare("
 $stmt->execute([$id, $churchId]);
 $loan = $stmt->fetch();
 if (!$loan) { header('Location: /pages/ministries/index.php'); exit; }
+auth_require_ministry((int)$loan['ministry_id']);
 
 $pageTitle = 'Recusar solicitação';
 

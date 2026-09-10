@@ -2,8 +2,6 @@
 require_once __DIR__ . "/../../config/database.php";
 require_once __DIR__ . "/../../includes/auth.php";
 auth_check();
-require_once __DIR__ . '/../../includes/auth.php';
-auth_require('manage_own_ministry');
 
 $db         = db();
 $churchId   = CHURCH_ID;
@@ -23,6 +21,8 @@ if ($editId) {
     if (!$item) { header('Location: /pages/ministries/index.php'); exit; }
     $ministryId = $item['ministry_id'];
 }
+
+auth_require_ministry($ministryId);
 
 $mn = $db->prepare("SELECT * FROM ministries WHERE id = ? AND church_id = ?");
 $mn->execute([$ministryId, $churchId]);

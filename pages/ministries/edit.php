@@ -6,6 +6,7 @@ auth_check();
 $db       = db();
 $churchId = current_church_id();
 $id       = (int)($_GET['id'] ?? 0);
+auth_require_ministry($id);
 $errors   = [];
 
 $stmt = $db->prepare("SELECT * FROM ministries WHERE id = ? AND church_id = ?");

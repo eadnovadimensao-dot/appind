@@ -8,7 +8,7 @@ $ministryId = (int)($_POST['ministry_id'] ?? 0);
 $memberId   = (int)($_POST['member_id']   ?? 0);
 $role       = trim($_POST['role'] ?? '') ?: null;
 
-if ($ministryId && $memberId) {
+if ($ministryId && $memberId && auth_can_manage_ministry($ministryId)) {
     $db->prepare("UPDATE member_ministries SET role = ? WHERE ministry_id = ? AND member_id = ?")
        ->execute([$role, $ministryId, $memberId]);
 }

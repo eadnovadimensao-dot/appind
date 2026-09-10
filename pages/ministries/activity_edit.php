@@ -18,6 +18,7 @@ $stmt = $db->prepare("
 $stmt->execute([$id, $churchId]);
 $act = $stmt->fetch();
 if (!$act) { header('Location: /pages/ministries/index.php'); exit; }
+auth_require_ministry((int)$act['ministry_id']);
 
 $mn = ['name' => $act['ministry_name']];
 

@@ -11,6 +11,7 @@ $stmt = $db->prepare("SELECT * FROM cells WHERE id = ? AND church_id = ?");
 $stmt->execute([$id, $churchId]);
 $cell = $stmt->fetch();
 if (!$cell) { header('Location: /pages/cells/index.php'); exit; }
+auth_require_cell($id);
 
 $pageTitle = 'Editar · ' . $cell['name'];
 $leaders   = $db->query("SELECT id, name FROM members WHERE church_id = $churchId AND status = 'active' ORDER BY name")->fetchAll();

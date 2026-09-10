@@ -108,6 +108,59 @@ function auth_member_redirect(): void {
     }
 }
 
+// Verifica se o usuário pode gerenciar ESSE ministério específico (não "qualquer"
+// ministério) — admin/supermaster sempre podem; qualquer outro papel só se estiver
+// de fato cadastrado como líder daquele ministério (tabela ministry_leaders).
+function auth_can_manage_ministry(int $ministryId): bool {
+    if (auth_can('all') || auth_role() === 'admin') return true;
+    $memberId = auth_member_id();
+    if (!$memberId) return false;
+    static $cache = [];
+    $key = "$ministryId:$memberId";
+    if (!array_key_exists($key, $cache)) {
+        $stmt = db()->prepare("SELECT 1 FROM ministry_leaders WHERE ministry_id=? AND member_id=?");
+        $stmt->execute([$ministryId, $memberId]);
+        $cache[$key] = (bool)$stmt->fetchColumn();
+    }
+    return $cache[$key];
+}
+
+// Mesma lógica pra células: admin/supermaster sempre podem; qualquer outro papel só
+// se estiver cadastrado como líder daquela célula específica (tabela cell_leaders).
+function auth_can_manage_cell(int $cellId): bool {
+    if (auth_can('all') || auth_role() === 'admin') return true;
+    $memberId = auth_member_id();
+    if (!$memberId) return false;
+    static $cache = [];
+    $key = "$cellId:$memberId";
+    if (!array_key_exists($key, $cache)) {
+        $stmt = db()->prepare("SELECT 1 FROM cell_leaders WHERE cell_id=? AND member_id=?");
+        $stmt->execute([$cellId, $memberId]);
+        $cache[$key] = (bool)$stmt->fetchColumn();
+    }
+    return $cache[$key];
+}
+
+// 403 se o usuário não puder gerenciar esse ministério específico
+function auth_require_ministry(int $ministryId): void {
+    auth_check();
+    if (!auth_can_manage_ministry($ministryId)) {
+        http_response_code(403);
+        include __DIR__ . '/403.php';
+        exit;
+    }
+}
+
+// 403 se o usuário não puder gerenciar essa célula específica
+function auth_require_cell(int $cellId): void {
+    auth_check();
+    if (!auth_can_manage_cell($cellId)) {
+        http_response_code(403);
+        include __DIR__ . '/403.php';
+        exit;
+    }
+}
+
 function auth_can_request_event(): bool {
     if (auth_can('request_event') || auth_can('all')) return true;
     $memberId = auth_member_id();

@@ -1,7 +1,7 @@
 <?php
 require_once __DIR__ . '/../../config/database.php';
 require_once __DIR__ . '/../../includes/auth.php';
-auth_check();
+auth_require('manage_finance');
 $pageTitle  = 'Relatório Financeiro';
 $activePage = 'finance';
 require_once __DIR__ . '/../../includes/layout.php';

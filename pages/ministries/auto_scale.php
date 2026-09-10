@@ -10,6 +10,11 @@ $db           = db();
 $ministryId   = (int)($_GET['ministry_id'] ?? 0);
 $activityType = ($_GET['activity_type'] ?? 'culto') === 'ensaio' ? 'ensaio' : 'culto';
 
+if (!auth_can_manage_ministry($ministryId)) {
+    echo json_encode(['error' => 'Você não tem permissão pra gerenciar esse ministério.']);
+    exit;
+}
+
 $stmt = $db->prepare("
     SELECT mn.*, ch.id AS branch_church_id
     FROM ministries mn

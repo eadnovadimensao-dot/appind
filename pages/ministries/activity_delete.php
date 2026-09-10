@@ -11,7 +11,7 @@ $stmt = $db->prepare("SELECT ministry_id FROM ministry_activities WHERE id = ? A
 $stmt->execute([$id, $churchId]);
 $ministryId = $stmt->fetchColumn();
 
-if ($ministryId) {
+if ($ministryId && auth_can_manage_ministry((int)$ministryId)) {
     // Cascateia pra ministry_activity_members, ministry_activity_songs e agenda_events
     $db->prepare("DELETE FROM ministry_activities WHERE id = ? AND church_id = ?")
        ->execute([$id, $churchId]);

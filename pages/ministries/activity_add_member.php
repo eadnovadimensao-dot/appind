@@ -19,7 +19,7 @@ $stmt = $db->prepare("
 $stmt->execute([$activityId, $churchId]);
 $act = $stmt->fetch();
 
-if ($act && $memberId) {
+if ($act && $memberId && auth_can_manage_ministry((int)$act['ministry_id'])) {
     $token   = bin2hex(random_bytes(32));
     $expires = response_deadline($act['activity_date'], $act['time_start']);
 

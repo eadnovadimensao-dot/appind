@@ -12,7 +12,7 @@ $stmt = $db->prepare("SELECT ml.*, mn.id AS ministry_id FROM ministry_loans ml J
 $stmt->execute([$id, $churchId]);
 $loan = $stmt->fetch();
 
-if ($loan) {
+if ($loan && auth_can_manage_ministry((int)$loan['ministry_id'])) {
     $db->prepare("UPDATE ministry_loans SET status='approved', approved_by=?, approved_at=NOW() WHERE id=?")
        ->execute([$memberId, $id]);
 }

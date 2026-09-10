@@ -1,5 +1,7 @@
 <?php
 require_once __DIR__ . '/../../config/database.php';
+require_once __DIR__ . '/../../includes/auth.php';
+auth_check();
 header('Content-Type: application/json');
 
 $db         = db();
