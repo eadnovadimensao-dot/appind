@@ -108,6 +108,11 @@ $at = $actTypeLabels[$act['activity_type']] ?? null;
            class="btn btn-secondary" style="color:var(--red)"
            data-confirm="Cancelar esta atividade?">Cancelar</a>
       <?php endif; ?>
+      <a href="/pages/ministries/activity_delete.php?id=<?= $id ?>"
+         class="btn btn-secondary" style="color:var(--red)"
+         data-confirm="Excluir esta atividade permanentemente? Remove a escala, o repertório e o evento na Agenda também. Não pode ser desfeito.">
+        🗑 Excluir
+      </a>
       <a href="/pages/ministries/view.php?id=<?= $act['ministry_id'] ?>" class="btn btn-secondary">Voltar</a>
     </div>
   </div>
