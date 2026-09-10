@@ -182,7 +182,7 @@ $churchId = $row['church_id'] ?? 1;
 $churchName  = setting('church_name', 'Igreja', $churchId);
 $primaryColor = setting('primary_color', '#012a36', $churchId);
 $accentColor  = setting('accent_color', '#1D9E75', $churchId);
-$logoUrl      = setting('church_logo_url', null, $churchId);
+$logoUrl      = setting('church_logo_url', '', $churchId);
 ?>
 <!DOCTYPE html>
 <html lang="pt-BR">
