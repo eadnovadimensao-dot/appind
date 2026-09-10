@@ -14,7 +14,7 @@ if (!$cell) { header('Location: /pages/cells/index.php'); exit; }
 $activePage = 'cells';
 require_once __DIR__ . '/../../includes/layout.php';
 
-
+$canManage = auth_can_manage_cell($id);
 
 $pageTitle = $cell['name'];
 
@@ -108,8 +108,10 @@ $addressStr = implode(', ', $address);
       </div>
     </div>
     <div style="display:flex;gap:8px;flex-wrap:wrap">
-      <a href="/pages/cells/report_create.php?cell_id=<?= $cell['id'] ?>" class="btn btn-primary">+ Relatório</a>
-      <a href="/pages/cells/edit.php?id=<?= $cell['id'] ?>" class="btn btn-secondary">Editar</a>
+      <?php if ($canManage): ?>
+        <a href="/pages/cells/report_create.php?cell_id=<?= $cell['id'] ?>" class="btn btn-primary">+ Relatório</a>
+        <a href="/pages/cells/edit.php?id=<?= $cell['id'] ?>" class="btn btn-secondary">Editar</a>
+      <?php endif; ?>
       <a href="/pages/cells/index.php" class="btn btn-secondary">Voltar</a>
     </div>
   </div>
@@ -177,9 +179,12 @@ $addressStr = implode(', ', $address);
   <div class="card" style="padding:0">
     <div style="padding:14px 18px;border-bottom:1px solid var(--border);display:flex;justify-content:space-between;align-items:center">
       <p style="font-weight:500;font-size:14px">Membros <span style="color:var(--text-muted);font-weight:400">(<?= count($members) ?>)</span></p>
-      <button onclick="var f=document.getElementById('add-member-form');f.style.display=f.style.display==='none'?'block':'none'"
-              class="btn btn-secondary" style="font-size:12px;padding:5px 12px">+ Vincular</button>
+      <?php if ($canManage): ?>
+        <button onclick="var f=document.getElementById('add-member-form');f.style.display=f.style.display==='none'?'block':'none'"
+                class="btn btn-secondary" style="font-size:12px;padding:5px 12px">+ Vincular</button>
+      <?php endif; ?>
     </div>
+    <?php if ($canManage): ?>
     <!-- Vincular membro existente -->
     <div id="add-member-form" style="display:none;padding:12px 18px;border-bottom:1px solid var(--border);background:#fafafa">
       <?php
@@ -201,6 +206,7 @@ $addressStr = implode(', ', $address);
         <button type="submit" class="btn btn-primary" style="margin-bottom:16px">Vincular</button>
       </form>
     </div>
+    <?php endif; ?>
     <?php if (empty($members)): ?>
       <div class="empty-state" style="padding:24px">Nenhum membro vinculado.</div>
     <?php else: ?>

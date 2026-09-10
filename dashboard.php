@@ -3,9 +3,9 @@ require_once __DIR__ . '/config/database.php';
 require_once __DIR__ . '/includes/auth.php';
 auth_check();
 
-$db       = db();
-$churchId = current_church_id();
-$isMember = auth_role() === 'member';
+$db         = db();
+$churchId   = current_church_id();
+$canFinance = auth_can('manage_finance');
 
 // KPIs
 $totalMembers = $db->query("SELECT COUNT(*) FROM members WHERE church_id=$churchId AND status='active'")->fetchColumn();
@@ -26,18 +26,21 @@ $birthdays = $db->prepare("
 $birthdays->execute([$churchId]);
 $birthdays = $birthdays->fetchAll();
 
-// Financeiro do mês
-$finance = $db->prepare("
-    SELECT
-        COALESCE(SUM(CASE WHEN type='income'  THEN amount END), 0) AS income,
-        COALESCE(SUM(CASE WHEN type='expense' THEN amount END), 0) AS expense
-    FROM finance_entries
-    WHERE church_id = ?
-      AND MONTH(entry_date) = MONTH(CURDATE())
-      AND YEAR(entry_date)  = YEAR(CURDATE())
-");
-$finance->execute([$churchId]);
-$finance = $finance->fetch();
+// Financeiro do mês (só se puder ver)
+$finance = ['income' => 0, 'expense' => 0];
+if ($canFinance) {
+    $stmt = $db->prepare("
+        SELECT
+            COALESCE(SUM(CASE WHEN type='income'  THEN amount END), 0) AS income,
+            COALESCE(SUM(CASE WHEN type='expense' THEN amount END), 0) AS expense
+        FROM finance_entries
+        WHERE church_id = ?
+          AND MONTH(entry_date) = MONTH(CURDATE())
+          AND YEAR(entry_date)  = YEAR(CURDATE())
+    ");
+    $stmt->execute([$churchId]);
+    $finance = $stmt->fetch();
+}
 
 // Próximo culto
 $nextService = $db->prepare("
@@ -73,7 +76,7 @@ require_once __DIR__ . '/includes/layout.php';
     <div class="kpi-label">Células ativas</div>
     <div class="kpi-value"><?= $totalCells ?></div>
   </div>
-  <?php if (!$isMember): ?>
+  <?php if ($canFinance): ?>
   <div class="kpi">
     <div class="kpi-icon">💰</div>
     <div class="kpi-label">Entradas do mês</div>
@@ -133,7 +136,7 @@ require_once __DIR__ . '/includes/layout.php';
     <?php endif; ?>
   </div>
 
-  <?php if (!$isMember): ?>
+  <?php if ($canFinance): ?>
   <!-- Resumo financeiro -->
   <div class="card">
     <p class="card-title">💰 Financeiro do mês</p>

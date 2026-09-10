@@ -4,7 +4,10 @@ require_once __DIR__ . '/../../includes/auth.php';
 auth_check();
 $pageTitle    = 'Células';
 $activePage   = 'cells';
-$topbarAction = ['href' => '/pages/cells/create.php', 'label' => 'Nova célula'];
+$canManageCells = auth_can('manage_cells');
+if ($canManageCells) {
+    $topbarAction = ['href' => '/pages/cells/create.php', 'label' => 'Nova célula'];
+}
 require_once __DIR__ . '/../../includes/layout.php';
 
 $db       = db();
@@ -56,7 +59,9 @@ $days = ['monday'=>'Segunda','tuesday'=>'Terça','wednesday'=>'Quarta',
     <div class="empty-state">
       <p style="font-size:32px;margin-bottom:8px">🔗</p>
       <p>Nenhuma célula cadastrada ainda.</p>
-      <a href="/pages/cells/create.php" class="btn btn-primary" style="margin-top:16px">+ Criar primeira célula</a>
+      <?php if ($canManageCells): ?>
+        <a href="/pages/cells/create.php" class="btn btn-primary" style="margin-top:16px">+ Criar primeira célula</a>
+      <?php endif; ?>
     </div>
   <?php else: ?>
     <div class="table-wrap">
@@ -102,7 +107,9 @@ $days = ['monday'=>'Segunda','tuesday'=>'Terça','wednesday'=>'Quarta',
               </td>
               <td style="text-align:right">
                 <a href="/pages/cells/view.php?id=<?= $c['id'] ?>" class="btn btn-secondary" style="font-size:12px;padding:5px 12px">Ver</a>
-                <a href="/pages/cells/edit.php?id=<?= $c['id'] ?>" class="btn btn-secondary" style="font-size:12px;padding:5px 12px">Editar</a>
+                <?php if ($canManageCells || auth_can_manage_cell((int)$c['id'])): ?>
+                  <a href="/pages/cells/edit.php?id=<?= $c['id'] ?>" class="btn btn-secondary" style="font-size:12px;padding:5px 12px">Editar</a>
+                <?php endif; ?>
               </td>
             </tr>
           <?php endforeach; ?>

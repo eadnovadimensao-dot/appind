@@ -22,6 +22,7 @@ $pageTitle  = $mn['name'];
 $activePage = 'ministries';
 $churchId   = $mn['church_id'];
 $isMusic    = is_music_ministry($mn['name']);
+$canManage  = auth_can_manage_ministry($id);
 // Buscar todos os líderes do ministério
 $leadersStmt = $db->prepare("
     SELECT m.id, m.name, m.photo_url,
@@ -132,8 +133,10 @@ $actTypeLabels = [
     </div>
     <div style="display:flex;gap:8px;flex-wrap:wrap">
       <a href="/pages/ministries/items.php?ministry_id=<?= $id ?>" class="btn btn-secondary">🎒 Pertences</a>
-      <a href="/pages/ministries/activity_create.php?ministry_id=<?= $id ?>" class="btn btn-primary">+ Atividade</a>
-      <a href="/pages/ministries/edit.php?id=<?= $id ?>" class="btn btn-secondary">Editar</a>
+      <?php if ($canManage): ?>
+        <a href="/pages/ministries/activity_create.php?ministry_id=<?= $id ?>" class="btn btn-primary">+ Atividade</a>
+        <a href="/pages/ministries/edit.php?id=<?= $id ?>" class="btn btn-secondary">Editar</a>
+      <?php endif; ?>
       <a href="/pages/ministries/index.php" class="btn btn-secondary">Voltar</a>
     </div>
   </div>
@@ -164,9 +167,12 @@ $actTypeLabels = [
   <div class="card" style="padding:0">
     <div style="padding:14px 18px;border-bottom:1px solid var(--border);display:flex;justify-content:space-between;align-items:center">
       <p style="font-weight:500;font-size:14px">Membros <span style="color:var(--text-muted);font-weight:400">(<?= count($members) ?>)</span></p>
-      <button onclick="var f=document.getElementById('add-member-form');f.style.display=f.style.display==='none'?'block':'none'"
-              class="btn btn-secondary" style="font-size:12px;padding:5px 12px">+ Vincular</button>
+      <?php if ($canManage): ?>
+        <button onclick="var f=document.getElementById('add-member-form');f.style.display=f.style.display==='none'?'block':'none'"
+                class="btn btn-secondary" style="font-size:12px;padding:5px 12px">+ Vincular</button>
+      <?php endif; ?>
     </div>
+    <?php if ($canManage): ?>
     <!-- Vincular membro -->
     <div id="add-member-form" style="display:none;padding:12px 18px;border-bottom:1px solid var(--border);background:#fafafa">
       <?php
@@ -206,6 +212,7 @@ $actTypeLabels = [
         <button type="submit" class="btn btn-primary" style="margin-bottom:16px">Vincular</button>
       </form>
     </div>
+    <?php endif; ?>
     <?php if (empty($members)): ?>
       <div class="empty-state" style="padding:24px">Nenhum membro vinculado.</div>
     <?php else: ?>
@@ -222,6 +229,7 @@ $actTypeLabels = [
             <?php if ($m['joined_at']): ?>
               <div style="font-size:11px;color:var(--text-muted)">desde <?= date('d/m/Y', strtotime($m['joined_at'])) ?></div>
             <?php endif; ?>
+            <?php if ($canManage): ?>
             <div class="role-view" id="role-view-<?= $m['id'] ?>" style="font-size:11px;color:var(--text-muted);margin-top:2px;cursor:pointer"
                  onclick="document.getElementById('role-view-<?= $m['id'] ?>').style.display='none';document.getElementById('role-edit-<?= $m['id'] ?>').style.display='flex'">
               🎵 <?= $m['role'] ? htmlspecialchars($m['role']) : 'Definir função…' ?> ✎
@@ -242,11 +250,18 @@ $actTypeLabels = [
               <?php endif; ?>
               <button type="submit" class="btn btn-secondary" style="font-size:11px;padding:4px 8px">Salvar</button>
             </form>
+            <?php else: ?>
+              <div style="font-size:11px;color:var(--text-muted);margin-top:2px">
+                🎵 <?= $m['role'] ? htmlspecialchars($m['role']) : 'Sem função definida' ?>
+              </div>
+            <?php endif; ?>
           </div>
           <span class="badge <?= $st['badge'] ?>"><?= $st['label'] ?></span>
+          <?php if ($canManage): ?>
           <a href="/pages/ministries/remove_member.php?ministry_id=<?= $id ?>&member_id=<?= $m['id'] ?>"
              style="font-size:18px;color:var(--text-muted);text-decoration:none;line-height:1"
              data-confirm="Remover <?= htmlspecialchars($m['name']) ?> do ministério?">×</a>
+          <?php endif; ?>
         </div>
       <?php endforeach; ?>
     <?php endif; ?>
@@ -256,7 +271,9 @@ $actTypeLabels = [
   <div class="card" style="padding:0">
     <div style="padding:14px 18px;border-bottom:1px solid var(--border);display:flex;justify-content:space-between;align-items:center">
       <p style="font-weight:500;font-size:14px">Próximas atividades</p>
-      <a href="/pages/ministries/activity_create.php?ministry_id=<?= $id ?>" style="font-size:12px;color:var(--accent);text-decoration:none">+ Nova</a>
+      <?php if ($canManage): ?>
+        <a href="/pages/ministries/activity_create.php?ministry_id=<?= $id ?>" style="font-size:12px;color:var(--accent);text-decoration:none">+ Nova</a>
+      <?php endif; ?>
     </div>
     <?php if (empty($upcoming)): ?>
       <div class="empty-state" style="padding:24px">Nenhuma atividade agendada.</div>
