@@ -68,8 +68,6 @@ function auth_member_redirect(): void {
             '/dashboard.php',
             '/pages/events/index.php',
             '/pages/communication/index.php',
-            '/pages/worship-scale/respond.php',
-            '/pages/worship-scale/response.php',
             '/logout.php',
             '/api/',
         ];
@@ -82,9 +80,8 @@ function auth_member_redirect(): void {
             }
         }
 
-        // Pode ver escalas e materiais se for de ministério
+        // Pode ver atividades e materiais do próprio ministério
         if ($inMinistry) {
-            $allowed[] = '/pages/worship-scale/index.php';
             $allowed[] = '/pages/ministries/activity_view.php';
             $allowed[] = '/pages/ministries/index.php';
             $allowed[] = '/pages/ministries/view.php';

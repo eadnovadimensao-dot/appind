@@ -16,7 +16,6 @@ $navItems = [
   ['href' => '/pages/events/index.php',         'icon' => 'ti-calendar',         'label' => 'Agenda',       'key' => 'events'],
   ['href' => '/pages/services/index.php',       'icon' => 'ti-building-church',  'label' => 'Cultos',       'key' => 'services'],
   ['href' => '/pages/communication/index.php',  'icon' => 'ti-bell',             'label' => 'Comunicação',  'key' => 'communication'],
-  ['href' => '/pages/worship-scale/index.php',  'icon' => 'ti-music',            'label' => 'Escalas',      'key' => 'worship-scale'],
   ['href' => '/pages/ministries/index.php',     'icon' => 'ti-star',             'label' => 'Ministérios',  'key' => 'ministries'],
   ['href' => '/pages/users/index.php',          'icon' => 'ti-lock',             'label' => 'Usuários',     'key' => 'users'],
   ['href' => '/pages/branches.php',             'icon' => 'ti-building',         'label' => 'Filiais',      'key' => 'branches'],
@@ -91,7 +90,7 @@ if (window.innerWidth <= 900) {
         if ($role === 'member') {
           $memberAllowed = ['dashboard','events','communication'];
           if ($memberCellId) $memberAllowed[] = 'cells';
-          if ($inMinistry) { $memberAllowed[] = 'worship-scale'; $memberAllowed[] = 'ministries'; }
+          if ($inMinistry) $memberAllowed[] = 'ministries';
           if (!in_array($item['key'], $memberAllowed)) continue;
           // Célula: redirecionar direto para a célula do membro
           if ($item['key'] === 'cells') {
@@ -100,7 +99,7 @@ if (window.innerWidth <= 900) {
           }
         }
         if ($role === 'leader') {
-          $leaderAllowed = ['dashboard','events','communication','worship-scale','ministries','cells'];
+          $leaderAllowed = ['dashboard','events','communication','ministries','cells'];
           if (!in_array($item['key'], $leaderAllowed)) continue;
         }
         if ($role === 'cell_leader') {
