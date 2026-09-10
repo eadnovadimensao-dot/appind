@@ -336,7 +336,7 @@ function create_ministry_activity(
             INSERT INTO agenda_events
               (church_id, title, description, location_id, event_date, time_start, time_end,
                ministry_id, ministry_activity_id, status, type, color)
-            VALUES (?,?,?,?,?,?,?,?,'approved','ministry_activity','#185FA5')
+            VALUES (?,?,?,?,?,?,?,?,?,'approved','ministry_activity','#185FA5')
         ")->execute([$churchId, $title, $description?:null, $locId, $date,
                      $timeStart, $timeEnd, $ministryId, $activityId]);
     }
