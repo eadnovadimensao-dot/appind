@@ -33,7 +33,10 @@ $sent = 0;
 $failed = 0;
 
 foreach ($batch as $i => $item) {
-    $ok = send_whatsapp($item['phone'], $item['message'], $item['church_id']);
+    $buttons = $item['buttons'] ? json_decode($item['buttons'], true) : null;
+    $ok = $buttons
+        ? send_whatsapp_buttons($item['phone'], $item['message'], $buttons, $item['church_id'])
+        : send_whatsapp($item['phone'], $item['message'], $item['church_id']);
 
     if ($ok) {
         $db->prepare("UPDATE whatsapp_queue SET status='sent', sent_at=NOW() WHERE id=?")->execute([$item['id']]);
