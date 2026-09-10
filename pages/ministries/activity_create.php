@@ -82,11 +82,13 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                     $rTimeStart = $mn['meeting_time'] ?: null;
                     $rTimeEnd   = $rTimeStart ? date('H:i:s', strtotime($rTimeStart . ' +2 hours')) : null;
 
+                    // Atraso de 3 min na notificação do ensaio — evita a mensagem do
+                    // ensaio chegar junto (quase idêntica) com a do culto que o gerou
                     create_ministry_activity(
                         $db, $mn, $ministryId, $churchId, 'ensaio',
                         'Ensaio · ' . $title, $description,
                         $rehearsalDate, $rTimeStart, $rTimeEnd, $location,
-                        $scaledIds, $roles, $songs, auth_member_id()
+                        $scaledIds, $roles, $songs, auth_member_id(), 3
                     );
                 }
                 // Se já existe um ensaio nesse dia, não duplica — a equipe pode ser

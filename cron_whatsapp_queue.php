@@ -25,6 +25,7 @@ $db = db();
 $batch = $db->query("
     SELECT * FROM whatsapp_queue
     WHERE status = 'pending' AND attempts < 3
+      AND (not_before IS NULL OR not_before <= NOW())
     ORDER BY created_at ASC
     LIMIT 4
 ")->fetchAll();

@@ -37,7 +37,8 @@ function notify_scale_invitation(
     string $role,
     int $churchId,
     int $notifiedBy,
-    ?\Minishlink\WebPush\WebPush $webPush = null
+    ?\Minishlink\WebPush\WebPush $webPush = null,
+    int $whatsappDelayMinutes = 0
 ): void {
     $ownWebPush = false;
     if ($webPush === null) {
@@ -124,8 +125,9 @@ function notify_scale_invitation(
     }
 
     if ($memberPhone) {
-        $waText = $whatsappButtons ? ($tpl['title'] . "\n\n" . $tpl['content']) : ($tpl['title'] . "\n\n" . $fullContent);
-        queue_whatsapp($memberPhone, $waText, $churchId, $whatsappButtons);
+        $waBody = $whatsappButtons ? $tpl['content'] : $fullContent;
+        $waText = "*🎵 {$title}*\n" . $tpl['title'] . "\n\n" . $waBody;
+        queue_whatsapp($memberPhone, $waText, $churchId, $whatsappButtons, $whatsappDelayMinutes);
     }
 
     if ($memberEmail) {
@@ -265,7 +267,8 @@ function create_ministry_activity(
     array $scaledIds,
     array $roles,
     array $songs,
-    int $createdBy
+    int $createdBy,
+    int $whatsappDelayMinutes = 0
 ): int {
     $stmt = $db->prepare("
         INSERT INTO ministry_activities
@@ -331,7 +334,7 @@ function create_ministry_activity(
         foreach ($scaledIds as $mid) {
             notify_scale_invitation(
                 $db, $mn, $activityId, $title, $date, $timeStart,
-                (int)$mid, trim($roles[$mid] ?? ''), $churchId, $createdBy, $webPush
+                (int)$mid, trim($roles[$mid] ?? ''), $churchId, $createdBy, $webPush, $whatsappDelayMinutes
             );
         }
 
@@ -480,7 +483,8 @@ function notify_activity_rescheduled(
 
         // WhatsApp (Z-API)
         if ($memberPhone) {
-            $waText = $whatsappButtons ? ($tpl['title'] . "\n\n" . $tpl['content']) : ($tpl['title'] . "\n\n" . $fullContent);
+            $waBody = $whatsappButtons ? $tpl['content'] : $fullContent;
+            $waText = "*🎵 {$title}*\n" . $tpl['title'] . "\n\n" . $waBody;
             queue_whatsapp($memberPhone, $waText, $churchId, $whatsappButtons);
         }
 
