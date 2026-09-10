@@ -21,7 +21,7 @@ $act = $stmt->fetch();
 
 if ($act && $memberId) {
     $token   = bin2hex(random_bytes(32));
-    $expires = date('Y-m-d H:i:s', strtotime($act['activity_date'] . ' -2 days'));
+    $expires = response_deadline($act['activity_date'], $act['time_start']);
 
     $inserted = $db->prepare("
         INSERT IGNORE INTO ministry_activity_members

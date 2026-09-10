@@ -5,6 +5,21 @@
 require_once __DIR__ . '/music_roles.php';
 
 /**
+ * Data-limite (Y-m-d H:i:s) pro token de confirmação de escala.
+ * Ideal: 2 dias antes da atividade. Mas nunca no passado — se a atividade
+ * foi criada em cima da hora, dá um mínimo de folga a partir de agora, e
+ * nunca deixa passar do horário em que o evento começa.
+ */
+function response_deadline(string $activityDate, ?string $timeStart = null): string {
+    $ideal    = strtotime($activityDate . ' -2 days');
+    $eventAt  = strtotime($activityDate . ' ' . ($timeStart ?: '23:59:59'));
+    $minimum  = strtotime('+6 hours');
+    $deadline = max($ideal, $minimum);
+    $deadline = min($deadline, $eventAt);
+    return date('Y-m-d H:i:s', $deadline);
+}
+
+/**
  * Notifica UM membro já escalado (announcement interno, push real, WhatsApp e e-mail) —
  * convite de escala normal, ou pedido de oração se a função for "sempre inclui".
  * Reaproveitado por create_ministry_activity() (em lote) e activity_add_member.php
@@ -47,13 +62,14 @@ function notify_scale_invitation(
     $memberPhone = $memberRow['phone'] ?? '';
     $memberEmail = $memberRow['email'] ?? '';
 
-    $tokenRow = $db->prepare("SELECT confirm_token FROM ministry_activity_members WHERE activity_id=? AND member_id=?");
+    $tokenRow = $db->prepare("SELECT confirm_token, token_expires_at FROM ministry_activity_members WHERE activity_id=? AND member_id=?");
     $tokenRow->execute([$activityId, $mid]);
-    $token = $tokenRow->fetchColumn();
+    $tokenData = $tokenRow->fetch();
+    $token = $tokenData['confirm_token'] ?? '';
 
     $confirmUrl = APP_URL . '/respond.php?token=' . $token . '&action=confirm';
     $refuseUrl  = APP_URL . '/respond.php?token=' . $token . '&action=refuse';
-    $prazo      = date('d/m/Y', strtotime($date . ' -2 days'));
+    $prazo      = date('d/m/Y H:i', strtotime($tokenData['token_expires_at'] ?? response_deadline($date, $timeStart)));
 
     $isPrayerRole = in_array(trim($role), MUSIC_ALWAYS_INCLUDE_ROLES, true);
 
@@ -285,7 +301,7 @@ function create_ministry_activity(
         foreach ($scaledIds as $mid) {
             $role    = trim($roles[$mid] ?? '');
             $token   = bin2hex(random_bytes(32));
-            $expires = date('Y-m-d H:i:s', strtotime($date . ' -2 days'));
+            $expires = response_deadline($date, $timeStart);
             $ss->execute([$activityId, (int)$mid, $role ?: null, $token, $expires]);
         }
 
@@ -401,7 +417,7 @@ function notify_activity_rescheduled(
         } else {
             // Nova data invalida a resposta anterior — gera token novo e volta pra pendente
             $newToken   = bin2hex(random_bytes(32));
-            $newExpires = date('Y-m-d H:i:s', strtotime($newDate . ' -2 days'));
+            $newExpires = response_deadline($newDate, $timeStart);
             $db->prepare("
                 UPDATE ministry_activity_members
                 SET status='pending', confirmed=0, refuse_reason=NULL, responded_at=NULL,
@@ -416,7 +432,7 @@ function notify_activity_rescheduled(
                 'nome'       => $memberName,
                 'ministerio' => $mn['name'],
                 'data'       => date('d/m/Y (l)', strtotime($newDate)),
-                'prazo'      => date('d/m/Y', strtotime($newDate . ' -2 days')),
+                'prazo'      => date('d/m/Y H:i', strtotime($newExpires)),
             ], $churchId);
             $fullContent = $tpl['content']
                 . "\n\n✅ Confirmar presença: $confirmUrl"

@@ -69,25 +69,29 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         if ($activityType === 'culto' && $autoRehearsal && !empty($mn['meeting_day']) && !empty($scaledIds)) {
             $rehearsalDate = previous_weekday_before($date, $mn['meeting_day']);
 
-            $existing = $db->prepare("
-                SELECT id FROM ministry_activities
-                WHERE ministry_id = ? AND activity_type = 'ensaio' AND activity_date = ? AND status != 'cancelled'
-            ");
-            $existing->execute([$ministryId, $rehearsalDate]);
+            // Se a última ocorrência do dia de ensaio antes do culto já passou (culto
+            // criado em cima da hora), não faz sentido gerar um ensaio no passado
+            if ($rehearsalDate >= date('Y-m-d')) {
+                $existing = $db->prepare("
+                    SELECT id FROM ministry_activities
+                    WHERE ministry_id = ? AND activity_type = 'ensaio' AND activity_date = ? AND status != 'cancelled'
+                ");
+                $existing->execute([$ministryId, $rehearsalDate]);
 
-            if (!$existing->fetchColumn()) {
-                $rTimeStart = $mn['meeting_time'] ?: null;
-                $rTimeEnd   = $rTimeStart ? date('H:i:s', strtotime($rTimeStart . ' +2 hours')) : null;
+                if (!$existing->fetchColumn()) {
+                    $rTimeStart = $mn['meeting_time'] ?: null;
+                    $rTimeEnd   = $rTimeStart ? date('H:i:s', strtotime($rTimeStart . ' +2 hours')) : null;
 
-                create_ministry_activity(
-                    $db, $mn, $ministryId, $churchId, 'ensaio',
-                    'Ensaio · ' . $title, $description,
-                    $rehearsalDate, $rTimeStart, $rTimeEnd, $location,
-                    $scaledIds, $roles, $songs, auth_member_id()
-                );
+                    create_ministry_activity(
+                        $db, $mn, $ministryId, $churchId, 'ensaio',
+                        'Ensaio · ' . $title, $description,
+                        $rehearsalDate, $rTimeStart, $rTimeEnd, $location,
+                        $scaledIds, $roles, $songs, auth_member_id()
+                    );
+                }
+                // Se já existe um ensaio nesse dia, não duplica — a equipe pode ser
+                // ajustada manualmente na tela do ensaio existente.
             }
-            // Se já existe um ensaio nesse dia, não duplica — a equipe pode ser
-            // ajustada manualmente na tela do ensaio existente.
         }
 
         header('Location: /pages/ministries/view.php?id=' . $ministryId . '&saved=1');
