@@ -292,7 +292,7 @@ $logoUrl      = setting('church_logo_url', '', $churchId);
       </div>
       <div style="margin-top:8px">
         <div class="label">Data</div>
-        <div class="value"><?= date('d/m/Y (l)', strtotime($row['activity_date'])) ?></div>
+        <div class="value"><?= date_pt($row['activity_date']) ?></div>
       </div>
     </div>
 

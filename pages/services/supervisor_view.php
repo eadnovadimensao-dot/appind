@@ -129,7 +129,7 @@ $itemTypes = [
     <div>
       <h1 style="font-size:18px;font-weight:500;margin-bottom:6px"><?= htmlspecialchars($service['title']) ?></h1>
       <div style="display:flex;flex-wrap:wrap;gap:12px;font-size:13px;color:var(--text-muted)">
-        <span>📅 <?= date('d/m/Y (l)', strtotime($service['service_date'])) ?></span>
+        <span>📅 <?= date_pt($service['service_date']) ?></span>
         <?php if ($service['time_start']): ?>
           <span>🕐 <?= substr($service['time_start'],0,5) ?> — <?= substr($service['time_end']??'',0,5) ?></span>
         <?php endif; ?>

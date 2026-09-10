@@ -80,14 +80,14 @@ function notify_scale_invitation(
         $tpl = notification_template('scale_prayer_request', [
             'nome'       => $memberName,
             'ministerio' => $mn['name'],
-            'data'       => date('d/m/Y (l)', strtotime($date)),
+            'data'       => date_pt($date),
         ], $churchId);
         $fullContent = $tpl['content'];
     } else {
         $tpl = notification_template('scale_invited', [
             'nome'       => $memberName,
             'ministerio' => $mn['name'],
-            'data'       => date('d/m/Y (l)', strtotime($date)),
+            'data'       => date_pt($date),
             'prazo'      => $prazo,
         ], $churchId);
         $fullContent = $tpl['content']
@@ -422,7 +422,7 @@ function notify_activity_rescheduled(
             $tpl = notification_template('scale_prayer_request', [
                 'nome'       => $memberName,
                 'ministerio' => $mn['name'],
-                'data'       => date('d/m/Y (l)', strtotime($newDate)),
+                'data'       => date_pt($newDate),
             ], $churchId);
             $fullContent = $tpl['content'];
             $ctaUrl      = $viewUrl;
@@ -443,7 +443,7 @@ function notify_activity_rescheduled(
             $tpl = notification_template('scale_rescheduled', [
                 'nome'       => $memberName,
                 'ministerio' => $mn['name'],
-                'data'       => date('d/m/Y (l)', strtotime($newDate)),
+                'data'       => date_pt($newDate),
                 'prazo'      => date('d/m/Y H:i', strtotime($newExpires)),
             ], $churchId);
             $fullContent = $tpl['content']
