@@ -91,7 +91,7 @@ if (window.innerWidth <= 900) {
         if ($role === 'member') {
           $memberAllowed = ['dashboard','events','communication'];
           if ($memberCellId) $memberAllowed[] = 'cells';
-          if ($inMinistry)   $memberAllowed[] = 'worship-scale';
+          if ($inMinistry) { $memberAllowed[] = 'worship-scale'; $memberAllowed[] = 'ministries'; }
           if (!in_array($item['key'], $memberAllowed)) continue;
           // Célula: redirecionar direto para a célula do membro
           if ($item['key'] === 'cells') {

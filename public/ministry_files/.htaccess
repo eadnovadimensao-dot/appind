@@ -1,0 +1,6 @@
+# Impede execução de scripts nessa pasta (só arquivos estáticos enviados pelos ministérios)
+<FilesMatch "\.(php|php\d|phtml|pl|py|cgi|sh)$">
+  Require all denied
+</FilesMatch>
+Options -ExecCGI
+AddHandler cgi-script .php .php3 .php4 .php5 .phtml .pl .py .cgi .sh

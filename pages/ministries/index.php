@@ -7,9 +7,29 @@ $db       = db();
 $role     = auth_role();
 $churchId = current_church_id();
 $isAdmin  = in_array($role, ['supermaster','admin']);
+$memberId = auth_member_id();
 
+// Membro comum só vê os ministérios em que participa
+if ($role === 'member') {
+    $stmt = $db->prepare("
+        SELECT mn.*, m.name AS leader_name, ch.name AS branch_name, ch.type AS branch_type,
+               COUNT(DISTINCT mm.member_id) AS member_count,
+               COUNT(DISTINCT ma.id) AS activity_count
+        FROM ministries mn
+        JOIN member_ministries mine ON mine.ministry_id = mn.id AND mine.member_id = ?
+        LEFT JOIN members m   ON m.id  = mn.leader_id
+        LEFT JOIN churches ch ON ch.id = mn.church_id
+        LEFT JOIN member_ministries mm  ON mm.ministry_id = mn.id
+        LEFT JOIN ministry_activities ma ON ma.ministry_id = mn.id AND ma.status='scheduled' AND ma.activity_date >= CURDATE()
+        WHERE mn.church_id = ?
+        GROUP BY mn.id
+        ORDER BY mn.name
+    ");
+    $stmt->execute([$memberId, $churchId]);
+    $ministries = $stmt->fetchAll();
+}
 // Admin da sede vê todos; outros veem só a sua filial
-if ($isAdmin && $churchId === SEDE_ID) {
+elseif ($isAdmin && $churchId === SEDE_ID) {
     $ministries = $db->query("
         SELECT mn.*, m.name AS leader_name, ch.name AS branch_name, ch.type AS branch_type,
                COUNT(DISTINCT mm.member_id) AS member_count,
@@ -41,9 +61,12 @@ if ($isAdmin && $churchId === SEDE_ID) {
     $ministries = $stmt->fetchAll();
 }
 
-$pageTitle    = 'Ministérios';
-$activePage   = 'ministries';
-$topbarAction = ['href' => '/pages/ministries/create.php', 'label' => 'Novo ministério'];
+$pageTitle       = 'Ministérios';
+$activePage      = 'ministries';
+$canCreateMinistry = auth_can('manage_ministries');
+if ($canCreateMinistry) {
+    $topbarAction = ['href' => '/pages/ministries/create.php', 'label' => 'Novo ministério'];
+}
 require_once __DIR__ . '/../../includes/layout.php';
 ?>
 
@@ -56,7 +79,9 @@ require_once __DIR__ . '/../../includes/layout.php';
     <div class="empty-state">
       <p style="font-size:32px;margin-bottom:8px">✝️</p>
       <p>Nenhum ministério cadastrado ainda.</p>
-      <a href="/pages/ministries/create.php" class="btn btn-primary" style="margin-top:16px">+ Criar primeiro ministério</a>
+      <?php if ($canCreateMinistry): ?>
+        <a href="/pages/ministries/create.php" class="btn btn-primary" style="margin-top:16px">+ Criar primeiro ministério</a>
+      <?php endif; ?>
     </div>
   <?php else: ?>
     <div class="table-wrap">
@@ -129,7 +154,9 @@ require_once __DIR__ . '/../../includes/layout.php';
               </td>
               <td style="text-align:right">
                 <a href="/pages/ministries/view.php?id=<?= $mn['id'] ?>" class="btn btn-secondary" style="font-size:12px;padding:5px 12px">Ver</a>
-                <a href="/pages/ministries/edit.php?id=<?= $mn['id'] ?>" class="btn btn-secondary" style="font-size:12px;padding:5px 12px">Editar</a>
+                <?php if ($canCreateMinistry || auth_can_manage_ministry((int)$mn['id'])): ?>
+                  <a href="/pages/ministries/edit.php?id=<?= $mn['id'] ?>" class="btn btn-secondary" style="font-size:12px;padding:5px 12px">Editar</a>
+                <?php endif; ?>
               </td>
             </tr>
           <?php endforeach; ?>

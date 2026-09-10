@@ -82,10 +82,13 @@ function auth_member_redirect(): void {
             }
         }
 
-        // Pode ver escalas se for de ministério
+        // Pode ver escalas e materiais se for de ministério
         if ($inMinistry) {
             $allowed[] = '/pages/worship-scale/index.php';
             $allowed[] = '/pages/ministries/activity_view.php';
+            $allowed[] = '/pages/ministries/index.php';
+            $allowed[] = '/pages/ministries/view.php';
+            $allowed[] = '/pages/ministries/resources.php';
         }
 
         // Pode solicitar evento se for de ministério

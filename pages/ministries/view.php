@@ -132,6 +132,7 @@ $actTypeLabels = [
       </div>
     </div>
     <div style="display:flex;gap:8px;flex-wrap:wrap">
+      <a href="/pages/ministries/resources.php?ministry_id=<?= $id ?>" class="btn btn-secondary">📁 Materiais</a>
       <a href="/pages/ministries/items.php?ministry_id=<?= $id ?>" class="btn btn-secondary">🎒 Pertences</a>
       <?php if ($canManage): ?>
         <a href="/pages/ministries/activity_create.php?ministry_id=<?= $id ?>" class="btn btn-primary">+ Atividade</a>
