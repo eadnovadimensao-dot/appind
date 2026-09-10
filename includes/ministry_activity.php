@@ -102,7 +102,7 @@ function notify_scale_invitation(
     }
 
     if ($memberPhone) {
-        send_whatsapp($memberPhone, $tpl['title'] . "\n\n" . $fullContent, $churchId);
+        queue_whatsapp($memberPhone, $tpl['title'] . "\n\n" . $fullContent, $churchId);
     }
 
     if ($memberEmail) {
@@ -451,7 +451,7 @@ function notify_activity_rescheduled(
 
         // WhatsApp (Z-API)
         if ($memberPhone) {
-            send_whatsapp($memberPhone, $tpl['title'] . "\n\n" . $fullContent, $churchId);
+            queue_whatsapp($memberPhone, $tpl['title'] . "\n\n" . $fullContent, $churchId);
         }
 
         $memberEmail = $db->query("SELECT email FROM members WHERE id=" . $mid)->fetchColumn();

@@ -146,7 +146,7 @@ if (!$row) {
         }
 
         if (!empty($leader['phone'])) {
-            send_whatsapp($leader['phone'], $tpl['title'] . "\n\n" . $leaderContent, $row['church_id']);
+            queue_whatsapp($leader['phone'], $tpl['title'] . "\n\n" . $leaderContent, $row['church_id']);
         }
 
         if (!empty($leader['email'])) {

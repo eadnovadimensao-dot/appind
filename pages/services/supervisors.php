@@ -226,7 +226,7 @@ if (!empty($activeSups)) {
             // WhatsApp (Z-API)
             $supPhone = $activeSups[$lastIdx]['member_phone'] ?? '';
             if ($supPhone) {
-                send_whatsapp(
+                queue_whatsapp(
                     $supPhone,
                     $tpl['title'] . "\n\n" . $tpl['content'] . "\n\n🔗 " . APP_URL . '/pages/services/index.php',
                     $churchId
