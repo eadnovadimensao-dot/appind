@@ -107,7 +107,7 @@ function fdate($d) { return $d ? date('d/m/Y', strtotime($d)) : '—'; }
       ['E-mail',   $m['email']  ?? '—'],
       ['CEP',      $m['zip_code'] ?? '—'],
       ['Cidade',   $m['city']   ?? '—'],
-      ['Endereço', $m['address'] ?? '—'],
+      ['Endereço', trim(($m['address'] ?? '') . ($m['number'] ? ', nº ' . $m['number'] : '')) ?: '—'],
       ['Bairro',   $m['neighborhood'] ?? '—'],
     ];
     foreach ($rows as [$label, $value]):

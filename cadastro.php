@@ -32,6 +32,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     $gender     = trim($_POST['gender']     ?? '');
     $marital    = trim($_POST['marital_status'] ?? '');
     $address    = trim($_POST['address']    ?? '');
+    $number     = trim($_POST['number']     ?? '');
     $neighborhood = trim($_POST['neighborhood'] ?? '');
     $city       = trim($_POST['city']       ?? '');
     $zip        = trim($_POST['zip_code']   ?? '');
@@ -59,10 +60,10 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             $ins = $db->prepare("
                 INSERT INTO member_signups
                   (church_id, name, phone, email, birth_date, gender, marital_status,
-                   address, neighborhood, city, zip_code, ip_address)
+                   address, number, neighborhood, city, zip_code, ip_address)
                 VALUES
                   (:church_id,:name,:phone,:email,:birth_date,:gender,:marital,
-                   :address,:neighborhood,:city,:zip,:ip)
+                   :address,:number,:neighborhood,:city,:zip,:ip)
             ");
             $ins->execute([
                 ':church_id' => $churchId,
@@ -73,6 +74,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 ':gender'    => $gender ?: null,
                 ':marital'   => $marital ?: null,
                 ':address'   => $address ?: null,
+                ':number'    => $number ?: null,
                 ':neighborhood' => $neighborhood ?: null,
                 ':city'      => $city ?: null,
                 ':zip'       => $zip ?: null,
@@ -217,14 +219,18 @@ $accentColor  = setting('accent_color',   '#1D9E75', $churchId);
             </div>
           </div>
           <div class="form-row">
-            <div class="form-group">
-              <label class="form-label">Endereço</label>
+            <div class="form-group" style="flex:2">
+              <label class="form-label">Rua / Logradouro</label>
               <input type="text" name="address" id="address" class="form-control" value="<?= htmlspecialchars($_POST['address'] ?? '') ?>">
             </div>
-            <div class="form-group">
-              <label class="form-label">Bairro</label>
-              <input type="text" name="neighborhood" id="neighborhood" class="form-control" value="<?= htmlspecialchars($_POST['neighborhood'] ?? '') ?>">
+            <div class="form-group" style="flex:0 0 100px">
+              <label class="form-label">Número</label>
+              <input type="text" name="number" id="number" class="form-control" value="<?= htmlspecialchars($_POST['number'] ?? '') ?>">
             </div>
+          </div>
+          <div class="form-group">
+            <label class="form-label">Bairro</label>
+            <input type="text" name="neighborhood" id="neighborhood" class="form-control" value="<?= htmlspecialchars($_POST['neighborhood'] ?? '') ?>">
           </div>
 
           <button type="submit" class="btn btn-signup" style="margin-top:4px">Enviar cadastro</button>
@@ -251,6 +257,7 @@ document.getElementById('zip_code')?.addEventListener('blur', function() {
       document.getElementById('address').value      = d.logradouro || '';
       document.getElementById('neighborhood').value = d.bairro     || '';
       document.getElementById('city').value         = d.localidade || '';
+      document.getElementById('number').focus();
     })
     .catch(() => { loading.style.display = 'none'; });
 });

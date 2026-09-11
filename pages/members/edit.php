@@ -41,6 +41,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     $conversion     = trim($_POST['conversion_date'] ?? '') ?: null;
     $origin         = trim($_POST['origin_church']   ?? '');
     $address        = trim($_POST['address']         ?? '');
+    $number         = trim($_POST['number']          ?? '');
     $neighborhood   = trim($_POST['neighborhood']    ?? '');
     $city           = trim($_POST['city']            ?? '');
     $zip            = trim($_POST['zip_code']        ?? '');
@@ -87,7 +88,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
               birth_date=:birth_date, gender=:gender, marital_status=:marital,
               status=:status, cell_id=:cell_id, join_date=:join_date,
               baptism_date=:baptism, conversion_date=:conversion,
-              origin_church=:origin, address=:address, neighborhood=:neighborhood,
+              origin_church=:origin, address=:address, number=:number, neighborhood=:neighborhood,
               city=:city, zip_code=:zip, notes=:notes, photo_url=:photo_url
             WHERE id=:id
         ")->execute([
@@ -96,7 +97,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             ':birth_date'=>$birthDate?:null,':gender'=>$gender?:null,':marital'=>$marital?:null,
             ':status'=>$status,':cell_id'=>$cellId,':join_date'=>$joinDate,
             ':baptism'=>$baptism?:null,':conversion'=>$conversion?:null,':origin'=>$origin?:null,
-            ':address'=>$address?:null,':neighborhood'=>$neighborhood?:null,
+            ':address'=>$address?:null,':number'=>$number?:null,':neighborhood'=>$neighborhood?:null,
             ':city'=>$city?:null,':zip'=>$zip?:null,':notes'=>$notes?:null,
             ':photo_url'=>$photoUrl,
             ':id'=>$id,
@@ -219,14 +220,18 @@ require_once __DIR__ . '/../../includes/layout.php';
       </div>
     </div>
     <div class="form-row">
-      <div class="form-group">
-        <label class="form-label">Endereço</label>
+      <div class="form-group" style="flex:2">
+        <label class="form-label">Rua / Logradouro</label>
         <input type="text" name="address" id="address" class="form-control" value="<?= htmlspecialchars($m['address'] ?? '') ?>">
       </div>
-      <div class="form-group">
-        <label class="form-label">Bairro</label>
-        <input type="text" name="neighborhood" id="neighborhood" class="form-control" value="<?= htmlspecialchars($m['neighborhood'] ?? '') ?>">
+      <div class="form-group" style="flex:0 0 100px">
+        <label class="form-label">Número</label>
+        <input type="text" name="number" id="number" class="form-control" value="<?= htmlspecialchars($m['number'] ?? '') ?>">
       </div>
+    </div>
+    <div class="form-group" style="margin-bottom:0">
+      <label class="form-label">Bairro</label>
+      <input type="text" name="neighborhood" id="neighborhood" class="form-control" value="<?= htmlspecialchars($m['neighborhood'] ?? '') ?>">
     </div>
   </div>
 
@@ -362,6 +367,7 @@ document.getElementById('zip_code').addEventListener('blur', function() {
       document.getElementById('address').value      = d.logradouro || '';
       document.getElementById('neighborhood').value = d.bairro     || '';
       document.getElementById('city').value         = d.localidade || '';
+      document.getElementById('number').focus();
     });
 });
 document.getElementById('zip_code').addEventListener('input', function() {

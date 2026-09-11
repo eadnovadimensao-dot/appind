@@ -29,6 +29,7 @@ if (!empty($_GET['from_signup']) && $_SERVER['REQUEST_METHOD'] !== 'POST') {
             'gender'           => $signup['gender'] ?? '',
             'marital_status'   => $signup['marital_status'] ?? '',
             'address'          => $signup['address'] ?? '',
+            'number'           => $signup['number'] ?? '',
             'neighborhood'     => $signup['neighborhood'] ?? '',
             'city'             => $signup['city'] ?? '',
             'zip_code'         => $signup['zip_code'] ?? '',
@@ -55,6 +56,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     $conversion = trim($_POST['conversion_date'] ?? '') ?: null;
     $origin     = trim($_POST['origin_church'] ?? '');
     $address    = trim($_POST['address']    ?? '');
+    $number     = trim($_POST['number']     ?? '');
     $neighborhood = trim($_POST['neighborhood'] ?? '');
     $city       = trim($_POST['city']       ?? '');
     $zip        = trim($_POST['zip_code']   ?? '');
@@ -86,11 +88,11 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             INSERT INTO members
               (church_id, name, phone, email, cpf, birth_date, gender, marital_status,
                status, cell_id, join_date, baptism_date, conversion_date, origin_church,
-               address, neighborhood, city, zip_code, notes, family_id, family_role)
+               address, number, neighborhood, city, zip_code, notes, family_id, family_role)
             VALUES
               (:church_id,:name,:phone,:email,:cpf,:birth_date,:gender,:marital,
                :status,:cell_id,:join_date,:baptism,:conversion,:origin,
-               :address,:neighborhood,:city,:zip,:notes,:family_id,:family_role)
+               :address,:number,:neighborhood,:city,:zip,:notes,:family_id,:family_role)
         ");
         $stmt->execute([
             ':church_id'=>$insertChurchId,':name'=>$name,':phone'=>$phone,
@@ -98,7 +100,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             ':birth_date'=>$birthDate?:null,':gender'=>$gender?:null,':marital'=>$marital?:null,
             ':status'=>$status,':cell_id'=>$cellId,':join_date'=>$joinDate,
             ':baptism'=>$baptism?:null,':conversion'=>$conversion?:null,':origin'=>$origin?:null,
-            ':address'=>$address?:null,':neighborhood'=>$neighborhood?:null,
+            ':address'=>$address?:null,':number'=>$number?:null,':neighborhood'=>$neighborhood?:null,
             ':city'=>$city?:null,':zip'=>$zip?:null,':notes'=>$notes?:null,
             ':family_id'=>$familyId,':family_role'=>$familyRole,
         ]);
@@ -239,14 +241,18 @@ require_once __DIR__ . '/../../includes/layout.php';
       </div>
     </div>
     <div class="form-row">
-      <div class="form-group">
-        <label class="form-label">Endereço</label>
+      <div class="form-group" style="flex:2">
+        <label class="form-label">Rua / Logradouro</label>
         <input type="text" name="address" id="address" class="form-control" value="<?= htmlspecialchars($_POST['address'] ?? '') ?>">
       </div>
-      <div class="form-group">
-        <label class="form-label">Bairro</label>
-        <input type="text" name="neighborhood" id="neighborhood" class="form-control" value="<?= htmlspecialchars($_POST['neighborhood'] ?? '') ?>">
+      <div class="form-group" style="flex:0 0 100px">
+        <label class="form-label">Número</label>
+        <input type="text" name="number" id="number" class="form-control" value="<?= htmlspecialchars($_POST['number'] ?? '') ?>">
       </div>
+    </div>
+    <div class="form-group" style="margin-bottom:0">
+      <label class="form-label">Bairro</label>
+      <input type="text" name="neighborhood" id="neighborhood" class="form-control" value="<?= htmlspecialchars($_POST['neighborhood'] ?? '') ?>">
     </div>
   </div>
 
@@ -367,6 +373,7 @@ document.getElementById('zip_code').addEventListener('blur', function() {
       document.getElementById('address').value      = d.logradouro || '';
       document.getElementById('neighborhood').value = d.bairro     || '';
       document.getElementById('city').value         = d.localidade || '';
+      document.getElementById('number').focus();
     })
     .catch(() => { loading.style.display = 'none'; });
 });
