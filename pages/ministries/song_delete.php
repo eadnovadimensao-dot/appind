@@ -13,6 +13,14 @@ if ($songId && $activityId) {
     $ministryId = $ministryId->fetchColumn();
 
     if ($ministryId && auth_can_manage_ministry((int)$ministryId)) {
+        $song = $db->prepare("SELECT file_path FROM ministry_activity_songs WHERE id = ? AND activity_id = ?");
+        $song->execute([$songId, $activityId]);
+        $filePath = $song->fetchColumn();
+        if ($filePath) {
+            $full = __DIR__ . '/../../' . ltrim($filePath, '/');
+            if (is_file($full)) @unlink($full);
+        }
+
         $db->prepare("DELETE FROM ministry_activity_songs WHERE id = ? AND activity_id = ?")
            ->execute([$songId, $activityId]);
     }

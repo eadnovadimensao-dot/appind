@@ -133,11 +133,14 @@ $at = $actTypeLabels[$act['activity_type']] ?? null;
           <?php if ($sg['key_tone']): ?>
             <span class="badge badge-gray" style="font-size:10px;margin-left:6px">Tom: <?= htmlspecialchars($sg['key_tone']) ?></span>
           <?php endif; ?>
-          <?php if ($sg['reference_link']): ?>
-            <div style="font-size:12px;margin-top:2px">
+          <div style="font-size:12px;margin-top:2px;display:flex;gap:12px">
+            <?php if ($sg['reference_link']): ?>
               <a href="<?= htmlspecialchars($sg['reference_link']) ?>" target="_blank" rel="noopener" style="color:var(--accent);text-decoration:none">🔗 Referência</a>
-            </div>
-          <?php endif; ?>
+            <?php endif; ?>
+            <?php if ($sg['file_path']): ?>
+              <a href="<?= htmlspecialchars($sg['file_path']) ?>" target="_blank" rel="noopener" style="color:var(--accent);text-decoration:none">📄 Cifra/partitura</a>
+            <?php endif; ?>
+          </div>
         </div>
         <a href="/pages/ministries/song_delete.php?song_id=<?= $sg['id'] ?>&activity_id=<?= $id ?>"
            style="font-size:18px;color:var(--text-muted);text-decoration:none;line-height:1"
@@ -145,7 +148,7 @@ $at = $actTypeLabels[$act['activity_type']] ?? null;
       </div>
     <?php endforeach; ?>
   <?php endif; ?>
-  <form method="POST" action="/pages/ministries/song_add.php" style="display:flex;gap:8px;align-items:flex-end;flex-wrap:wrap;padding:12px 18px;background:#fafafa">
+  <form method="POST" action="/pages/ministries/song_add.php" enctype="multipart/form-data" style="display:flex;gap:8px;align-items:flex-end;flex-wrap:wrap;padding:12px 18px;background:#fafafa">
     <input type="hidden" name="activity_id" value="<?= $id ?>">
     <div style="flex:2;min-width:140px">
       <input type="text" name="title" class="form-control" placeholder="Música" required>
@@ -155,6 +158,10 @@ $at = $actTypeLabels[$act['activity_type']] ?? null;
     </div>
     <div style="flex:2;min-width:140px">
       <input type="text" name="reference_link" class="form-control" placeholder="Link (cifra/YouTube…)">
+    </div>
+    <div style="flex:2;min-width:160px">
+      <label style="font-size:11px;color:var(--text-muted);display:block;margin-bottom:2px">Cifra/partitura (opcional)</label>
+      <input type="file" name="file" class="form-control" style="padding:5px 8px">
     </div>
     <button type="submit" class="btn btn-primary">+ Adicionar</button>
   </form>
