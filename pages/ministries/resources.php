@@ -106,12 +106,25 @@ function resource_size(?int $bytes): string {
     <input type="hidden" name="ministry_id" value="<?= $id ?>">
     <div class="form-row">
       <div class="form-group">
+        <label class="form-label">Tipo</label>
+        <select name="type" class="form-control" id="resource-type">
+          <option value="material">📄 Material</option>
+          <option value="song">🎵 Música (entra na lista pra escalar em cultos/ensaios)</option>
+        </select>
+      </div>
+      <div class="form-group" id="key-tone-group" style="display:none">
+        <label class="form-label">Tom</label>
+        <input type="text" name="key_tone" class="form-control" placeholder="Ex: G, D, A#m…">
+      </div>
+    </div>
+    <div class="form-row">
+      <div class="form-group">
         <label class="form-label">Título *</label>
         <input type="text" name="title" class="form-control" placeholder="Ex: Repertório de domingo, Exercício de afinação…" required>
       </div>
       <div class="form-group">
         <label class="form-label">Categoria</label>
-        <input type="text" name="category" class="form-control" list="category-suggestions" placeholder="Ex: Repertório" value="Geral">
+        <input type="text" name="category" class="form-control" list="category-suggestions" placeholder="Ex: Repertório" value="Geral" id="resource-category">
         <datalist id="category-suggestions">
           <?php foreach ($categorySuggestions as $cs): ?>
             <option value="<?= htmlspecialchars($cs) ?>">
@@ -136,6 +149,15 @@ function resource_size(?int $bytes): string {
     </div>
     <button type="submit" class="btn btn-primary">Salvar material</button>
   </form>
+  <script>
+    document.getElementById('resource-type').addEventListener('change', function() {
+      const isSong = this.value === 'song';
+      document.getElementById('key-tone-group').style.display = isSong ? 'block' : 'none';
+      const catField = document.getElementById('resource-category');
+      if (isSong && catField.value === 'Geral') catField.value = 'Repertório';
+      if (!isSong && catField.value === 'Repertório') catField.value = 'Geral';
+    });
+  </script>
 </div>
 <?php endif; ?>
 
@@ -161,7 +183,12 @@ function resource_size(?int $bytes): string {
         <div style="display:flex;align-items:flex-start;gap:12px;padding:12px 18px;border-bottom:1px solid var(--border)">
           <div style="font-size:22px;flex-shrink:0"><?= resource_icon($r['file_name'], $r['external_url']) ?></div>
           <div style="flex:1;min-width:0">
-            <div style="font-size:13px;font-weight:500"><?= htmlspecialchars($r['title']) ?></div>
+            <div style="font-size:13px;font-weight:500">
+              <?= htmlspecialchars($r['title']) ?>
+              <?php if ($r['key_tone']): ?>
+                <span class="badge badge-gray" style="font-size:10px;margin-left:6px">Tom: <?= htmlspecialchars($r['key_tone']) ?></span>
+              <?php endif; ?>
+            </div>
             <?php if ($r['description']): ?>
               <div style="font-size:12px;color:var(--text-muted);margin-top:2px"><?= nl2br(htmlspecialchars($r['description'])) ?></div>
             <?php endif; ?>

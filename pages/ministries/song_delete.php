@@ -13,11 +13,14 @@ if ($songId && $activityId) {
     $ministryId = $ministryId->fetchColumn();
 
     if ($ministryId && auth_can_manage_ministry((int)$ministryId)) {
-        $song = $db->prepare("SELECT file_path FROM ministry_activity_songs WHERE id = ? AND activity_id = ?");
+        // Só apaga o arquivo do disco se for uma música "avulsa" antiga (sem resource_id) —
+        // músicas do catálogo (resource_id preenchido) têm o arquivo compartilhado com o
+        // catálogo em Materiais e outras atividades, então aqui só desvincula.
+        $song = $db->prepare("SELECT file_path, resource_id FROM ministry_activity_songs WHERE id = ? AND activity_id = ?");
         $song->execute([$songId, $activityId]);
-        $filePath = $song->fetchColumn();
-        if ($filePath) {
-            $full = __DIR__ . '/../../' . ltrim($filePath, '/');
+        $song = $song->fetch();
+        if ($song && !$song['resource_id'] && $song['file_path']) {
+            $full = __DIR__ . '/../../' . ltrim($song['file_path'], '/');
             if (is_file($full)) @unlink($full);
         }
 

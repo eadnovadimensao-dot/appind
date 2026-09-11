@@ -249,7 +249,7 @@ function notify_scale_invitation(
  * Também integra com a agenda quando há horário de término.
  *
  * @param array $roles     member_id => função (string)
- * @param array $songs     lista de ['title'=>, 'key_tone'=>, 'reference_link'=>]
+ * @param array $songs     lista de IDs de ministry_resources (catálogo de músicas do ministério)
  * @return int  id da atividade criada
  */
 function create_ministry_activity(
@@ -288,20 +288,14 @@ function create_ministry_activity(
     ]);
     $activityId = (int)$db->lastInsertId();
 
-    // Repertório
+    // Repertório — $songs é uma lista de IDs do catálogo de músicas (ministry_resources)
     if (!empty($songs)) {
-        $sg = $db->prepare("INSERT INTO ministry_activity_songs (activity_id, title, key_tone, reference_link, position) VALUES (?,?,?,?,?)");
+        $sg  = $db->prepare("INSERT INTO ministry_activity_songs (activity_id, resource_id, position) VALUES (?,?,?)");
         $pos = 0;
-        foreach ($songs as $song) {
-            $songTitle = trim($song['title'] ?? '');
-            if ($songTitle === '') continue;
-            $sg->execute([
-                $activityId,
-                $songTitle,
-                trim($song['key_tone'] ?? '') ?: null,
-                trim($song['reference_link'] ?? '') ?: null,
-                $pos++,
-            ]);
+        foreach ($songs as $resourceId) {
+            $resourceId = (int)$resourceId;
+            if ($resourceId <= 0) continue;
+            $sg->execute([$activityId, $resourceId, $pos++]);
         }
     }
 

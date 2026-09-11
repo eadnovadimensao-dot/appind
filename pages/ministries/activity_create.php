@@ -37,6 +37,16 @@ $members = $db->prepare("
 $members->execute([$ministryId, $churchId]);
 $members = $members->fetchAll();
 
+// Catálogo de músicas do ministério (cadastradas em Materiais)
+$songCatalog = $db->prepare("
+    SELECT id, title, key_tone, reference_link, file_path
+    FROM ministry_resources
+    WHERE ministry_id = ? AND type = 'song'
+    ORDER BY title
+");
+$songCatalog->execute([$ministryId]);
+$songCatalog = $songCatalog->fetchAll();
+
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     $title        = trim($_POST['title']         ?? '');
     $description  = trim($_POST['description']   ?? '');
@@ -47,20 +57,13 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     $activityType   = ($_POST['activity_type'] ?? 'culto') === 'ensaio' ? 'ensaio' : 'culto';
     $scaledIds      = $_POST['scaled_ids'] ?? [];
     $roles          = $_POST['roles']      ?? [];
-    $songTitles     = $_POST['song_title'] ?? [];
-    $songKeys       = $_POST['song_key']   ?? [];
-    $songLinks      = $_POST['song_link']  ?? [];
+    $songs          = array_map('intval', $_POST['song_ids'] ?? []);
     $autoRehearsal  = isset($_POST['auto_rehearsal']);
 
     if ($title === '') $errors[] = 'Título é obrigatório.';
     if ($date  === '') $errors[] = 'Data é obrigatória.';
 
     if (empty($errors)) {
-        $songs = [];
-        foreach ($songTitles as $i => $t) {
-            $songs[] = ['title' => $t, 'key_tone' => $songKeys[$i] ?? '', 'reference_link' => $songLinks[$i] ?? ''];
-        }
-
         $activityId = create_ministry_activity(
             $db, $mn, $ministryId, $churchId, $activityType, $title, $description,
             $date, $timeStart, $timeEnd, $location, $scaledIds, $roles, $songs, auth_member_id()
@@ -172,27 +175,37 @@ require_once __DIR__ . '/../../includes/layout.php';
 
   <!-- Repertório -->
   <div class="card" style="margin-bottom:16px">
-    <p class="card-title">Repertório</p>
-    <div id="songs-wrap">
-      <?php
-        $songTitlesPost = $_POST['song_title'] ?? [];
-        $songKeysPost   = $_POST['song_key']   ?? [];
-        $songLinksPost  = $_POST['song_link']  ?? [];
-        $songCount      = max(count($songTitlesPost), 1);
-        for ($i = 0; $i < $songCount; $i++):
-      ?>
-        <div class="song-row" style="display:flex;gap:8px;margin-bottom:8px;flex-wrap:wrap">
-          <input type="text" name="song_title[]" class="form-control" placeholder="Música"
-                 style="flex:2;min-width:140px" value="<?= htmlspecialchars($songTitlesPost[$i] ?? '') ?>">
-          <input type="text" name="song_key[]" class="form-control" placeholder="Tom (ex: G)"
-                 style="flex:1;min-width:70px" value="<?= htmlspecialchars($songKeysPost[$i] ?? '') ?>">
-          <input type="text" name="song_link[]" class="form-control" placeholder="Link (cifra/YouTube…)"
-                 style="flex:2;min-width:140px" value="<?= htmlspecialchars($songLinksPost[$i] ?? '') ?>">
-          <button type="button" class="btn btn-secondary remove-song-btn" style="flex-shrink:0">×</button>
-        </div>
-      <?php endfor; ?>
+    <div style="display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:8px;margin-bottom:8px">
+      <p class="card-title" style="margin:0">Repertório</p>
+      <a href="/pages/ministries/resources.php?ministry_id=<?= $ministryId ?>" target="_blank" style="font-size:12px;color:var(--accent);text-decoration:none">+ Adicionar música ao catálogo ↗</a>
     </div>
-    <button type="button" id="add-song-btn" class="btn btn-secondary" style="font-size:12px">+ Adicionar música</button>
+    <?php if (empty($songCatalog)): ?>
+      <p style="font-size:13px;color:var(--text-muted)">
+        Nenhuma música cadastrada ainda no catálogo do ministério.
+        <a href="/pages/ministries/resources.php?ministry_id=<?= $ministryId ?>" target="_blank">Cadastrar em Materiais</a>
+      </p>
+    <?php else: ?>
+      <p style="font-size:12px;color:var(--text-muted);margin-bottom:10px">Selecione as músicas dessa atividade (cadastradas em Materiais):</p>
+      <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(220px,1fr));gap:8px">
+        <?php foreach ($songCatalog as $sg): ?>
+          <label style="border:1px solid var(--border);border-radius:7px;padding:10px 12px;display:flex;align-items:flex-start;gap:8px;cursor:pointer">
+            <input type="checkbox" name="song_ids[]" value="<?= $sg['id'] ?>" style="margin-top:2px"
+                   <?= in_array($sg['id'], array_map('intval', $_POST['song_ids'] ?? [])) ? 'checked' : '' ?>>
+            <div style="flex:1;min-width:0">
+              <div style="font-size:13px;font-weight:500">
+                <?= htmlspecialchars($sg['title']) ?>
+                <?php if ($sg['key_tone']): ?>
+                  <span class="badge badge-gray" style="font-size:10px;margin-left:4px">Tom: <?= htmlspecialchars($sg['key_tone']) ?></span>
+                <?php endif; ?>
+              </div>
+              <div style="font-size:11px;color:var(--text-muted);margin-top:2px">
+                <?= $sg['reference_link'] ? '🔗 link' : '' ?><?= ($sg['reference_link'] && $sg['file_path']) ? ' · ' : '' ?><?= $sg['file_path'] ? '📄 arquivo' : '' ?>
+              </div>
+            </div>
+          </label>
+        <?php endforeach; ?>
+      </div>
+    <?php endif; ?>
   </div>
 
   <!-- Escala -->
@@ -264,28 +277,6 @@ document.querySelectorAll('.scale-cb').forEach(cb => {
     const roleInput = document.getElementById('role' + this.dataset.id);
     roleInput.style.display = this.checked ? 'block' : 'none';
   });
-});
-
-// Repertório — adicionar/remover músicas dinamicamente
-let songIdx = document.querySelectorAll('.song-row').length;
-document.getElementById('add-song-btn')?.addEventListener('click', function() {
-  const wrap = document.getElementById('songs-wrap');
-  const row = document.createElement('div');
-  row.className = 'song-row';
-  row.style.cssText = 'display:flex;gap:8px;margin-bottom:8px;flex-wrap:wrap';
-  row.innerHTML = `
-    <input type="text" name="song_title[]" class="form-control" placeholder="Música" style="flex:2;min-width:140px">
-    <input type="text" name="song_key[]" class="form-control" placeholder="Tom (ex: G)" style="flex:1;min-width:70px">
-    <input type="text" name="song_link[]" class="form-control" placeholder="Link (cifra/YouTube…)" style="flex:2;min-width:140px">
-    <button type="button" class="btn btn-secondary remove-song-btn" style="flex-shrink:0">×</button>
-  `;
-  wrap.appendChild(row);
-  songIdx++;
-});
-document.getElementById('songs-wrap')?.addEventListener('click', function(e) {
-  if (e.target.classList.contains('remove-song-btn')) {
-    e.target.closest('.song-row').remove();
-  }
 });
 
 // Gerar escala automaticamente (só ministério de Música)

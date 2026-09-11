@@ -24,6 +24,7 @@ require_once __DIR__ . '/../../includes/layout.php';
 
 $pageTitle = $act['title'];
 $isMusic   = is_music_ministry($act['ministry_name']);
+$canManage = auth_can_manage_ministry((int)$act['ministry_id']);
 
 // Escala
 $scaled = $db->prepare("
@@ -48,10 +49,32 @@ $available = $db->prepare("
 $available->execute([$act['ministry_id'], $act['church_id'], $id]);
 $available = $available->fetchAll();
 
-// Repertório
-$songs = $db->prepare("SELECT * FROM ministry_activity_songs WHERE activity_id = ? ORDER BY position, id");
+// Repertório — músicas do catálogo (resource_id) têm prioridade sobre os campos
+// locais legados (entradas avulsas criadas antes do catálogo existir)
+$songs = $db->prepare("
+    SELECT mas.id, mas.resource_id,
+           COALESCE(r.title, mas.title) AS title,
+           COALESCE(r.key_tone, mas.key_tone) AS key_tone,
+           COALESCE(r.external_url, mas.reference_link) AS reference_link,
+           COALESCE(r.file_path, mas.file_path) AS file_path
+    FROM ministry_activity_songs mas
+    LEFT JOIN ministry_resources r ON r.id = mas.resource_id
+    WHERE mas.activity_id = ?
+    ORDER BY mas.position, mas.id
+");
 $songs->execute([$id]);
 $songs = $songs->fetchAll();
+
+// Catálogo de músicas do ministério que ainda não estão nessa atividade
+$songCatalog = $db->prepare("
+    SELECT id, title, key_tone, external_url, file_path
+    FROM ministry_resources
+    WHERE ministry_id = ? AND type = 'song'
+      AND id NOT IN (SELECT resource_id FROM ministry_activity_songs WHERE activity_id = ? AND resource_id IS NOT NULL)
+    ORDER BY title
+");
+$songCatalog->execute([$act['ministry_id'], $id]);
+$songCatalog = $songCatalog->fetchAll();
 
 $statusLabels = [
     'scheduled' => ['label'=>'Agendada',  'badge'=>'badge-blue'],
@@ -142,29 +165,39 @@ $at = $actTypeLabels[$act['activity_type']] ?? null;
             <?php endif; ?>
           </div>
         </div>
-        <a href="/pages/ministries/song_delete.php?song_id=<?= $sg['id'] ?>&activity_id=<?= $id ?>"
-           style="font-size:18px;color:var(--text-muted);text-decoration:none;line-height:1"
-           data-confirm="Remover <?= htmlspecialchars($sg['title']) ?> do repertório?">×</a>
+        <?php if ($canManage): ?>
+          <a href="/pages/ministries/song_delete.php?song_id=<?= $sg['id'] ?>&activity_id=<?= $id ?>"
+             style="font-size:18px;color:var(--text-muted);text-decoration:none;line-height:1"
+             data-confirm="Remover <?= htmlspecialchars($sg['title']) ?> do repertório?">×</a>
+        <?php endif; ?>
       </div>
     <?php endforeach; ?>
   <?php endif; ?>
-  <form method="POST" action="/pages/ministries/song_add.php" enctype="multipart/form-data" style="display:flex;gap:8px;align-items:flex-end;flex-wrap:wrap;padding:12px 18px;background:#fafafa">
-    <input type="hidden" name="activity_id" value="<?= $id ?>">
-    <div style="flex:2;min-width:140px">
-      <input type="text" name="title" class="form-control" placeholder="Música" required>
-    </div>
-    <div style="flex:1;min-width:70px">
-      <input type="text" name="key_tone" class="form-control" placeholder="Tom (ex: G)">
-    </div>
-    <div style="flex:2;min-width:140px">
-      <input type="text" name="reference_link" class="form-control" placeholder="Link (cifra/YouTube…)">
-    </div>
-    <div style="flex:2;min-width:160px">
-      <label style="font-size:11px;color:var(--text-muted);display:block;margin-bottom:2px">Cifra/partitura (opcional)</label>
-      <input type="file" name="file" class="form-control" style="padding:5px 8px">
-    </div>
-    <button type="submit" class="btn btn-primary">+ Adicionar</button>
-  </form>
+  <?php if ($canManage): ?>
+  <div style="padding:12px 18px;background:#fafafa">
+    <?php if (empty($songCatalog)): ?>
+      <p style="font-size:12px;color:var(--text-muted)">
+        Todo o catálogo já está nessa atividade, ou ainda não há músicas cadastradas.
+        <a href="/pages/ministries/resources.php?ministry_id=<?= $act['ministry_id'] ?>" target="_blank">Adicionar em Materiais</a>
+      </p>
+    <?php else: ?>
+      <form method="POST" action="/pages/ministries/song_add.php">
+        <input type="hidden" name="activity_id" value="<?= $id ?>">
+        <p style="font-size:12px;color:var(--text-muted);margin-bottom:8px">+ Adicionar do catálogo:</p>
+        <div style="display:flex;flex-wrap:wrap;gap:6px;margin-bottom:10px">
+          <?php foreach ($songCatalog as $sg): ?>
+            <label style="display:flex;align-items:center;gap:5px;border:1px solid var(--border);border-radius:20px;padding:5px 12px;font-size:12px;cursor:pointer;background:white">
+              <input type="checkbox" name="resource_ids[]" value="<?= $sg['id'] ?>">
+              <?= htmlspecialchars($sg['title']) ?>
+              <?= $sg['key_tone'] ? ' · ' . htmlspecialchars($sg['key_tone']) : '' ?>
+            </label>
+          <?php endforeach; ?>
+        </div>
+        <button type="submit" class="btn btn-primary" style="font-size:12px">+ Adicionar selecionadas</button>
+      </form>
+    <?php endif; ?>
+  </div>
+  <?php endif; ?>
 </div>
 
 <!-- Escala -->

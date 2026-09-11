@@ -14,6 +14,8 @@ $mn = $stmt->fetch();
 if (!$mn) { header('Location: /pages/ministries/index.php'); exit; }
 
 $title       = trim($_POST['title'] ?? '');
+$type        = ($_POST['type'] ?? 'material') === 'song' ? 'song' : 'material';
+$keyTone     = trim($_POST['key_tone'] ?? '') ?: null;
 $category    = trim($_POST['category'] ?? '') ?: 'Geral';
 $description = trim($_POST['description'] ?? '');
 $externalUrl = trim($_POST['external_url'] ?? '');
@@ -53,14 +55,16 @@ if (!$filePath && $externalUrl === '') {
 
 $ins = $db->prepare("
     INSERT INTO ministry_resources
-      (ministry_id, church_id, category, title, description, file_path, file_name, file_size, external_url, created_by)
-    VALUES (?,?,?,?,?,?,?,?,?,?)
+      (ministry_id, church_id, category, type, title, key_tone, description, file_path, file_name, file_size, external_url, created_by)
+    VALUES (?,?,?,?,?,?,?,?,?,?,?,?)
 ");
 $ins->execute([
     $ministryId,
     $mn['church_id'],
     $category,
+    $type,
     $title,
+    $keyTone,
     $description ?: null,
     $filePath,
     $fileName,
