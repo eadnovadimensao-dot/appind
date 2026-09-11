@@ -143,15 +143,19 @@ function resource_size(?int $bytes): string {
     </div>
     <div class="form-row">
       <div class="form-group">
-        <label class="form-label">Arquivo</label>
+        <label class="form-label">Arquivo <span style="font-weight:400;color:var(--text-muted)">(cifra/partitura avulsa)</span></label>
         <input type="file" name="file" class="form-control">
         <div style="font-size:11px;color:var(--text-muted);margin-top:4px">PDF, cifra, foto, doc, planilha… até 50 MB.</div>
       </div>
       <div class="form-group">
-        <label class="form-label">ou link externo</label>
-        <input type="url" name="external_url" class="form-control" placeholder="https://drive.google.com/… ou YouTube">
-        <div style="font-size:11px;color:var(--text-muted);margin-top:4px">Áudio bruto, vídeo ou arquivo grande? Prefira o link em vez de anexar.</div>
+        <label class="form-label" id="external-url-label">ou link externo</label>
+        <input type="url" name="external_url" class="form-control" id="external-url-input" placeholder="https://…">
+        <div style="font-size:11px;color:var(--text-muted);margin-top:4px" id="external-url-hint">Áudio bruto, vídeo ou arquivo grande? Prefira o link em vez de anexar.</div>
       </div>
+    </div>
+    <div class="form-group" id="materials-url-group" style="display:none">
+      <label class="form-label">Link de materiais (Drive) <span style="font-weight:400;color:var(--text-muted)">— multitracks, cifra, pasta completa</span></label>
+      <input type="url" name="materials_url" class="form-control" placeholder="https://drive.google.com/…">
     </div>
     <button type="submit" class="btn btn-primary">Salvar material</button>
   </form>
@@ -159,6 +163,12 @@ function resource_size(?int $bytes): string {
     document.getElementById('resource-type').addEventListener('change', function() {
       const isSong = this.value === 'song';
       document.getElementById('key-tone-group').style.display = isSong ? 'block' : 'none';
+      document.getElementById('materials-url-group').style.display = isSong ? 'block' : 'none';
+      document.getElementById('external-url-label').textContent = isSong ? 'Link de referência (YouTube)' : 'ou link externo';
+      document.getElementById('external-url-input').placeholder = isSong ? 'https://youtube.com/…' : 'https://…';
+      document.getElementById('external-url-hint').textContent = isSong
+        ? 'A versão/interpretação que vocês estão seguindo.'
+        : 'Áudio bruto, vídeo ou arquivo grande? Prefira o link em vez de anexar.';
       const catField = document.getElementById('resource-category');
       if (isSong && catField.value === 'Geral') catField.value = 'Repertório';
       if (!isSong && catField.value === 'Repertório') catField.value = 'Geral';
@@ -204,13 +214,18 @@ function resource_size(?int $bytes): string {
               <?= $r['file_size'] ? ' · ' . resource_size($r['file_size']) : '' ?>
             </div>
           </div>
-          <div style="display:flex;align-items:center;gap:8px;flex-shrink:0">
+          <div style="display:flex;align-items:center;gap:8px;flex-shrink:0;flex-wrap:wrap">
+            <?php if ($r['external_url']): ?>
+              <a href="<?= htmlspecialchars($r['external_url']) ?>" target="_blank" rel="noopener"
+                 class="btn btn-secondary" style="font-size:12px;padding:5px 12px"><?= $r['type'] === 'song' ? '▶ Referência' : '🔗 Abrir' ?></a>
+            <?php endif; ?>
+            <?php if ($r['materials_url']): ?>
+              <a href="<?= htmlspecialchars($r['materials_url']) ?>" target="_blank" rel="noopener"
+                 class="btn btn-secondary" style="font-size:12px;padding:5px 12px">📁 Materiais</a>
+            <?php endif; ?>
             <?php if ($r['file_path']): ?>
               <a href="<?= htmlspecialchars($r['file_path']) ?>" target="_blank" rel="noopener"
                  class="btn btn-secondary" style="font-size:12px;padding:5px 12px">⬇ Baixar</a>
-            <?php elseif ($r['external_url']): ?>
-              <a href="<?= htmlspecialchars($r['external_url']) ?>" target="_blank" rel="noopener"
-                 class="btn btn-secondary" style="font-size:12px;padding:5px 12px">🔗 Abrir</a>
             <?php endif; ?>
             <?php if ($canManage): ?>
               <a href="/pages/ministries/resource_delete.php?id=<?= $r['id'] ?>"

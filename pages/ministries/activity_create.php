@@ -39,7 +39,7 @@ $members = $members->fetchAll();
 
 // Catálogo de músicas do ministério (cadastradas em Materiais)
 $songCatalog = $db->prepare("
-    SELECT id, title, key_tone, reference_link, file_path
+    SELECT id, title, key_tone, external_url, materials_url, file_path
     FROM ministry_resources
     WHERE ministry_id = ? AND type = 'song'
     ORDER BY title
@@ -199,7 +199,13 @@ require_once __DIR__ . '/../../includes/layout.php';
                 <?php endif; ?>
               </div>
               <div style="font-size:11px;color:var(--text-muted);margin-top:2px">
-                <?= $sg['reference_link'] ? '🔗 link' : '' ?><?= ($sg['reference_link'] && $sg['file_path']) ? ' · ' : '' ?><?= $sg['file_path'] ? '📄 arquivo' : '' ?>
+                <?php
+                  $tags = [];
+                  if ($sg['external_url'])  $tags[] = '▶ referência';
+                  if (!empty($sg['materials_url'])) $tags[] = '📁 materiais';
+                  if ($sg['file_path'])     $tags[] = '📄 arquivo';
+                  echo implode(' · ', $tags);
+                ?>
               </div>
             </div>
           </label>

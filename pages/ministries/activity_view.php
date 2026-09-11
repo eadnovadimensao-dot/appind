@@ -56,6 +56,7 @@ $songs = $db->prepare("
            COALESCE(r.title, mas.title) AS title,
            COALESCE(r.key_tone, mas.key_tone) AS key_tone,
            COALESCE(r.external_url, mas.reference_link) AS reference_link,
+           r.materials_url,
            COALESCE(r.file_path, mas.file_path) AS file_path
     FROM ministry_activity_songs mas
     LEFT JOIN ministry_resources r ON r.id = mas.resource_id
@@ -67,7 +68,7 @@ $songs = $songs->fetchAll();
 
 // Catálogo de músicas do ministério que ainda não estão nessa atividade
 $songCatalog = $db->prepare("
-    SELECT id, title, key_tone, external_url, file_path
+    SELECT id, title, key_tone, external_url, materials_url, file_path
     FROM ministry_resources
     WHERE ministry_id = ? AND type = 'song'
       AND id NOT IN (SELECT resource_id FROM ministry_activity_songs WHERE activity_id = ? AND resource_id IS NOT NULL)
@@ -156,9 +157,12 @@ $at = $actTypeLabels[$act['activity_type']] ?? null;
           <?php if ($sg['key_tone']): ?>
             <span class="badge badge-gray" style="font-size:10px;margin-left:6px">Tom: <?= htmlspecialchars($sg['key_tone']) ?></span>
           <?php endif; ?>
-          <div style="font-size:12px;margin-top:2px;display:flex;gap:12px">
+          <div style="font-size:12px;margin-top:2px;display:flex;gap:12px;flex-wrap:wrap">
             <?php if ($sg['reference_link']): ?>
-              <a href="<?= htmlspecialchars($sg['reference_link']) ?>" target="_blank" rel="noopener" style="color:var(--accent);text-decoration:none">🔗 Referência</a>
+              <a href="<?= htmlspecialchars($sg['reference_link']) ?>" target="_blank" rel="noopener" style="color:var(--accent);text-decoration:none">▶ Referência</a>
+            <?php endif; ?>
+            <?php if (!empty($sg['materials_url'])): ?>
+              <a href="<?= htmlspecialchars($sg['materials_url']) ?>" target="_blank" rel="noopener" style="color:var(--accent);text-decoration:none">📁 Materiais</a>
             <?php endif; ?>
             <?php if ($sg['file_path']): ?>
               <a href="<?= htmlspecialchars($sg['file_path']) ?>" target="_blank" rel="noopener" style="color:var(--accent);text-decoration:none">📄 Cifra/partitura</a>

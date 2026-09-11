@@ -13,12 +13,13 @@ $stmt->execute([$ministryId]);
 $mn = $stmt->fetch();
 if (!$mn) { header('Location: /pages/ministries/index.php'); exit; }
 
-$title       = trim($_POST['title'] ?? '');
-$type        = ($_POST['type'] ?? 'material') === 'song' ? 'song' : 'material';
-$keyTone     = trim($_POST['key_tone'] ?? '') ?: null;
-$category    = trim($_POST['category'] ?? '') ?: 'Geral';
-$description = trim($_POST['description'] ?? '');
-$externalUrl = trim($_POST['external_url'] ?? '');
+$title        = trim($_POST['title'] ?? '');
+$type         = ($_POST['type'] ?? 'material') === 'song' ? 'song' : 'material';
+$keyTone      = trim($_POST['key_tone'] ?? '') ?: null;
+$category     = trim($_POST['category'] ?? '') ?: 'Geral';
+$description  = trim($_POST['description'] ?? '');
+$externalUrl  = trim($_POST['external_url'] ?? '');  // Referência (YouTube)
+$materialsUrl = trim($_POST['materials_url'] ?? ''); // Materiais (Drive — multitracks, cifra…)
 
 if ($title === '') {
     header('Location: /pages/ministries/resources.php?ministry_id=' . $ministryId . '&error=titulo');
@@ -58,15 +59,15 @@ if (!empty($_FILES['file']['tmp_name']) && $_FILES['file']['error'] === UPLOAD_E
     }
 }
 
-if (!$filePath && $externalUrl === '') {
+if (!$filePath && $externalUrl === '' && $materialsUrl === '') {
     header('Location: /pages/ministries/resources.php?ministry_id=' . $ministryId . '&error=arquivo');
     exit;
 }
 
 $ins = $db->prepare("
     INSERT INTO ministry_resources
-      (ministry_id, church_id, category, type, title, key_tone, description, file_path, file_name, file_size, external_url, created_by)
-    VALUES (?,?,?,?,?,?,?,?,?,?,?,?)
+      (ministry_id, church_id, category, type, title, key_tone, description, file_path, file_name, file_size, external_url, materials_url, created_by)
+    VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?)
 ");
 $ins->execute([
     $ministryId,
@@ -80,6 +81,7 @@ $ins->execute([
     $fileName,
     $fileSize,
     $externalUrl ?: null,
+    $materialsUrl ?: null,
     auth_member_id(),
 ]);
 
