@@ -252,6 +252,21 @@ $accentColor  = setting('accent_color',   '#1D9E75', $churchId);
   </div>
 </div>
 <script>
+// Máscara de telefone/WhatsApp — (DD) 9XXXX-XXXX ou (DD) XXXX-XXXX
+document.querySelector('[name="phone"]')?.addEventListener('input', function () {
+  let v = this.value.replace(/\D/g, '').slice(0, 11);
+  if (v.length > 10) {
+    v = v.replace(/^(\d{2})(\d{5})(\d{0,4}).*/, '($1) $2-$3');
+  } else if (v.length > 6) {
+    v = v.replace(/^(\d{2})(\d{4})(\d{0,4}).*/, '($1) $2-$3');
+  } else if (v.length > 2) {
+    v = v.replace(/^(\d{2})(\d{0,5})/, '($1) $2');
+  } else if (v.length > 0) {
+    v = v.replace(/^(\d{0,2})/, '($1');
+  }
+  this.value = v;
+});
+
 document.getElementById('zip_code')?.addEventListener('blur', function() {
   const cep = this.value.replace(/\D/g,'');
   if (cep.length !== 8) return;
