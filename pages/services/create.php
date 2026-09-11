@@ -16,19 +16,6 @@ $members = $db->prepare("
 $members->execute([SEDE_ID, SEDE_ID]);
 $members = $members->fetchAll();
 
-// Membros de ministérios para escala
-$ministryMembers = $db->prepare("
-    SELECT DISTINCT m.id, m.name, mn.name AS ministry_name
-    FROM member_ministries mm
-    JOIN members m     ON m.id  = mm.member_id
-    JOIN ministries mn ON mn.id = mm.ministry_id
-    JOIN churches ch   ON ch.id = m.church_id
-    WHERE (ch.id = ? OR ch.parent_id = ?) AND m.status = 'active'
-    ORDER BY m.name
-");
-$ministryMembers->execute([SEDE_ID, SEDE_ID]);
-$ministryMembers = $ministryMembers->fetchAll();
-
 $typeOptions = [
     'sunday'  => 'Culto de Domingo',
     'weekday' => 'Culto de Semana',
@@ -58,8 +45,6 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     $sermonTitle = trim($_POST['sermon_title'] ?? '');
     $sermonText  = trim($_POST['sermon_text']  ?? '');
     $notes       = trim($_POST['notes']        ?? '');
-    $scaleIds    = $_POST['scale_ids']  ?? [];
-    $scaleRoles  = $_POST['scale_roles'] ?? [];
     $itemTitles  = $_POST['item_titles']  ?? [];
     $itemTypes_p = $_POST['item_types']   ?? [];
     $itemDescs   = $_POST['item_descs']   ?? [];
@@ -96,7 +81,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             ]);
         }
 
-        // Buscar escalados em atividades de ministérios na mesma data (aceitos)
+        // Escala automática: membros já escalados em atividades de ministérios nessa data
         $autoScale = $db->prepare("
             SELECT DISTINCT mam.member_id, mam.role
             FROM ministry_activity_members mam
@@ -107,20 +92,10 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         $autoScale->execute([$date, $churchId]);
         $autoScaled = $autoScale->fetchAll();
 
-        // Mesclar com escala manual
-        $allScaled = [];
-        foreach ($autoScaled as $as) {
-            $allScaled[$as['member_id']] = $as['role'];
-        }
-        foreach ($scaleIds as $mid) {
-            $allScaled[(int)$mid] = trim($scaleRoles[$mid] ?? '') ?: ($allScaled[(int)$mid] ?? null);
-        }
-
-        // Salvar escala mesclada
-        if (!empty($allScaled)) {
+        if (!empty($autoScaled)) {
             $ss = $db->prepare("INSERT IGNORE INTO service_scale (service_id, member_id, role) VALUES (?,?,?)");
-            foreach ($allScaled as $mid => $role) {
-                $ss->execute([$serviceId, $mid, $role]);
+            foreach ($autoScaled as $as) {
+                $ss->execute([$serviceId, $as['member_id'], $as['role']]);
             }
         }
 
@@ -300,35 +275,13 @@ require_once __DIR__ . '/../../includes/layout.php';
   <div class="card" style="margin-bottom:16px">
     <p class="card-title">Escala do culto</p>
     <div style="background:#E1F5EE;border-radius:8px;padding:10px 14px;margin-bottom:14px;font-size:13px;color:#0F6E56">
-      ✨ Ao salvar, membros escalados nos ministérios nesta data serão adicionados automaticamente.
+      ✨ A escala é feita por ministério. Quem já foi escalado nos ministérios pra esta data
+      entra automaticamente ao salvar o culto — não é possível adicionar manualmente por aqui.
     </div>
-    <p style="font-size:12px;color:var(--text-muted);margin-bottom:12px">Adicione membros extras manualmente se necessário:</p>
-    <?php if (empty($ministryMembers)): ?>
-      <p style="font-size:13px;color:var(--text-muted)">Nenhum membro de ministério cadastrado ainda.</p>
-    <?php else: ?>
-      <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(280px,1fr));gap:8px">
-        <?php foreach ($ministryMembers as $m): ?>
-          <div style="border:1px solid var(--border);border-radius:7px;padding:10px 12px;display:flex;align-items:center;gap:10px">
-            <input type="checkbox" name="scale_ids[]" value="<?= $m['id'] ?>"
-                   id="sm<?= $m['id'] ?>" class="scale-cb" data-id="<?= $m['id'] ?>"
-                   onchange="toggleScaleRole(<?= $m['id'] ?>)">
-            <div class="avatar" style="width:28px;height:28px;font-size:10px;flex-shrink:0">
-              <?= strtoupper(substr($m['name'],0,2)) ?>
-            </div>
-            <div style="flex:1;min-width:0">
-              <label for="sm<?= $m['id'] ?>" style="font-size:13px;font-weight:500;cursor:pointer;display:block">
-                <?= htmlspecialchars($m['name']) ?>
-              </label>
-              <div style="font-size:11px;color:var(--text-muted)"><?= htmlspecialchars($m['ministry_name']) ?></div>
-              <input type="text" name="scale_roles[<?= $m['id'] ?>]"
-                     id="sr<?= $m['id'] ?>" class="form-control"
-                     placeholder="Função (vocal, guitarra, som…)"
-                     style="margin-top:4px;font-size:12px;padding:5px 8px;display:none">
-            </div>
-          </div>
-        <?php endforeach; ?>
-      </div>
-    <?php endif; ?>
+    <p style="font-weight:500;font-size:13px;margin-bottom:8px">Já escalados nesta data</p>
+    <div id="scale-preview">
+      <p style="font-size:13px;color:var(--text-muted)">Selecione uma data pra ver quem já está escalado.</p>
+    </div>
   </div>
 
   <!-- Observações -->
@@ -376,11 +329,40 @@ function toggleWorship(sel, idx) {
   if (countEl) countEl.style.display = sel.value === 'worship' ? 'block' : 'none';
 }
 
-function toggleScaleRole(id) {
-  const cb   = document.getElementById('sm' + id);
-  const role = document.getElementById('sr' + id);
-  role.style.display = cb.checked ? 'block' : 'none';
+// ── Preview da escala automática (por ministério) ──────────
+function loadScalePreview() {
+  const date = document.querySelector('[name=service_date]').value;
+  const box  = document.getElementById('scale-preview');
+  if (!date) {
+    box.innerHTML = '<p style="font-size:13px;color:var(--text-muted)">Selecione uma data pra ver quem já está escalado.</p>';
+    return;
+  }
+  box.innerHTML = '<p style="font-size:13px;color:var(--text-muted)">Carregando…</p>';
+  fetch('/pages/services/scaled_preview.php?date=' + encodeURIComponent(date))
+    .then(r => r.json())
+    .then(d => {
+      if (!d.groups || d.groups.length === 0) {
+        box.innerHTML = '<p style="font-size:13px;color:var(--text-muted)">Nenhuma escala de ministério vinculada a esta data ainda.</p>';
+        return;
+      }
+      box.innerHTML = d.groups.map(g =>
+        '<div style="margin-bottom:10px">' +
+          '<div style="font-size:12px;font-weight:500;color:var(--accent);margin-bottom:4px">' + g.ministry + '</div>' +
+          '<div style="display:flex;flex-wrap:wrap;gap:6px">' +
+            g.members.map(m =>
+              '<span style="font-size:12px;background:var(--content-bg);border-radius:20px;padding:4px 10px">' +
+                m.name + (m.role ? ' · ' + m.role : '') +
+                (m.status === 'pending' ? ' ⏳' : '') +
+              '</span>'
+            ).join('') +
+          '</div>' +
+        '</div>'
+      ).join('');
+    })
+    .catch(() => { box.innerHTML = '<p style="font-size:13px;color:var(--red)">Não foi possível carregar a escala.</p>'; });
 }
+document.querySelector('[name=service_date]').addEventListener('change', loadScalePreview);
+loadScalePreview();
 
 // ── Drag and drop ──────────────────────────────────────────
 let dragSrc = null;
