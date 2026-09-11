@@ -25,6 +25,7 @@ if (!empty($_GET['from_signup']) && $_SERVER['REQUEST_METHOD'] !== 'POST') {
             'name'             => $signup['name'],
             'phone'            => $signup['phone'],
             'email'            => $signup['email'] ?? '',
+            'cpf'              => $signup['cpf'] ?? '',
             'birth_date'       => $signup['birth_date'] ?? '',
             'gender'           => $signup['gender'] ?? '',
             'marital_status'   => $signup['marital_status'] ?? '',

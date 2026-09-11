@@ -69,7 +69,7 @@ require_once __DIR__ . '/../../includes/layout.php';
             <?php endif; ?>
           </div>
           <div style="font-size:12px;color:var(--text-muted);margin-top:3px;display:flex;flex-direction:column;gap:2px">
-            <span>📱 <?= htmlspecialchars($s['phone']) ?><?= $s['email'] ? ' · ✉️ ' . htmlspecialchars($s['email']) : '' ?></span>
+            <span>📱 <?= htmlspecialchars($s['phone']) ?><?= $s['email'] ? ' · ✉️ ' . htmlspecialchars($s['email']) : '' ?><?= $s['cpf'] ? ' · CPF ' . htmlspecialchars($s['cpf']) : '' ?></span>
             <?php if ($s['cell_name']): ?>
               <span>🔗 Interesse: <?= htmlspecialchars($s['cell_name']) ?></span>
             <?php endif; ?>

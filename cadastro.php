@@ -28,6 +28,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     $name       = trim($_POST['name']       ?? '');
     $phone      = trim($_POST['phone']      ?? '');
     $email      = trim($_POST['email']      ?? '');
+    $cpf        = trim($_POST['cpf']        ?? '');
     $birthDate  = trim($_POST['birth_date'] ?? '');
     $gender     = trim($_POST['gender']     ?? '');
     $marital    = trim($_POST['marital_status'] ?? '');
@@ -59,10 +60,10 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         if (empty($errors)) {
             $ins = $db->prepare("
                 INSERT INTO member_signups
-                  (church_id, name, phone, email, birth_date, gender, marital_status,
+                  (church_id, name, phone, email, cpf, birth_date, gender, marital_status,
                    address, number, neighborhood, city, zip_code, ip_address)
                 VALUES
-                  (:church_id,:name,:phone,:email,:birth_date,:gender,:marital,
+                  (:church_id,:name,:phone,:email,:cpf,:birth_date,:gender,:marital,
                    :address,:number,:neighborhood,:city,:zip,:ip)
             ");
             $ins->execute([
@@ -70,6 +71,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 ':name'      => $name,
                 ':phone'     => $phone,
                 ':email'     => $email ?: null,
+                ':cpf'       => $cpf ?: null,
                 ':birth_date'=> $birthDate ?: null,
                 ':gender'    => $gender ?: null,
                 ':marital'   => $marital ?: null,
@@ -182,9 +184,15 @@ $accentColor  = setting('accent_color',   '#1D9E75', $churchId);
           </div>
           <div class="form-row">
             <div class="form-group">
+              <label class="form-label">CPF</label>
+              <input type="text" name="cpf" class="form-control" placeholder="000.000.000-00" value="<?= htmlspecialchars($_POST['cpf'] ?? '') ?>" maxlength="14">
+            </div>
+            <div class="form-group">
               <label class="form-label">Data de nascimento</label>
               <input type="date" name="birth_date" class="form-control" value="<?= htmlspecialchars($_POST['birth_date'] ?? '') ?>">
             </div>
+          </div>
+          <div class="form-row">
             <div class="form-group">
               <label class="form-label">Gênero</label>
               <select name="gender" class="form-control">
@@ -193,16 +201,16 @@ $accentColor  = setting('accent_color',   '#1D9E75', $churchId);
                 <option value="F" <?= ($_POST['gender']??'')==='F'?'selected':''?>>Feminino</option>
               </select>
             </div>
-          </div>
-          <div class="form-group">
-            <label class="form-label">Estado civil</label>
-            <select name="marital_status" class="form-control">
-              <option value="">Selecione</option>
-              <option value="single"   <?= ($_POST['marital_status']??'')==='single'   ?'selected':''?>>Solteiro(a)</option>
-              <option value="married"  <?= ($_POST['marital_status']??'')==='married'  ?'selected':''?>>Casado(a)</option>
-              <option value="divorced" <?= ($_POST['marital_status']??'')==='divorced' ?'selected':''?>>Divorciado(a)</option>
-              <option value="widowed"  <?= ($_POST['marital_status']??'')==='widowed'  ?'selected':''?>>Viúvo(a)</option>
-            </select>
+            <div class="form-group">
+              <label class="form-label">Estado civil</label>
+              <select name="marital_status" class="form-control">
+                <option value="">Selecione</option>
+                <option value="single"   <?= ($_POST['marital_status']??'')==='single'   ?'selected':''?>>Solteiro(a)</option>
+                <option value="married"  <?= ($_POST['marital_status']??'')==='married'  ?'selected':''?>>Casado(a)</option>
+                <option value="divorced" <?= ($_POST['marital_status']??'')==='divorced' ?'selected':''?>>Divorciado(a)</option>
+                <option value="widowed"  <?= ($_POST['marital_status']??'')==='widowed'  ?'selected':''?>>Viúvo(a)</option>
+              </select>
+            </div>
           </div>
 
           <div class="form-row">
