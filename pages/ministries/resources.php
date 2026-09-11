@@ -93,6 +93,11 @@ function resource_size(?int $bytes): string {
       Dê um título pro material antes de enviar.
     <?php elseif ($_GET['error'] === 'arquivo'): ?>
       Anexe um arquivo ou informe um link antes de enviar.
+    <?php elseif ($_GET['error'] === 'tamanho'): ?>
+      Arquivo muito grande (máx. 50 MB). Pra áudio bruto, vídeo ou qualquer coisa maior,
+      suba num Google Drive (ou YouTube não-listado) e cole o link aqui em vez do arquivo.
+    <?php elseif ($_GET['error'] === 'tipo'): ?>
+      Esse tipo de arquivo não é aceito.
     <?php else: ?>
       Não foi possível salvar o material.
     <?php endif; ?>
@@ -140,11 +145,12 @@ function resource_size(?int $bytes): string {
       <div class="form-group">
         <label class="form-label">Arquivo</label>
         <input type="file" name="file" class="form-control">
-        <div style="font-size:11px;color:var(--text-muted);margin-top:4px">PDF, áudio, imagem, planilha, doc… até 20 MB.</div>
+        <div style="font-size:11px;color:var(--text-muted);margin-top:4px">PDF, cifra, foto, doc, planilha… até 50 MB.</div>
       </div>
       <div class="form-group">
         <label class="form-label">ou link externo</label>
-        <input type="url" name="external_url" class="form-control" placeholder="https://youtube.com/… ou Google Drive">
+        <input type="url" name="external_url" class="form-control" placeholder="https://drive.google.com/… ou YouTube">
+        <div style="font-size:11px;color:var(--text-muted);margin-top:4px">Áudio bruto, vídeo ou arquivo grande? Prefira o link em vez de anexar.</div>
       </div>
     </div>
     <button type="submit" class="btn btn-primary">Salvar material</button>

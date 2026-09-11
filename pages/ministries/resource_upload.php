@@ -34,9 +34,19 @@ if (!empty($_FILES['file']['tmp_name']) && $_FILES['file']['error'] === UPLOAD_E
     $allowedExt = ['pdf','doc','docx','xls','xlsx','ppt','pptx','mp3','wav','m4a','ogg',
                    'mp4','mov','webm','jpg','jpeg','png','gif','webp','zip','txt'];
     $ext     = strtolower(pathinfo($file['name'], PATHINFO_EXTENSION));
-    $maxSize = 20 * 1024 * 1024; // 20 MB
+    $maxSize = 50 * 1024 * 1024; // 50 MB — pra arquivo maior (áudio bruto, vídeo), usar link (Drive/YouTube)
 
-    if (in_array($ext, $allowedExt, true) && $file['size'] > 0 && $file['size'] <= $maxSize) {
+    // Arquivo grande demais ou tipo não permitido: erro específico, não falha silenciosa
+    if ($file['size'] > $maxSize) {
+        header('Location: /pages/ministries/resources.php?ministry_id=' . $ministryId . '&error=tamanho');
+        exit;
+    }
+    if (!in_array($ext, $allowedExt, true)) {
+        header('Location: /pages/ministries/resources.php?ministry_id=' . $ministryId . '&error=tipo');
+        exit;
+    }
+
+    if ($file['size'] > 0) {
         $dir = __DIR__ . '/../../public/ministry_files/' . $ministryId . '/';
         if (!is_dir($dir)) mkdir($dir, 0755, true);
         $safeName = 'mr_' . uniqid() . '.' . $ext;
