@@ -14,10 +14,6 @@ $branchIds = array_column($branches, 'id');
 $churchId = (int)($_GET['filial'] ?? SEDE_ID);
 if (!in_array($churchId, $branchIds, true)) $churchId = SEDE_ID;
 
-$cells = $db->prepare("SELECT id, name FROM cells WHERE church_id = ? AND active = 1 ORDER BY name");
-$cells->execute([$churchId]);
-$cells = $cells->fetchAll();
-
 $success = false;
 $errors  = [];
 
@@ -39,8 +35,6 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     $neighborhood = trim($_POST['neighborhood'] ?? '');
     $city       = trim($_POST['city']       ?? '');
     $zip        = trim($_POST['zip_code']   ?? '');
-    $cellId     = trim($_POST['cell_interest_id'] ?? '') ?: null;
-    $notes      = trim($_POST['notes']      ?? '');
     $postChurchId = (int)($_POST['church_id'] ?? $churchId);
     if (in_array($postChurchId, $branchIds, true)) $churchId = $postChurchId;
 
@@ -65,10 +59,10 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             $ins = $db->prepare("
                 INSERT INTO member_signups
                   (church_id, name, phone, email, birth_date, gender, marital_status,
-                   address, neighborhood, city, zip_code, cell_interest_id, notes, ip_address)
+                   address, neighborhood, city, zip_code, ip_address)
                 VALUES
                   (:church_id,:name,:phone,:email,:birth_date,:gender,:marital,
-                   :address,:neighborhood,:city,:zip,:cell_id,:notes,:ip)
+                   :address,:neighborhood,:city,:zip,:ip)
             ");
             $ins->execute([
                 ':church_id' => $churchId,
@@ -82,8 +76,6 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 ':neighborhood' => $neighborhood ?: null,
                 ':city'      => $city ?: null,
                 ':zip'       => $zip ?: null,
-                ':cell_id'   => $cellId,
-                ':notes'     => $notes ?: null,
                 ':ip'        => $ip ?: null,
             ]);
             $success = true;
@@ -235,26 +227,7 @@ $accentColor  = setting('accent_color',   '#1D9E75', $churchId);
             </div>
           </div>
 
-          <?php if (!empty($cells)): ?>
-            <div class="form-group">
-              <label class="form-label">Tem interesse em participar de uma célula?</label>
-              <select name="cell_interest_id" class="form-control">
-                <option value="">Ainda não sei / sem preferência</option>
-                <?php foreach ($cells as $c): ?>
-                  <option value="<?= $c['id'] ?>" <?= ($_POST['cell_interest_id']??'')==$c['id']?'selected':''?>>
-                    <?= htmlspecialchars($c['name']) ?>
-                  </option>
-                <?php endforeach; ?>
-              </select>
-            </div>
-          <?php endif; ?>
-
-          <div class="form-group" style="margin-bottom:20px">
-            <label class="form-label">Quer nos contar algo? <span style="font-weight:400;color:var(--text-muted)">(opcional)</span></label>
-            <textarea name="notes" class="form-control" rows="2" placeholder="Como conheceu a igreja, algum pedido de oração…"><?= htmlspecialchars($_POST['notes'] ?? '') ?></textarea>
-          </div>
-
-          <button type="submit" class="btn btn-signup">Enviar cadastro</button>
+          <button type="submit" class="btn btn-signup" style="margin-top:4px">Enviar cadastro</button>
         </form>
       <?php endif; ?>
 
