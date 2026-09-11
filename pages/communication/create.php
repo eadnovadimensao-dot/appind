@@ -57,6 +57,11 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             if (in_array('push', $channels)) {
                 sendPushNotifications($db, $announcementId, $recipients, $title, $content);
             }
+
+            // WhatsApp se selecionado — entra na fila (mesmo mecanismo das escalas)
+            if (in_array('whatsapp', $channels)) {
+                sendWhatsappAnnouncement($db, $announcementId, $recipients, $title, $content, $churchId);
+            }
         }
 
         header('Location: /pages/communication/index.php?sent=1');
@@ -66,7 +71,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 
 // Funções auxiliares
 function getRecipients(PDO $db, int $churchId, string $targetType, ?int $targetId): array {
-    $sql    = "SELECT m.id, m.name, m.email FROM members m JOIN churches ch ON ch.id = m.church_id WHERE m.status = 'active'";
+    $sql    = "SELECT m.id, m.name, m.email, m.phone FROM members m JOIN churches ch ON ch.id = m.church_id WHERE m.status = 'active'";
     $params = [];
 
     if ($targetType === 'all') {
@@ -185,6 +190,19 @@ function sendPushNotifications(PDO $db, int $announcementId, array $recipients, 
     }
 }
 
+function sendWhatsappAnnouncement(PDO $db, int $announcementId, array $recipients, string $title, string $content, int $churchId): void {
+    $churchName = setting('church_name', 'Igreja', $churchId);
+    $message    = "*{$churchName}*\n\n*{$title}*\n\n{$content}";
+
+    $sl = $db->prepare("INSERT IGNORE INTO announcement_sends (announcement_id, member_id, channel) VALUES (?,?,'whatsapp')");
+
+    foreach ($recipients as $r) {
+        if (empty($r['phone'])) continue;
+        queue_whatsapp($r['phone'], $message, $churchId);
+        $sl->execute([$announcementId, $r['id']]);
+    }
+}
+
 $pageTitle  = 'Novo aviso';
 $activePage = 'communication';
 require_once __DIR__ . '/../../includes/layout.php';
@@ -283,7 +301,7 @@ require_once __DIR__ . '/../../includes/layout.php';
         <input type="checkbox" name="channels[]" value="whatsapp" style="margin-top:2px" id="whatsapp-cb" onchange="toggleWhatsapp()">
         <div>
           <div style="font-weight:500;font-size:13px">💬 WhatsApp</div>
-          <div style="font-size:12px;color:var(--text-muted)">Gera mensagem para copiar</div>
+          <div style="font-size:12px;color:var(--text-muted)">Envia automaticamente pra quem tem telefone cadastrado</div>
         </div>
       </label>
 
@@ -294,6 +312,10 @@ require_once __DIR__ . '/../../includes/layout.php';
   <div id="whatsapp-preview" style="display:none;margin-bottom:16px">
     <div class="card">
       <p class="card-title">💬 Preview da mensagem WhatsApp</p>
+      <div style="background:#FEF3C7;border:1px solid #FCD34D;border-radius:8px;padding:10px 14px;margin-bottom:12px;font-size:12px;color:#854F0B">
+        ⚠️ Ao clicar em "Enviar agora", essa mensagem entra numa fila e é enviada de verdade,
+        aos poucos, pra todo mundo do destinatário selecionado que tem telefone cadastrado.
+      </div>
       <div style="background:#ECF8F1;border-radius:8px;padding:14px;font-size:13px;line-height:1.8;font-family:monospace;white-space:pre-wrap" id="wa-preview-text"></div>
       <button type="button" onclick="copyWhatsapp()"
               class="btn btn-secondary" style="margin-top:12px;font-size:12px">
@@ -350,7 +372,7 @@ function toggleWhatsapp() {
 function updateWaPreview() {
   const title   = document.querySelector('[name=title]').value   || 'Aviso';
   const content = document.querySelector('[name=content]').value || '';
-  const text    = '*$churchName*\\n\\n*' + title + '*\\n\\n' + content + '\\n\\n_Enviado pelo Igreja Manager_';
+  const text    = '*$churchName*\\n\\n*' + title + '*\\n\\n' + content;
   document.getElementById('wa-preview-text').textContent = text;
 }
 
