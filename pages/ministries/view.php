@@ -21,7 +21,7 @@ if (!$mn) { header('Location: /pages/ministries/index.php'); exit; }
 $pageTitle  = $mn['name'];
 $activePage = 'ministries';
 $churchId   = $mn['church_id'];
-$isMusic    = is_music_ministry($mn['name']);
+$isMusic    = (bool)($mn['auto_scale_enabled'] ?? false);
 $canManage  = auth_can_manage_ministry($id);
 // Buscar todos os líderes do ministério
 $leadersStmt = $db->prepare("

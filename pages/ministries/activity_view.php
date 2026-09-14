@@ -8,7 +8,7 @@ $churchId = current_church_id();
 $id       = (int)($_GET['id'] ?? 0);
 
 $stmt = $db->prepare("
-    SELECT ma.*, mn.name AS ministry_name, mn.id AS ministry_id
+    SELECT ma.*, mn.name AS ministry_name, mn.id AS ministry_id, mn.auto_scale_enabled
     FROM ministry_activities ma
     JOIN ministries mn ON mn.id = ma.ministry_id
     WHERE ma.id = ? AND ma.church_id = ?
@@ -23,7 +23,7 @@ require_once __DIR__ . '/../../includes/layout.php';
 
 
 $pageTitle = $act['title'];
-$isMusic   = is_music_ministry($act['ministry_name']);
+$isMusic   = (bool)($act['auto_scale_enabled'] ?? false);
 $canManage = auth_can_manage_ministry((int)$act['ministry_id']);
 
 // Escala

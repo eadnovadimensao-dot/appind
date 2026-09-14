@@ -22,7 +22,7 @@ $mn = $stmt->fetch();
 if (!$mn) { header('Location: /pages/ministries/index.php'); exit; }
 
 $churchId = $mn['church_id']; // usa a church_id DO MINISTÉRIO, não do usuário
-$isMusic  = is_music_ministry($mn['name']);
+$isMusic  = (bool)($mn['auto_scale_enabled'] ?? false);
 
 $days = ['monday'=>'Segunda-feira','tuesday'=>'Terça-feira','wednesday'=>'Quarta-feira',
          'thursday'=>'Quinta-feira','friday'=>'Sexta-feira','saturday'=>'Sábado','sunday'=>'Domingo'];

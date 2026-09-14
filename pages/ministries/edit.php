@@ -29,6 +29,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     $day       = trim($_POST['meeting_day'] ?? '') ?: null;
     $time      = trim($_POST['meeting_time']?? '') ?: null;
     $active    = isset($_POST['active']) ? 1 : 0;
+    $autoScale = isset($_POST['auto_scale_enabled']) ? 1 : 0;
 
     if ($name === '') $errors[] = 'Nome é obrigatório.';
     if (empty($leaderIds)) $errors[] = 'Selecione pelo menos um líder.';
@@ -38,10 +39,10 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 
         $db->prepare("
             UPDATE ministries SET name=:name, description=:desc, leader_id=:leader,
-              meeting_day=:day, meeting_time=:time, active=:active
+              meeting_day=:day, meeting_time=:time, active=:active, auto_scale_enabled=:auto_scale
             WHERE id=:id AND church_id=:church_id
         ")->execute([':name'=>$name,':desc'=>$desc?:null,':leader'=>$mainLeader,
-                     ':day'=>$day,':time'=>$time,':active'=>$active,
+                     ':day'=>$day,':time'=>$time,':active'=>$active,':auto_scale'=>$autoScale,
                      ':id'=>$id,':church_id'=>$churchId]);
 
         // Atualizar tabela ministry_leaders
@@ -94,11 +95,20 @@ require_once __DIR__ . '/../../includes/layout.php';
     <p style="font-size:12px;color:var(--text-muted);margin-top:-8px;margin-bottom:16px">
       Se definido, toda escala de Culto criada gera automaticamente um Ensaio neste dia, com a mesma equipe.
     </p>
-    <div class="form-group" style="margin-bottom:0">
+    <div class="form-group" style="margin-bottom:10px">
       <label style="display:flex;align-items:center;gap:8px;cursor:pointer;font-size:13px">
         <input type="checkbox" name="active" value="1" <?= $mn['active']?'checked':''?>>
         Ministério ativo
       </label>
+    </div>
+    <div class="form-group" style="margin-bottom:0">
+      <label style="display:flex;align-items:center;gap:8px;cursor:pointer;font-size:13px">
+        <input type="checkbox" name="auto_scale_enabled" value="1" <?= !empty($mn['auto_scale_enabled'])?'checked':''?>>
+        🎲 Usar escala automática com funções fixas (vocal, instrumentos, etc.)
+      </label>
+      <p style="font-size:11px;color:var(--text-muted);margin-top:4px;margin-left:24px">
+        Ative pra ministérios de louvor/música — libera o sorteio automático de escala e as funções fixas na tela de atividade.
+      </p>
     </div>
   </div>
 

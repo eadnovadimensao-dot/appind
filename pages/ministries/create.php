@@ -18,6 +18,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     $day         = trim($_POST['meeting_day'] ?? '') ?: null;
     $time        = trim($_POST['meeting_time']?? '') ?: null;
     $active      = isset($_POST['active']) ? 1 : 0;
+    $autoScale   = isset($_POST['auto_scale_enabled']) ? 1 : 0;
     $memberIds   = array_map('intval', $_POST['member_ids'] ?? []);
 
     if ($name === '') $errors[] = 'Nome do ministério é obrigatório.';
@@ -28,11 +29,12 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         $mainLeader = $leaderId ?: ($leaderIds[0] ?? null);
 
         $db->prepare("
-            INSERT INTO ministries (church_id, name, description, leader_id, meeting_day, meeting_time, active)
-            VALUES (:church_id,:name,:desc,:leader_id,:day,:time,:active)
+            INSERT INTO ministries (church_id, name, description, leader_id, meeting_day, meeting_time, active, auto_scale_enabled)
+            VALUES (:church_id,:name,:desc,:leader_id,:day,:time,:active,:auto_scale)
         ")->execute([
             ':church_id' => $churchId, ':name' => $name, ':desc' => $description ?: null,
             ':leader_id' => $mainLeader, ':day' => $day, ':time' => $time, ':active' => $active,
+            ':auto_scale' => $autoScale,
         ]);
         $ministryId = $db->lastInsertId();
 
@@ -97,11 +99,20 @@ require_once __DIR__ . '/../../includes/layout.php';
     <p style="font-size:12px;color:var(--text-muted);margin-top:-8px;margin-bottom:16px">
       Se definido, toda escala de Culto criada gera automaticamente um Ensaio neste dia, com a mesma equipe.
     </p>
-    <div class="form-group" style="margin-bottom:0">
+    <div class="form-group" style="margin-bottom:10px">
       <label style="display:flex;align-items:center;gap:8px;cursor:pointer;font-size:13px">
         <input type="checkbox" name="active" value="1" <?= !isset($_POST['name']) || isset($_POST['active']) ? 'checked' : '' ?>>
         Ministério ativo
       </label>
+    </div>
+    <div class="form-group" style="margin-bottom:0">
+      <label style="display:flex;align-items:center;gap:8px;cursor:pointer;font-size:13px">
+        <input type="checkbox" name="auto_scale_enabled" value="1" <?= isset($_POST['auto_scale_enabled']) ? 'checked' : '' ?>>
+        🎲 Usar escala automática com funções fixas (vocal, instrumentos, etc.)
+      </label>
+      <p style="font-size:11px;color:var(--text-muted);margin-top:4px;margin-left:24px">
+        Ative pra ministérios de louvor/música — libera o sorteio automático de escala e as funções fixas na tela de atividade.
+      </p>
     </div>
   </div>
 

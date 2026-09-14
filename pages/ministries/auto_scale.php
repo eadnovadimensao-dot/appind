@@ -28,8 +28,8 @@ if (!$mn) {
     echo json_encode(['error' => 'Ministério não encontrado.']);
     exit;
 }
-if (!is_music_ministry($mn['name'])) {
-    echo json_encode(['error' => 'Este ministério não tem uma composição automática definida.']);
+if (empty($mn['auto_scale_enabled'])) {
+    echo json_encode(['error' => 'Este ministério não tem escala automática ativada (configure em Editar ministério).']);
     exit;
 }
 
