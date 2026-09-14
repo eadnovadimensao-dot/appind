@@ -69,10 +69,57 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 
     if ($action === 'delete') {
         $id = (int)($_POST['branch_id'] ?? 0);
-        $count = $db->query("SELECT COUNT(*) FROM members WHERE church_id=$id")->fetchColumn();
-        if ($count > 0) {
-            $errors[] = 'Não é possível excluir uma filial com membros. Transfira os membros primeiro.';
+
+        // Tudo que referencia churches.id e bloqueia a exclusão (FK RESTRICT) —
+        // church_settings é só config copiada da sede na criação, não é "dado"
+        // de verdade, então é limpa automaticamente em vez de bloquear.
+        $blockingChecks = [
+            'members'             => ['column' => 'church_id', 'label' => 'membro(s)'],
+            'cells'               => ['column' => 'church_id', 'label' => 'célula(s)'],
+            'cell_reports'        => ['column' => 'church_id', 'label' => 'relatório(s) de célula'],
+            'ministries'          => ['column' => 'church_id', 'label' => 'ministério(s)'],
+            'ministry_activities' => ['column' => 'church_id', 'label' => 'atividade(s) de ministério'],
+            'ministry_items'      => ['column' => 'church_id', 'label' => 'item(ns)/pertence(s) de ministério'],
+            'ministry_loans'      => ['column' => 'church_id', 'label' => 'empréstimo(s) de ministério'],
+            'services'            => ['column' => 'church_id', 'label' => 'culto(s)'],
+            'service_templates'   => ['column' => 'church_id', 'label' => 'modelo(s) de culto'],
+            'supervisors'         => ['column' => 'church_id', 'label' => 'supervisor(es)'],
+            'supervisor_rotation' => ['column' => 'church_id', 'label' => 'rotação(ões) de supervisor'],
+            'agenda_events'       => ['column' => 'church_id', 'label' => 'evento(s) na agenda'],
+            'events'              => ['column' => 'church_id', 'label' => 'evento(s)'],
+            'announcements'       => ['column' => 'church_id', 'label' => 'aviso(s) de comunicação'],
+            'families'            => ['column' => 'church_id', 'label' => 'família(s)'],
+            'finance_categories'  => ['column' => 'church_id', 'label' => 'categoria(s) financeira(s)'],
+            'finance_entries'     => ['column' => 'church_id', 'label' => 'lançamento(s) financeiro(s)'],
+            'locations'           => ['column' => 'church_id', 'label' => 'local(is) cadastrado(s)'],
+            'worship_scales'      => ['column' => 'church_id', 'label' => 'escala(s) de culto (legado)'],
+            'churches'            => ['column' => 'parent_id', 'label' => 'sub-filial(is)'],
+        ];
+
+        $blockers = [];
+        foreach ($blockingChecks as $table => $chk) {
+            $stmt = $db->prepare("SELECT COUNT(*) FROM `$table` WHERE `{$chk['column']}` = ?");
+            $stmt->execute([$id]);
+            $count = (int)$stmt->fetchColumn();
+            if ($count > 0) $blockers[] = "$count {$chk['label']}";
+        }
+
+        // users e member_visits têm duas colunas cada — checa como um bloco só
+        $userStmt = $db->prepare("SELECT COUNT(*) FROM users WHERE church_id = ? OR branch_id = ?");
+        $userStmt->execute([$id, $id]);
+        $userCount = (int)$userStmt->fetchColumn();
+        if ($userCount > 0) $blockers[] = "$userCount usuário(s) vinculado(s)";
+
+        $visitStmt = $db->prepare("SELECT COUNT(*) FROM member_visits WHERE from_church = ? OR to_church = ?");
+        $visitStmt->execute([$id, $id]);
+        $visitCount = (int)$visitStmt->fetchColumn();
+        if ($visitCount > 0) $blockers[] = "$visitCount transferência(s) de membro no histórico";
+
+        if (!empty($blockers)) {
+            $errors[] = 'Não é possível excluir: essa filial ainda tem ' . implode(', ', $blockers) . '. Remova ou transfira isso primeiro.';
         } else {
+            // Config copiada da sede na criação — limpa antes de excluir de fato
+            $db->prepare("DELETE FROM church_settings WHERE church_id = ?")->execute([$id]);
             $db->prepare("DELETE FROM churches WHERE id=? AND parent_id=?")->execute([$id, SEDE_ID]);
             header('Location: /pages/branches.php?deleted=1');
             exit;
