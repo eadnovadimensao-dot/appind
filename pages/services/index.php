@@ -55,7 +55,7 @@ if ($template) {
             INSERT INTO services
               (church_id, title, type, service_date, time_start, time_end,
                supervisor_id, status, from_template, template_id, created_by)
-            VALUES (?,?,?,?,?,?,?,'planning',1,?,1)
+            VALUES (?,?,?,?,?,?,?,'planning',1,?,?)
         ")->execute([
             $churchId,
             $template['name'] . ' — ' . date('d/m/Y', strtotime($sunday)),
@@ -64,6 +64,7 @@ if ($template) {
             $template['time_end'],
             $sup['supervisor_id'] ?? null,
             $template['id'],
+            auth_member_id(),
         ]);
         $serviceId = $db->lastInsertId();
 
