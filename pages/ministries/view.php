@@ -38,7 +38,7 @@ require_once __DIR__ . '/../../includes/layout.php';
 
 // Membros
 $members = $db->prepare("
-    SELECT m.id, m.name, m.phone, m.status, mm.joined_at, mm.role
+    SELECT m.id, m.name, m.phone, m.status, mm.joined_at, mm.role, mm.naipe
     FROM member_ministries mm
     JOIN members m ON m.id = mm.member_id
     WHERE mm.ministry_id = ?
@@ -236,16 +236,23 @@ $actTypeLabels = [
             <?php if ($canManage): ?>
             <div class="role-view" id="role-view-<?= $m['id'] ?>" style="font-size:11px;color:var(--text-muted);margin-top:2px;cursor:pointer"
                  onclick="document.getElementById('role-view-<?= $m['id'] ?>').style.display='none';document.getElementById('role-edit-<?= $m['id'] ?>').style.display='flex'">
-              🎵 <?= $m['role'] ? htmlspecialchars($m['role']) : 'Definir função…' ?> ✎
+              🎵 <?= $m['role'] ? htmlspecialchars($m['role']) : 'Definir função…' ?><?= ($m['role']==='Backing Vocal' && $m['naipe']) ? ' (' . htmlspecialchars($m['naipe']) . ')' : '' ?> ✎
             </div>
-            <form method="POST" action="/pages/ministries/update_member_role.php" id="role-edit-<?= $m['id'] ?>" style="display:none;gap:4px;margin-top:4px">
+            <form method="POST" action="/pages/ministries/update_member_role.php" id="role-edit-<?= $m['id'] ?>" style="display:none;gap:4px;flex-wrap:wrap;margin-top:4px">
               <input type="hidden" name="ministry_id" value="<?= $id ?>">
               <input type="hidden" name="member_id" value="<?= $m['id'] ?>">
               <?php if ($isMusic): ?>
-                <select name="role" class="form-control" style="font-size:12px;padding:4px 8px">
+                <select name="role" class="form-control role-select" data-member-id="<?= $m['id'] ?>" style="font-size:12px;padding:4px 8px">
                   <option value="">Selecione…</option>
                   <?php foreach (MUSIC_ROLE_OPTIONS as $opt): ?>
                     <option value="<?= htmlspecialchars($opt) ?>" <?= ($m['role'] ?? '')===$opt ? 'selected' : '' ?>><?= htmlspecialchars($opt) ?></option>
+                  <?php endforeach; ?>
+                </select>
+                <select name="naipe" class="form-control naipe-select" id="naipe-<?= $m['id'] ?>"
+                        style="font-size:12px;padding:4px 8px;display:<?= ($m['role']??'')==='Backing Vocal'?'inline-block':'none' ?>">
+                  <option value="">Naipe…</option>
+                  <?php foreach (BACKING_VOCAL_NAIPES as $nv): ?>
+                    <option value="<?= htmlspecialchars($nv) ?>" <?= ($m['naipe'] ?? '')===$nv ? 'selected' : '' ?>><?= htmlspecialchars($nv) ?></option>
                   <?php endforeach; ?>
                 </select>
               <?php else: ?>
@@ -256,7 +263,7 @@ $actTypeLabels = [
             </form>
             <?php else: ?>
               <div style="font-size:11px;color:var(--text-muted);margin-top:2px">
-                🎵 <?= $m['role'] ? htmlspecialchars($m['role']) : 'Sem função definida' ?>
+                🎵 <?= $m['role'] ? htmlspecialchars($m['role']) : 'Sem função definida' ?><?= ($m['role']==='Backing Vocal' && $m['naipe']) ? ' (' . htmlspecialchars($m['naipe']) . ')' : '' ?>
               </div>
             <?php endif; ?>
           </div>
@@ -334,4 +341,16 @@ $actTypeLabels = [
 
 </div>
 
-<?php require_once __DIR__ . '/../../includes/layout-footer.php'; ?>
+<?php
+$extraJs = <<<JS
+// Mostrar/ocultar o select de Naipe conforme a função escolhida (só faz
+// sentido pra Backing Vocal)
+document.querySelectorAll('.role-select').forEach(function (sel) {
+  sel.addEventListener('change', function () {
+    const naipeSel = document.getElementById('naipe-' + this.dataset.memberId);
+    if (naipeSel) naipeSel.style.display = this.value === 'Backing Vocal' ? 'inline-block' : 'none';
+  });
+});
+JS;
+require_once __DIR__ . '/../../includes/layout-footer.php';
+?>
