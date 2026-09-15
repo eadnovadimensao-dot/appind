@@ -19,7 +19,7 @@ $stmt = $db->prepare("
     JOIN ministry_activities ma ON ma.id = mam.activity_id
     JOIN ministries mn          ON mn.id = ma.ministry_id
     JOIN members m              ON m.id  = mam.member_id
-    WHERE ma.activity_date = ? AND mam.status IN ('accepted','pending')
+    WHERE ma.activity_date = ? AND mam.status IN ('confirmed','pending')
       AND mn.church_id = ?
     ORDER BY mn.name, m.name
 ");

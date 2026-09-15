@@ -86,7 +86,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             SELECT DISTINCT mam.member_id, mam.role
             FROM ministry_activity_members mam
             JOIN ministry_activities ma ON ma.id = mam.activity_id
-            WHERE ma.activity_date = ? AND mam.status IN ('accepted','pending')
+            WHERE ma.activity_date = ? AND mam.status IN ('confirmed','pending')
               AND ma.ministry_id IN (SELECT id FROM ministries WHERE church_id = ?)
         ");
         $autoScale->execute([$date, $churchId]);

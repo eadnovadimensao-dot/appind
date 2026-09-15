@@ -53,7 +53,7 @@ $refused   = 0;
 $pending   = 0;
 $roleCount = [];
 foreach ($history as $h) {
-    if ($h['status'] === 'accepted') $accepted++;
+    if ($h['status'] === 'confirmed') $accepted++;
     elseif ($h['status'] === 'refused') $refused++;
     else $pending++;
     if ($h['role']) $roleCount[$h['role']] = ($roleCount[$h['role']] ?? 0) + 1;
@@ -63,9 +63,9 @@ $answered    = $accepted + $refused;
 $confirmRate = $answered > 0 ? round($accepted / $answered * 100) : null;
 
 $statusLabels = [
-    'accepted' => ['label' => 'Confirmou',  'badge' => 'badge-green'],
-    'refused'  => ['label' => 'Recusou',    'badge' => 'badge-red'],
-    'pending'  => ['label' => 'Aguardando', 'badge' => 'badge-gray'],
+    'confirmed' => ['label' => 'Confirmou',  'badge' => 'badge-green'],
+    'refused'   => ['label' => 'Recusou',    'badge' => 'badge-red'],
+    'pending'   => ['label' => 'Aguardando', 'badge' => 'badge-gray'],
 ];
 $typeLabels = ['culto' => 'Culto', 'ensaio' => 'Ensaio'];
 
