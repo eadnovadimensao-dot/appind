@@ -34,20 +34,7 @@ if (empty($mn['auto_scale_enabled'])) {
 }
 
 $churchId = $mn['church_id'];
-
-// Membros do ministério agrupados por função
-$members = $db->prepare("
-    SELECT m.id, m.name, mm.role
-    FROM member_ministries mm
-    JOIN members m ON m.id = mm.member_id
-    WHERE mm.ministry_id = ? AND m.church_id = ?
-");
-$members->execute([$ministryId, $churchId]);
-$pool = [];
-foreach ($members->fetchAll() as $m) {
-    if (!$m['role']) continue;
-    $pool[$m['role']][] = ['id' => (int)$m['id'], 'name' => $m['name']];
-}
+$pool     = build_music_pool($db, $ministryId, $churchId);
 
 // Última escala do mesmo tipo para este ministério (pra poupar quem já serviu)
 $prev = $db->prepare("
@@ -66,52 +53,4 @@ if ($prevActivityId) {
     $prevMemberIds = array_map('intval', $pm->fetchAll(PDO::FETCH_COLUMN));
 }
 
-$assignments = []; // member_id => role
-$warnings    = [];
-
-// Funções que sempre entram, sem rodízio: escala todo mundo que tem essa função
-foreach (MUSIC_ALWAYS_INCLUDE_ROLES as $role) {
-    $candidates = $pool[$role] ?? [];
-    if (empty($candidates)) {
-        $warnings[] = "$role: nenhum membro cadastrado nessa função.";
-        continue;
-    }
-    foreach ($candidates as $c) {
-        $assignments[$c['id']] = $role;
-    }
-}
-
-foreach (MUSIC_ROLE_COMPOSITION as $role => $needed) {
-    $candidates = $pool[$role] ?? [];
-
-    // Ministros de louvor que não foram escalados como o ministro da semana
-    // entram também na disputa pelas vagas de Backing Vocal.
-    if ($role === 'Backing Vocal') {
-        $extraMinistros = array_filter(
-            $pool['Ministro(a) de Louvor'] ?? [],
-            fn($c) => !isset($assignments[$c['id']])
-        );
-        $candidates = array_merge($candidates, array_values($extraMinistros));
-    }
-
-    $fresh  = array_values(array_filter($candidates, fn($c) => !in_array($c['id'], $prevMemberIds, true)));
-    $recent = array_values(array_filter($candidates, fn($c) =>  in_array($c['id'], $prevMemberIds, true)));
-
-    shuffle($fresh);
-    shuffle($recent);
-
-    $chosen = array_slice($fresh, 0, $needed);
-    if (count($chosen) < $needed) {
-        $chosen = array_merge($chosen, array_slice($recent, 0, $needed - count($chosen)));
-    }
-
-    foreach ($chosen as $c) {
-        $assignments[$c['id']] = $role;
-    }
-
-    if (count($chosen) < $needed) {
-        $warnings[] = "$role: só " . count($chosen) . " de $needed disponível(is).";
-    }
-}
-
-echo json_encode(['assignments' => $assignments, 'warnings' => $warnings]);
+echo json_encode(draw_music_scale($pool, $prevMemberIds));
