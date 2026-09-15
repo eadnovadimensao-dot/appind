@@ -261,6 +261,8 @@ $actTypeLabels = [
             <?php endif; ?>
           </div>
           <span class="badge <?= $st['badge'] ?>"><?= $st['label'] ?></span>
+          <a href="/pages/ministries/member_profile.php?ministry_id=<?= $id ?>&member_id=<?= $m['id'] ?>"
+             title="Perfil no ministério" style="font-size:15px;color:var(--text-muted);text-decoration:none;line-height:1">📊</a>
           <?php if ($canManage): ?>
           <a href="/pages/ministries/remove_member.php?ministry_id=<?= $id ?>&member_id=<?= $m['id'] ?>"
              style="font-size:18px;color:var(--text-muted);text-decoration:none;line-height:1"
