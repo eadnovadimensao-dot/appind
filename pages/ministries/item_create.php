@@ -4,19 +4,16 @@ require_once __DIR__ . "/../../includes/auth.php";
 auth_check();
 
 $db         = db();
-$churchId   = CHURCH_ID;
 $ministryId = (int)($_GET['ministry_id'] ?? 0);
 $editId     = (int)($_GET['id'] ?? 0);
 $errors     = [];
 
-$stmt = $db->prepare("SELECT * FROM ministries WHERE id = ? AND church_id = ?");
-$stmt->execute([$ministryId ?: $editId, $churchId]);
-
-// Se editando, busca o item
+// Se editando, busca o item primeiro (sem restrição de filial — o item
+// carrega o próprio church_id, checado logo abaixo via a ministério dele)
 $item = null;
 if ($editId) {
-    $si = $db->prepare("SELECT * FROM ministry_items WHERE id = ? AND church_id = ?");
-    $si->execute([$editId, $churchId]);
+    $si = $db->prepare("SELECT * FROM ministry_items WHERE id = ?");
+    $si->execute([$editId]);
     $item = $si->fetch();
     if (!$item) { header('Location: /pages/ministries/index.php'); exit; }
     $ministryId = $item['ministry_id'];
@@ -24,11 +21,19 @@ if ($editId) {
 
 auth_require_ministry($ministryId);
 
-$mn = $db->prepare("SELECT * FROM ministries WHERE id = ? AND church_id = ?");
-$mn->execute([$ministryId, $churchId]);
+// Ministério em qualquer filial da sede (antes travava em CHURCH_ID, sempre
+// a sede, então ministério de filial nunca era encontrado)
+$mn = $db->prepare("
+    SELECT mn.*
+    FROM ministries mn
+    JOIN churches ch ON ch.id = mn.church_id
+    WHERE mn.id = ? AND (ch.id = ? OR ch.parent_id = ?)
+");
+$mn->execute([$ministryId, SEDE_ID, SEDE_ID]);
 $mn = $mn->fetch();
 if (!$mn) { header('Location: /pages/ministries/index.php'); exit; }
 
+$churchId  = $mn['church_id']; // pertence à filial DO MINISTÉRIO, não da sede fixa
 $pageTitle = ($editId ? 'Editar item' : 'Novo item') . ' · ' . $mn['name'];
 
 $categories = ['roupa'=>'Roupa','instrumento'=>'Instrumento',
@@ -58,7 +63,6 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     if ($item) $item = array_merge($item, $_POST);
 }
 
-$pageTitle = ($editId ? 'Editar item' : 'Novo item') . ' · ' . $mn['name'];
 $activePage = 'ministries';
 require_once __DIR__ . '/../../includes/layout.php';
 

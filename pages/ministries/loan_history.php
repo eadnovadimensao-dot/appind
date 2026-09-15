@@ -2,24 +2,28 @@
 require_once __DIR__ . "/../../config/database.php";
 require_once __DIR__ . "/../../includes/auth.php";
 auth_check();
-require_once __DIR__ . '/../../includes/auth.php';
-auth_check();
 
 $db         = db();
-$churchId   = CHURCH_ID;
 $itemId     = (int)($_GET['item_id']     ?? 0);
 $ministryId = (int)($_GET['ministry_id'] ?? 0);
 
-$item = $db->prepare("SELECT mi.*, mn.name AS ministry_name FROM ministry_items mi JOIN ministries mn ON mn.id = mi.ministry_id WHERE mi.id = ? AND mi.church_id = ?");
-$item->execute([$itemId, $churchId]);
+// Busca o item em qualquer filial da sede (igual ao resto do app) — antes
+// travava em CHURCH_ID (sempre 1, a sede), então item de filial nunca era
+// encontrado e $item ficava sem as colunas esperadas.
+$item = $db->prepare("
+    SELECT mi.*, mn.name AS ministry_name
+    FROM ministry_items mi
+    JOIN ministries mn ON mn.id = mi.ministry_id
+    JOIN churches ch    ON ch.id = mi.church_id
+    WHERE mi.id = ? AND (ch.id = ? OR ch.parent_id = ?)
+");
+$item->execute([$itemId, SEDE_ID, SEDE_ID]);
 $item = $item->fetch();
 if (!$item) { header('Location: /pages/ministries/index.php'); exit; }
 
+$pageTitle  = 'Histórico · ' . $item['name'];
 $activePage = 'ministries';
 require_once __DIR__ . '/../../includes/layout.php';
-
-
-$pageTitle = 'Histórico · ' . $item['name'];
 
 $loans = $db->prepare("
     SELECT ml.*, m.name AS member_name, m2.name AS approved_name, m3.name AS return_confirmed_name

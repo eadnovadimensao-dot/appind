@@ -5,7 +5,7 @@ auth_check();
 header('Content-Type: application/json');
 
 $db         = db();
-$churchId   = CHURCH_ID;
+$churchId   = current_church_id();
 $locationId = (int)($_GET['location_id'] ?? 0);
 $date       = $_GET['date']  ?? '';
 $start      = $_GET['start'] ?? '';

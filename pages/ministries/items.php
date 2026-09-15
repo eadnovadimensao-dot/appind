@@ -4,19 +4,23 @@ require_once __DIR__ . "/../../includes/auth.php";
 auth_check();
 
 $db         = db();
-$churchId   = CHURCH_ID;
 $ministryId = (int)($_GET['ministry_id'] ?? 0);
 
-$stmt = $db->prepare("SELECT * FROM ministries WHERE id = ? AND church_id = ?");
-$stmt->execute([$ministryId, $churchId]);
+// Busca o ministério em qualquer filial da sede (antes travava em CHURCH_ID,
+// sempre a sede, então ministério de filial nunca era encontrado)
+$stmt = $db->prepare("
+    SELECT mn.*
+    FROM ministries mn
+    JOIN churches ch ON ch.id = mn.church_id
+    WHERE mn.id = ? AND (ch.id = ? OR ch.parent_id = ?)
+");
+$stmt->execute([$ministryId, SEDE_ID, SEDE_ID]);
 $mn = $stmt->fetch();
 if (!$mn) { header('Location: /pages/ministries/index.php'); exit; }
 
+$pageTitle  = 'Pertences · ' . $mn['name'];
 $activePage = 'ministries';
 require_once __DIR__ . '/../../includes/layout.php';
-
-
-$pageTitle = 'Pertences · ' . $mn['name'];
 
 // Itens do ministério com contagem de empréstimos ativos
 $items = $db->prepare("

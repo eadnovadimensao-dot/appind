@@ -2,21 +2,25 @@
 require_once __DIR__ . "/../../config/database.php";
 require_once __DIR__ . "/../../includes/auth.php";
 auth_check();
-require_once __DIR__ . '/../../includes/auth.php';
-auth_check();
 
 $db         = db();
-$churchId   = CHURCH_ID;
 $ministryId = (int)($_GET['ministry_id'] ?? 0);
 $itemId     = (int)($_GET['item_id']     ?? 0);
 $errors     = [];
 
-$mn = $db->prepare("SELECT * FROM ministries WHERE id = ? AND church_id = ?");
-$mn->execute([$ministryId, $churchId]);
+// Ministério em qualquer filial da sede (antes travava em CHURCH_ID, sempre
+// a sede, então ministério de filial nunca era encontrado)
+$mn = $db->prepare("
+    SELECT mn.*
+    FROM ministries mn
+    JOIN churches ch ON ch.id = mn.church_id
+    WHERE mn.id = ? AND (ch.id = ? OR ch.parent_id = ?)
+");
+$mn->execute([$ministryId, SEDE_ID, SEDE_ID]);
 $mn = $mn->fetch();
 if (!$mn) { header('Location: /pages/ministries/index.php'); exit; }
 
-$pageTitle = 'Solicitar empréstimo · ' . $mn['name'];
+$churchId = $mn['church_id']; // pertence à filial DO MINISTÉRIO, não da sede fixa
 
 // Itens disponíveis
 $items = $db->prepare("
