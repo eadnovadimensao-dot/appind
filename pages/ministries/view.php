@@ -136,6 +136,9 @@ $actTypeLabels = [
       <a href="/pages/ministries/items.php?ministry_id=<?= $id ?>" class="btn btn-secondary">🎒 Pertences</a>
       <?php if ($canManage): ?>
         <a href="/pages/ministries/activity_create.php?ministry_id=<?= $id ?>" class="btn btn-primary">+ Atividade</a>
+        <?php if ($isMusic): ?>
+          <a href="/pages/ministries/activity_batch_create.php?ministry_id=<?= $id ?>" class="btn btn-secondary">🎲 Escala em lote</a>
+        <?php endif; ?>
         <a href="/pages/ministries/edit.php?id=<?= $id ?>" class="btn btn-secondary">Editar</a>
       <?php endif; ?>
       <a href="/pages/ministries/index.php" class="btn btn-secondary">Voltar</a>
