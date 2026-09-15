@@ -1,5 +1,6 @@
 <?php
 require_once __DIR__ . '/config/database.php';
+require_once __DIR__ . '/includes/ministry_activity.php';
 
 $token  = trim($_GET['token']  ?? '');
 $action = trim($_GET['action'] ?? '');
@@ -47,6 +48,9 @@ if (!$row) {
         SET status='confirmed', responded_at=NOW()
         WHERE confirm_token=?
     ")->execute([$token]);
+
+    // Agenda o lembrete de check-in ("✅ Cheguei") pra perto do horário do evento
+    queue_checkin_reminder($db, (int)$row['activity_id'], (int)$row['member_id'], (int)$row['church_id']);
 
     // Notificar o líder
     $tpl = notification_template('scale_confirmed', [

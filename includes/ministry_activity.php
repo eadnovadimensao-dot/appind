@@ -19,6 +19,52 @@ function response_deadline(string $activityDate, ?string $timeStart = null): str
     return date('Y-m-d H:i:s', $deadline);
 }
 
+// Quantos minutos antes do início manda o lembrete de check-in
+const CHECKIN_REMINDER_MINUTES_BEFORE = 30;
+
+/**
+ * Enfileira o lembrete de check-in ("✅ Cheguei") por WhatsApp pra UM membro
+ * que confirmou presença — chamado tanto quando o próprio membro confirma
+ * (respond.php) quanto quando o líder marca confirmado manualmente
+ * (activity_confirm.php). Não faz nada se o membro não tem telefone, se o
+ * evento já passou do horário de lembrete, ou se já tinha um token gerado
+ * (evita reenviar/duplicar a cada toggle).
+ */
+function queue_checkin_reminder(PDO $db, int $activityId, int $memberId, int $churchId): void {
+    $row = $db->prepare("
+        SELECT mam.checkin_token, ma.title, ma.activity_date, ma.time_start, m.name, m.phone
+        FROM ministry_activity_members mam
+        JOIN ministry_activities ma ON ma.id = mam.activity_id
+        JOIN members m ON m.id = mam.member_id
+        WHERE mam.activity_id = ? AND mam.member_id = ?
+    ");
+    $row->execute([$activityId, $memberId]);
+    $row = $row->fetch();
+    if (!$row || !$row['phone'] || $row['checkin_token']) return; // já enfileirado antes, ou sem telefone
+
+    $eventAt   = strtotime($row['activity_date'] . ' ' . ($row['time_start'] ?: '00:00:00'));
+    $checkinAt = $eventAt - CHECKIN_REMINDER_MINUTES_BEFORE * 60;
+    $delayMinutes = (int)round(($checkinAt - time()) / 60);
+    if ($delayMinutes <= 0) return; // já é tarde demais pra mandar o lembrete com antecedência
+
+    $token = bin2hex(random_bytes(32));
+    $db->prepare("UPDATE ministry_activity_members SET checkin_token = ? WHERE activity_id = ? AND member_id = ?")
+       ->execute([$token, $activityId, $memberId]);
+
+    $checkinUrl = APP_URL . '/checkin.php?token=' . $token;
+    $timeLabel  = $row['time_start'] ? substr($row['time_start'], 0, 5) : '';
+    $message    = "⏰ *{$row['title']}* começa em " . CHECKIN_REMINDER_MINUTES_BEFORE . " minutos"
+                . ($timeLabel ? " ($timeLabel)" : '') . "!\n\nJá chegou?";
+
+    queue_whatsapp(
+        $row['phone'],
+        $message,
+        $churchId,
+        [['label' => '✅ Cheguei', 'url' => $checkinUrl]],
+        $delayMinutes
+    );
+}
+
 /**
  * Notifica UM membro já escalado (announcement interno, push real, WhatsApp e e-mail) —
  * convite de escala normal, ou pedido de oração se a função for "sempre inclui".

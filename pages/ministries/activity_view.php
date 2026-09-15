@@ -28,7 +28,7 @@ $canManage = auth_can_manage_ministry((int)$act['ministry_id']);
 
 // Escala
 $scaled = $db->prepare("
-    SELECT m.id, m.name, m.phone, mam.role, mam.confirmed, mam.status, mam.refuse_reason
+    SELECT m.id, m.name, m.phone, mam.role, mam.confirmed, mam.status, mam.refuse_reason, mam.checked_in_at
     FROM ministry_activity_members mam
     JOIN members m ON m.id = mam.member_id
     WHERE mam.activity_id = ?
@@ -255,6 +255,7 @@ $at = $actTypeLabels[$act['activity_type']] ?? null;
             <th>Função</th>
             <th>Telefone</th>
             <th>Resposta do membro</th>
+            <th>Chegada</th>
           </tr>
         </thead>
         <tbody>
@@ -291,6 +292,21 @@ $at = $actTypeLabels[$act['activity_type']] ?? null;
                   <div style="font-size:11px;color:var(--text-muted);margin-top:4px;max-width:220px">
                     💬 <?= htmlspecialchars($s['refuse_reason']) ?>
                   </div>
+                <?php endif; ?>
+              </td>
+              <td>
+                <?php
+                  $eventAt = $act['time_start'] ? strtotime($act['activity_date'] . ' ' . $act['time_start']) : null;
+                ?>
+                <?php if ($s['checked_in_at']): ?>
+                  <?php $lateBy = $eventAt ? round((strtotime($s['checked_in_at']) - $eventAt) / 60) : 0; ?>
+                  <span class="badge <?= $lateBy > 5 ? 'badge-amber' : 'badge-green' ?>">
+                    <?= date('H:i', strtotime($s['checked_in_at'])) ?><?= $lateBy > 5 ? " · {$lateBy}min atrasado" : '' ?>
+                  </span>
+                <?php elseif ($s['status'] === 'confirmed' && $eventAt && time() > $eventAt): ?>
+                  <span class="badge badge-red">⚠ não chegou</span>
+                <?php else: ?>
+                  <span style="color:var(--text-muted);font-size:12px">—</span>
                 <?php endif; ?>
               </td>
             </tr>
