@@ -161,12 +161,26 @@ $accentColor  = setting('accent_color',   '#1D9E75', $churchId);
         <?php endif; ?>
 
         <form method="POST">
-          <input type="hidden" name="church_id" value="<?= $churchId ?>">
           <!-- honeypot: campo que só robôs preenchem -->
           <div class="hp-field" aria-hidden="true">
             <label>Deixe em branco</label>
             <input type="text" name="website" tabindex="-1" autocomplete="off">
           </div>
+
+          <?php if (count($branches) > 1): ?>
+            <div class="form-group">
+              <label class="form-label">Filial *</label>
+              <select name="church_id" class="form-control" required>
+                <?php foreach ($branches as $b): ?>
+                  <option value="<?= $b['id'] ?>" <?= ($_POST['church_id'] ?? $churchId) == $b['id'] ? 'selected' : '' ?>>
+                    <?= htmlspecialchars($b['name']) ?><?= $b['type'] === 'sede' ? ' (Sede)' : '' ?>
+                  </option>
+                <?php endforeach; ?>
+              </select>
+            </div>
+          <?php else: ?>
+            <input type="hidden" name="church_id" value="<?= $churchId ?>">
+          <?php endif; ?>
 
           <div class="form-group">
             <label class="form-label">Nome completo *</label>
