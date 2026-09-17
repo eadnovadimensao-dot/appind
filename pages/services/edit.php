@@ -2,6 +2,7 @@
 require_once __DIR__ . '/../../config/database.php';
 require_once __DIR__ . '/../../includes/auth.php';
 require_once __DIR__ . '/../../includes/bible.php';
+require_once __DIR__ . '/../../includes/service_checkin.php';
 auth_check();
 $db = db();
 $churchId = current_church_id();
@@ -12,8 +13,9 @@ $service = $s->fetch();
 if (!$service) { header('Location: /pages/services/index.php'); exit; }
 
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
-    $title = trim($_POST['title'] ?? $service['title']);
-    $date  = trim($_POST['service_date'] ?? $service['service_date']);
+    $title     = trim($_POST['title'] ?? $service['title']);
+    $date      = trim($_POST['service_date'] ?? $service['service_date']);
+    $timeStart = trim($_POST['time_start'] ?? '') ?: null;
 
     $scriptureRefsRaw = array_values(array_filter(array_map('trim', $_POST['scripture_refs'] ?? []), fn($r) => $r !== ''));
     $parsedRefs = [];
@@ -30,7 +32,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
            $title,
            trim($_POST['type']         ?? $service['type']),
            $date,
-           trim($_POST['time_start']   ?? '') ?: null,
+           $timeStart,
            trim($_POST['time_end']     ?? '') ?: null,
            (int)($_POST['preacher_id'] ?? 0) ?: null,
            trim($_POST['sermon_title'] ?? '') ?: null,
@@ -57,6 +59,9 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         }
     }
     queue_scripture_meditation($db, $id, $title, $date, $churchId);
+
+    // Convida por WhatsApp quem ainda não foi convidado pro check-in geral
+    queue_service_checkins($db, $id, $title, $date, $timeStart, $churchId);
 
     header('Location: /pages/services/view.php?id=' . $id);
     exit;

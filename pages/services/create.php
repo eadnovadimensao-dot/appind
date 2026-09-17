@@ -2,6 +2,7 @@
 require_once __DIR__ . '/../../config/database.php';
 require_once __DIR__ . '/../../includes/auth.php';
 require_once __DIR__ . '/../../includes/bible.php';
+require_once __DIR__ . '/../../includes/service_checkin.php';
 auth_check();
 
 $db       = db();
@@ -95,6 +96,9 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             }
             queue_scripture_meditation($db, $serviceId, $title, $date, $churchId);
         }
+
+        // Convite de check-in geral por WhatsApp, pra toda a congregação
+        queue_service_checkins($db, $serviceId, $title, $date, $timeStart, $churchId);
 
         // Salvar ordem do culto
         $si = $db->prepare("INSERT INTO service_items (service_id,position,type,title,description,duration,worship_count) VALUES (?,?,?,?,?,?,?)");

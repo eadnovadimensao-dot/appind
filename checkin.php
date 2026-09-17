@@ -10,17 +10,32 @@ if (!$token) {
 
 $db = db();
 
+// Primeiro tenta check-in geral de culto (congregação inteira)
 $stmt = $db->prepare("
-    SELECT mam.*, ma.title, ma.activity_date, ma.time_start, mn.name AS ministry_name,
-           mn.church_id, m.name AS member_name
-    FROM ministry_activity_members mam
-    JOIN ministry_activities ma ON ma.id = mam.activity_id
-    JOIN ministries mn ON mn.id = ma.ministry_id
-    JOIN members m ON m.id = mam.member_id
-    WHERE mam.checkin_token = ?
+    SELECT sc.checked_in_at, s.title, s.service_date AS activity_date, s.time_start,
+           s.church_id, m.name AS member_name, 'culto' AS kind
+    FROM service_checkins sc
+    JOIN services s ON s.id = sc.service_id
+    JOIN members m ON m.id = sc.member_id
+    WHERE sc.checkin_token = ?
 ");
 $stmt->execute([$token]);
 $row = $stmt->fetch();
+
+// Se não achou, tenta check-in de escala de ministério (quem está servindo)
+if (!$row) {
+    $stmt = $db->prepare("
+        SELECT mam.checked_in_at, ma.title, ma.activity_date, ma.time_start, mn.name AS ministry_name,
+               mn.church_id, m.name AS member_name, 'ministerio' AS kind
+        FROM ministry_activity_members mam
+        JOIN ministry_activities ma ON ma.id = mam.activity_id
+        JOIN ministries mn ON mn.id = ma.ministry_id
+        JOIN members m ON m.id = mam.member_id
+        WHERE mam.checkin_token = ?
+    ");
+    $stmt->execute([$token]);
+    $row = $stmt->fetch();
+}
 
 $error   = null;
 $success = null;
@@ -30,11 +45,12 @@ if (!$row) {
     $error = 'Link inválido.';
 } elseif ($row['checked_in_at']) {
     $already = true;
-    $success = "✅ Chegada já registrada às " . date('H:i', strtotime($row['checked_in_at'])) . ".";
+    $success = "✅ Presença já registrada às " . date('H:i', strtotime($row['checked_in_at'])) . ".";
 } else {
-    $db->prepare("UPDATE ministry_activity_members SET checked_in_at = NOW() WHERE checkin_token = ?")->execute([$token]);
+    $table = $row['kind'] === 'culto' ? 'service_checkins' : 'ministry_activity_members';
+    $db->prepare("UPDATE {$table} SET checked_in_at = NOW() WHERE checkin_token = ?")->execute([$token]);
     $now = date('H:i');
-    $success = "✅ Chegada registrada às {$now}. Bom culto/ensaio, {$row['member_name']}! 🙏";
+    $success = "✅ Presença registrada às {$now}. Bom culto" . ($row['kind'] === 'ministerio' ? '/ensaio' : '') . ", {$row['member_name']}! 🙏";
 }
 
 $churchId     = $row['church_id'] ?? 1;
@@ -106,12 +122,14 @@ $logoUrl      = setting('church_logo_url', '', $churchId);
     <p class="success"><?= htmlspecialchars($success) ?></p>
 
     <div class="activity-box">
-      <div class="label">Atividade</div>
+      <div class="label"><?= $row['kind'] === 'culto' ? 'Culto' : 'Atividade' ?></div>
       <div class="value"><?= htmlspecialchars($row['title']) ?></div>
-      <div style="margin-top:8px">
-        <div class="label">Ministério</div>
-        <div class="value"><?= htmlspecialchars($row['ministry_name']) ?></div>
-      </div>
+      <?php if ($row['kind'] === 'ministerio'): ?>
+        <div style="margin-top:8px">
+          <div class="label">Ministério</div>
+          <div class="value"><?= htmlspecialchars($row['ministry_name']) ?></div>
+        </div>
+      <?php endif; ?>
     </div>
   <?php endif; ?>
 
