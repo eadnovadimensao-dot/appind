@@ -113,20 +113,26 @@ function bible_format_text(array $verses): string {
 const SCRIPTURE_MEDITATION_DAYS_BEFORE = 2;
 
 /**
- * Enfileira, pra todos os membros ativos da filial, o texto bíblico do
- * culto (já salvo em service_scriptures) pra meditação — 2 dias antes da
- * data do culto. Só manda uma vez por culto (guarda em
- * services.meditation_queued_at). Chamado depois de criar/editar o culto.
+ * Sincroniza a fila de meditação com o que está salvo em service_scriptures
+ * pra esse culto: cancela os avisos ainda não entregues (status='pending')
+ * e enfileira de novo com o texto atual, pra todos os membros ativos da
+ * filial — 2 dias antes da data do culto. Seguro chamar de novo a cada vez
+ * que o culto é criado OU editado (não duplica; mensagens já entregues não
+ * são recolhidas, mas as pendentes são atualizadas). Se não houver mais
+ * nenhuma referência válida, só cancela o que estava pendente.
  */
 function queue_scripture_meditation(PDO $db, int $serviceId, string $serviceTitle, string $serviceDate, int $churchId): void {
-    $svc = $db->prepare("SELECT meditation_queued_at FROM services WHERE id = ?");
-    $svc->execute([$serviceId]);
-    if ($svc->fetchColumn()) return; // já enviado antes pra esse culto
+    // Cancela os avisos dessa meditação que ainda não foram entregues,
+    // pra não mandar texto desatualizado se o culto for editado de novo.
+    $db->prepare("DELETE FROM whatsapp_queue WHERE service_id = ? AND status = 'pending'")->execute([$serviceId]);
 
     $refs = $db->prepare("SELECT * FROM service_scriptures WHERE service_id = ? AND book_abbrev IS NOT NULL ORDER BY position");
     $refs->execute([$serviceId]);
     $refs = $refs->fetchAll();
-    if (empty($refs)) return;
+    if (empty($refs)) {
+        $db->prepare("UPDATE services SET meditation_queued_at = NULL WHERE id = ?")->execute([$serviceId]);
+        return;
+    }
 
     $blocks = [];
     foreach ($refs as $r) {
@@ -138,7 +144,10 @@ function queue_scripture_meditation(PDO $db, int $serviceId, string $serviceTitl
         if (empty($verses)) continue;
         $blocks[] = "📖 *" . bible_format_reference($parsed) . "*\n" . bible_format_text($verses);
     }
-    if (empty($blocks)) return;
+    if (empty($blocks)) {
+        $db->prepare("UPDATE services SET meditation_queued_at = NULL WHERE id = ?")->execute([$serviceId]);
+        return;
+    }
 
     $churchName = setting('church_name', 'Igreja', $churchId);
     $message = "🙏 *Preparação para {$serviceTitle}*\n\nMedite nessa Palavra antes do culto:\n\n"
@@ -150,7 +159,7 @@ function queue_scripture_meditation(PDO $db, int $serviceId, string $serviceTitl
     $members = $db->prepare("SELECT phone FROM members WHERE church_id = ? AND status = 'active' AND phone IS NOT NULL AND phone != ''");
     $members->execute([$churchId]);
     foreach ($members->fetchAll(PDO::FETCH_COLUMN) as $phone) {
-        queue_whatsapp($phone, $message, $churchId, null, $delayMinutes);
+        queue_whatsapp($phone, $message, $churchId, null, $delayMinutes, $serviceId);
     }
 
     $db->prepare("UPDATE services SET meditation_queued_at = NOW() WHERE id = ?")->execute([$serviceId]);
