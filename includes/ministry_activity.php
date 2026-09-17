@@ -19,8 +19,21 @@ function response_deadline(string $activityDate, ?string $timeStart = null): str
     return date('Y-m-d H:i:s', $deadline);
 }
 
-// Quantos minutos antes do início manda o lembrete de check-in
+// Quantos minutos antes do início manda o lembrete de check-in, quando o
+// ministério não define o próprio tempo (ministries.checkin_lead_minutes).
 const CHECKIN_REMINDER_MINUTES_BEFORE = 30;
+
+/** "30 minutos" / "2 horas" / "1h30" — pro texto do lembrete. */
+function format_lead_time(int $minutes): string {
+    if ($minutes % 60 === 0) {
+        $h = $minutes / 60;
+        return $h . ' hora' . ($h > 1 ? 's' : '');
+    }
+    if ($minutes > 60) {
+        return sprintf('%dh%02d', intdiv($minutes, 60), $minutes % 60);
+    }
+    return $minutes . ' minutos';
+}
 
 /**
  * Enfileira o lembrete de check-in ("✅ Cheguei") por WhatsApp pra UM membro
@@ -28,13 +41,17 @@ const CHECKIN_REMINDER_MINUTES_BEFORE = 30;
  * (respond.php) quanto quando o líder marca confirmado manualmente
  * (activity_confirm.php). Não faz nada se o membro não tem telefone, se o
  * evento já passou do horário de lembrete, ou se já tinha um token gerado
- * (evita reenviar/duplicar a cada toggle).
+ * (evita reenviar/duplicar a cada toggle). A antecedência é a do ministério
+ * (ministries.checkin_lead_minutes — ex: Louvor chega 2h antes), com 30min
+ * como padrão pra quem não configurou nada.
  */
 function queue_checkin_reminder(PDO $db, int $activityId, int $memberId, int $churchId): void {
     $row = $db->prepare("
-        SELECT mam.checkin_token, ma.title, ma.activity_date, ma.time_start, m.name, m.phone
+        SELECT mam.checkin_token, ma.title, ma.activity_date, ma.time_start, m.name, m.phone,
+               mn.checkin_lead_minutes
         FROM ministry_activity_members mam
         JOIN ministry_activities ma ON ma.id = mam.activity_id
+        JOIN ministries mn ON mn.id = ma.ministry_id
         JOIN members m ON m.id = mam.member_id
         WHERE mam.activity_id = ? AND mam.member_id = ?
     ");
@@ -42,8 +59,9 @@ function queue_checkin_reminder(PDO $db, int $activityId, int $memberId, int $ch
     $row = $row->fetch();
     if (!$row || !$row['phone'] || $row['checkin_token']) return; // já enfileirado antes, ou sem telefone
 
+    $leadMinutes = $row['checkin_lead_minutes'] ?: CHECKIN_REMINDER_MINUTES_BEFORE;
     $eventAt   = strtotime($row['activity_date'] . ' ' . ($row['time_start'] ?: '00:00:00'));
-    $checkinAt = $eventAt - CHECKIN_REMINDER_MINUTES_BEFORE * 60;
+    $checkinAt = $eventAt - $leadMinutes * 60;
     $delayMinutes = (int)round(($checkinAt - time()) / 60);
     if ($delayMinutes <= 0) return; // já é tarde demais pra mandar o lembrete com antecedência
 
@@ -53,7 +71,7 @@ function queue_checkin_reminder(PDO $db, int $activityId, int $memberId, int $ch
 
     $checkinUrl = APP_URL . '/checkin.php?token=' . $token;
     $timeLabel  = $row['time_start'] ? substr($row['time_start'], 0, 5) : '';
-    $message    = "⏰ *{$row['title']}* começa em " . CHECKIN_REMINDER_MINUTES_BEFORE . " minutos"
+    $message    = "⏰ *{$row['title']}* começa em " . format_lead_time($leadMinutes)
                 . ($timeLabel ? " ($timeLabel)" : '') . "!\n\nJá chegou?";
 
     queue_whatsapp(

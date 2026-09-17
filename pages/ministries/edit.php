@@ -30,6 +30,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     $time      = trim($_POST['meeting_time']?? '') ?: null;
     $active    = isset($_POST['active']) ? 1 : 0;
     $autoScale = isset($_POST['auto_scale_enabled']) ? 1 : 0;
+    $checkinLead = max(0, (int)($_POST['checkin_lead_minutes'] ?? 30)) ?: 30;
 
     if ($name === '') $errors[] = 'Nome é obrigatório.';
     if (empty($leaderIds)) $errors[] = 'Selecione pelo menos um líder.';
@@ -39,10 +40,12 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 
         $db->prepare("
             UPDATE ministries SET name=:name, description=:desc, leader_id=:leader,
-              meeting_day=:day, meeting_time=:time, active=:active, auto_scale_enabled=:auto_scale
+              meeting_day=:day, meeting_time=:time, active=:active, auto_scale_enabled=:auto_scale,
+              checkin_lead_minutes=:checkin_lead
             WHERE id=:id AND church_id=:church_id
         ")->execute([':name'=>$name,':desc'=>$desc?:null,':leader'=>$mainLeader,
                      ':day'=>$day,':time'=>$time,':active'=>$active,':auto_scale'=>$autoScale,
+                     ':checkin_lead'=>$checkinLead,
                      ':id'=>$id,':church_id'=>$churchId]);
 
         // Atualizar tabela ministry_leaders
@@ -108,6 +111,17 @@ require_once __DIR__ . '/../../includes/layout.php';
       </label>
       <p style="font-size:11px;color:var(--text-muted);margin-top:4px;margin-left:24px">
         Ative pra ministérios de louvor/música — libera o sorteio automático de escala e as funções fixas na tela de atividade.
+      </p>
+    </div>
+    <div class="form-group" style="margin-top:14px;margin-bottom:0;max-width:220px">
+      <label class="form-label">Antecedência do lembrete de chegada</label>
+      <select name="checkin_lead_minutes" class="form-control">
+        <?php foreach ([15=>'15 minutos',30=>'30 minutos',60=>'1 hora',90=>'1h30',120=>'2 horas',180=>'3 horas'] as $min=>$label): ?>
+          <option value="<?= $min ?>" <?= (int)($mn['checkin_lead_minutes'] ?? 30)===$min?'selected':'' ?>><?= $label ?></option>
+        <?php endforeach; ?>
+      </select>
+      <p style="font-size:11px;color:var(--text-muted);margin-top:4px">
+        Quando manda o "✅ Cheguei" por WhatsApp pra quem confirmou escala aqui.
       </p>
     </div>
   </div>
