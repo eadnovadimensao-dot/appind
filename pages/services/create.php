@@ -97,9 +97,6 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             queue_scripture_meditation($db, $serviceId, $title, $date, $churchId);
         }
 
-        // Convite de check-in geral por WhatsApp, pra toda a congregação
-        queue_service_checkins($db, $serviceId, $title, $date, $timeStart, $churchId);
-
         // Salvar ordem do culto
         $si = $db->prepare("INSERT INTO service_items (service_id,position,type,title,description,duration,worship_count) VALUES (?,?,?,?,?,?,?)");
         foreach ($itemTitles as $i => $ititle) {
@@ -131,6 +128,10 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 $ss->execute([$serviceId, $as['member_id'], $as['role']]);
             }
         }
+
+        // Convite de check-in geral por WhatsApp, pra toda a congregação (menos
+        // quem já está escalado — esses já recebem o "Cheguei" da escala)
+        queue_service_checkins($db, $serviceId, $title, $date, $timeStart, $churchId);
 
         header('Location: /pages/services/view.php?id=' . $serviceId);
         exit;

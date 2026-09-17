@@ -13,7 +13,9 @@ const SERVICE_CHECKIN_MINUTES_AFTER_START = 15;
  * que ainda não tem um pra esse culto, e enfileira o convite por WhatsApp.
  * Aditivo e seguro de chamar de novo a cada criação/edição do culto: nunca
  * mexe em quem já tem registro (preserva quem já confirmou presença e não
- * duplica quem já foi convidado).
+ * duplica quem já foi convidado). Quem já está escalado nesse culto
+ * (service_scale) fica de fora — essas pessoas já recebem o "✅ Cheguei"
+ * da escala do próprio ministério, com a antecedência configurada nele.
  */
 function queue_service_checkins(PDO $db, int $serviceId, string $serviceTitle, string $serviceDate, ?string $timeStart, int $churchId): void {
     $startAt = strtotime($serviceDate . ' ' . ($timeStart ?: '09:00:00'));
@@ -21,10 +23,11 @@ function queue_service_checkins(PDO $db, int $serviceId, string $serviceTitle, s
     $delayMinutes = max(0, (int)round(($sendAt - time()) / 60));
 
     $members = $db->prepare("
-        SELECT id, phone FROM members
-        WHERE church_id = ? AND status = 'active' AND phone IS NOT NULL AND phone != ''
+        SELECT m.id, m.phone FROM members m
+        WHERE m.church_id = ? AND m.status = 'active' AND m.phone IS NOT NULL AND m.phone != ''
+          AND m.id NOT IN (SELECT member_id FROM service_scale WHERE service_id = ?)
     ");
-    $members->execute([$churchId]);
+    $members->execute([$churchId, $serviceId]);
     $members = $members->fetchAll();
 
     $existing = $db->prepare("SELECT member_id FROM service_checkins WHERE service_id = ?");
