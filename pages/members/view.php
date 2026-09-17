@@ -149,6 +149,53 @@ function fdate($d) { return $d ? date('d/m/Y', strtotime($d)) : '—'; }
 </div>
 
 <?php
+// Trilha de crescimento espiritual
+$steps = $db->prepare("
+    SELECT gs.*, mgp.completed_at
+    FROM growth_steps gs
+    LEFT JOIN member_growth_progress mgp ON mgp.step_id = gs.id AND mgp.member_id = ?
+    WHERE gs.church_id = ? AND gs.active = 1
+    ORDER BY gs.position
+");
+$steps->execute([$m['id'], $m['church_id']]);
+$steps = $steps->fetchAll();
+$doneCount = count(array_filter($steps, fn($s) => $s['completed_at'] !== null));
+?>
+<?php if (!empty($steps)): ?>
+<div class="card" style="margin-top:16px;padding:0">
+  <div style="padding:14px 18px;border-bottom:1px solid var(--border);display:flex;align-items:center;justify-content:space-between">
+    <p style="font-weight:500;font-size:14px">🌱 Trilha de crescimento <span style="color:var(--text-muted);font-weight:400">(<?= $doneCount ?>/<?= count($steps) ?>)</span></p>
+    <?php if (auth_can('manage_members')): ?>
+      <a href="/pages/members/growth_steps.php" style="font-size:12px;color:var(--text-muted);text-decoration:none">Configurar etapas</a>
+    <?php endif; ?>
+  </div>
+  <div style="padding:16px 18px;display:flex;flex-direction:column;gap:4px">
+    <?php foreach ($steps as $s): $isDone = $s['completed_at'] !== null; ?>
+      <form method="POST" action="/pages/members/growth_toggle.php" style="display:flex;align-items:center;gap:12px;padding:8px 0">
+        <input type="hidden" name="member_id" value="<?= $m['id'] ?>">
+        <input type="hidden" name="step_id" value="<?= $s['id'] ?>">
+        <input type="hidden" name="done" value="<?= $isDone ? '0' : '1' ?>">
+        <button type="submit" style="border:none;background:none;cursor:pointer;padding:0;font-size:20px;line-height:1;flex-shrink:0"
+                title="<?= $isDone ? 'Desmarcar' : 'Marcar como concluído' ?>">
+          <?= $isDone ? '✅' : '⬜' ?>
+        </button>
+        <div style="font-size:16px;flex-shrink:0"><?= htmlspecialchars($s['icon']) ?></div>
+        <div style="flex:1">
+          <div style="font-size:13px;font-weight:500;<?= $isDone ? '' : 'color:var(--text-muted)' ?>"><?= htmlspecialchars($s['name']) ?></div>
+          <?php if ($s['description']): ?>
+            <div style="font-size:11px;color:var(--text-muted)"><?= htmlspecialchars($s['description']) ?></div>
+          <?php endif; ?>
+        </div>
+        <?php if ($isDone && $s['completed_at']): ?>
+          <span style="font-size:11px;color:var(--accent);flex-shrink:0"><?= fdate($s['completed_at']) ?></span>
+        <?php endif; ?>
+      </form>
+    <?php endforeach; ?>
+  </div>
+</div>
+<?php endif; ?>
+
+<?php
 // Histórico de transferências entre filiais
 $visits = $db->prepare("
     SELECT mv.*, cf.name AS from_name, ct.name AS to_name, mb.name AS created_name
