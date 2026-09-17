@@ -22,6 +22,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         'church_address', 'church_phone', 'church_email', 'church_website',
         'smtp_host', 'smtp_port', 'smtp_user', 'smtp_pass',
         'zapi_instance_id', 'zapi_token', 'zapi_client_token',
+        'pix_key', 'pix_key_type', 'pix_receiver_name', 'pix_receiver_city',
         'primary_color', 'accent_color',
     ];
 
@@ -283,6 +284,46 @@ require_once __DIR__ . '/../includes/layout.php';
                value="https://<?= htmlspecialchars($_SERVER['HTTP_HOST'] ?? 'app.igrejanovadimensao.com.br') ?>/cadastro.php">
         <button type="button" class="btn btn-secondary" style="flex-shrink:0"
                 onclick="navigator.clipboard.writeText(document.getElementById('signup-link').value).then(()=>{this.textContent='Copiado!';setTimeout(()=>this.textContent='Copiar',1500)})">Copiar</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Pix -->
+  <div class="card" style="margin-bottom:16px">
+    <p class="card-title">Pix pra oferta/dízimo</p>
+    <p style="font-size:12px;color:var(--text-muted);margin-bottom:12px">
+      Gera QR code e código copia-e-cola direto no sistema, usando a própria chave Pix da igreja
+      — sem taxas nem conta em gateway de pagamento. Não confirma automaticamente que o valor caiu;
+      é só a forma de pagar, quem recebe confere pelo banco normalmente.
+    </p>
+    <div class="form-row">
+      <div class="form-group">
+        <label class="form-label">Chave Pix</label>
+        <input type="text" name="pix_key" class="form-control"
+               placeholder="CPF/CNPJ, e-mail, telefone ou chave aleatória"
+               value="<?= htmlspecialchars($s['pix_key'] ?? '') ?>">
+      </div>
+      <div class="form-group">
+        <label class="form-label">Tipo da chave</label>
+        <select name="pix_key_type" class="form-control">
+          <?php foreach (['cpf'=>'CPF','cnpj'=>'CNPJ','email'=>'E-mail','phone'=>'Telefone','random'=>'Chave aleatória'] as $k=>$v): ?>
+            <option value="<?= $k ?>" <?= ($s['pix_key_type']??'')===$k?'selected':'' ?>><?= $v ?></option>
+          <?php endforeach; ?>
+        </select>
+      </div>
+    </div>
+    <div class="form-row" style="margin-bottom:0">
+      <div class="form-group">
+        <label class="form-label">Nome do favorecido</label>
+        <input type="text" name="pix_receiver_name" class="form-control"
+               placeholder="Como está registrado na chave Pix"
+               value="<?= htmlspecialchars($s['pix_receiver_name'] ?? '') ?>" maxlength="25">
+      </div>
+      <div class="form-group">
+        <label class="form-label">Cidade</label>
+        <input type="text" name="pix_receiver_city" class="form-control"
+               placeholder="Ex: Sao Paulo"
+               value="<?= htmlspecialchars($s['pix_receiver_city'] ?? '') ?>" maxlength="15">
       </div>
     </div>
   </div>

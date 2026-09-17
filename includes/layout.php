@@ -9,6 +9,7 @@ auth_member_redirect(); // bloqueia membro de acessar páginas restritas
 
 $navItems = [
   ['href' => '/dashboard.php',                 'icon' => 'ti-layout-dashboard', 'label' => 'Dashboard',    'key' => 'dashboard'],
+  ['href' => '/pages/offering.php',            'icon' => 'ti-heart',            'label' => 'Oferta',       'key' => 'offering'],
   ['href' => '/pages/members/index.php',        'icon' => 'ti-users',            'label' => 'Membros',      'key' => 'members'],
   ['href' => '/pages/families/index.php',       'icon' => 'ti-home',             'label' => 'Famílias',     'key' => 'families'],
   ['href' => '/pages/cells/index.php',          'icon' => 'ti-circles',          'label' => 'Células',      'key' => 'cells'],
@@ -88,7 +89,7 @@ if (window.innerWidth <= 900) {
 
       foreach ($navItems as $item):
         if ($role === 'member') {
-          $memberAllowed = ['dashboard','events','communication'];
+          $memberAllowed = ['dashboard','events','communication','offering'];
           if ($memberCellId) $memberAllowed[] = 'cells';
           if ($inMinistry) $memberAllowed[] = 'ministries';
           if (!in_array($item['key'], $memberAllowed)) continue;
@@ -99,11 +100,11 @@ if (window.innerWidth <= 900) {
           }
         }
         if ($role === 'leader') {
-          $leaderAllowed = ['dashboard','events','communication','ministries','cells'];
+          $leaderAllowed = ['dashboard','events','communication','ministries','cells','offering'];
           if (!in_array($item['key'], $leaderAllowed)) continue;
         }
         if ($role === 'cell_leader') {
-          $cellLeaderAllowed = ['dashboard','events','communication','cells','ministries'];
+          $cellLeaderAllowed = ['dashboard','events','communication','cells','ministries','offering'];
           if (!in_array($item['key'], $cellLeaderAllowed)) continue;
         }
       ?>
