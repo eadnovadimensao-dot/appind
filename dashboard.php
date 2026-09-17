@@ -1,11 +1,75 @@
 <?php
 require_once __DIR__ . '/config/database.php';
 require_once __DIR__ . '/includes/auth.php';
+require_once __DIR__ . '/includes/mini_charts.php';
 auth_check();
 
 $db         = db();
 $churchId   = current_church_id();
 $canFinance = auth_can('manage_finance');
+
+// ── Tendências (últimos 6 meses) ─────────────────────────────
+$monthAbbrevPt = ['Jan','Fev','Mar','Abr','Mai','Jun','Jul','Ago','Set','Out','Nov','Dez'];
+$monthKeys = []; // 'YYYY-MM' dos últimos 6 meses, do mais antigo pro mais recente
+for ($i = 5; $i >= 0; $i--) {
+    $monthKeys[] = date('Y-m', strtotime("-$i months"));
+}
+
+// Crescimento de membros: total cadastrado até o fim de cada mês (cumulativo)
+$memberGrowth = [];
+$memberGrowthStmt = $db->prepare("SELECT COUNT(*) FROM members WHERE church_id=? AND created_at <= ?");
+foreach ($monthKeys as $mk) {
+    $monthEnd = date('Y-m-t 23:59:59', strtotime($mk . '-01'));
+    $memberGrowthStmt->execute([$churchId, $monthEnd]);
+    $memberGrowth[] = [
+        'label' => $monthAbbrevPt[(int)substr($mk, 5, 2) - 1],
+        'value' => (int)$memberGrowthStmt->fetchColumn(),
+    ];
+}
+
+// Frequência média em células por mês
+$cellAttendanceByMonth = [];
+$caStmt = $db->prepare("
+    SELECT DATE_FORMAT(cr.report_date, '%Y-%m') AS ym, AVG(cr.total_present) AS avg_present
+    FROM cell_reports cr
+    JOIN cells c ON c.id = cr.cell_id
+    WHERE c.church_id = ? AND cr.report_date >= ?
+    GROUP BY ym
+");
+$caStmt->execute([$churchId, $monthKeys[0] . '-01']);
+foreach ($caStmt->fetchAll() as $row) { $cellAttendanceByMonth[$row['ym']] = (float)$row['avg_present']; }
+$cellAttendance = [];
+$hasCellData = false;
+foreach ($monthKeys as $mk) {
+    $val = round($cellAttendanceByMonth[$mk] ?? 0, 1);
+    if (isset($cellAttendanceByMonth[$mk])) $hasCellData = true;
+    $cellAttendance[] = ['label' => $monthAbbrevPt[(int)substr($mk, 5, 2) - 1], 'value' => $val];
+}
+
+// Financeiro: entradas x saídas por mês (só se puder ver)
+$financeTrend = [];
+$hasFinanceData = false;
+if ($canFinance) {
+    $ftByMonth = [];
+    $ftStmt = $db->prepare("
+        SELECT DATE_FORMAT(entry_date, '%Y-%m') AS ym,
+               COALESCE(SUM(CASE WHEN type='income'  THEN amount END), 0) AS income,
+               COALESCE(SUM(CASE WHEN type='expense' THEN amount END), 0) AS expense
+        FROM finance_entries
+        WHERE church_id = ? AND entry_date >= ?
+        GROUP BY ym
+    ");
+    $ftStmt->execute([$churchId, $monthKeys[0] . '-01']);
+    foreach ($ftStmt->fetchAll() as $row) { $ftByMonth[$row['ym']] = $row; }
+    foreach ($monthKeys as $mk) {
+        if (isset($ftByMonth[$mk])) $hasFinanceData = true;
+        $financeTrend[] = [
+            'label'   => $monthAbbrevPt[(int)substr($mk, 5, 2) - 1],
+            'income'  => (float)($ftByMonth[$mk]['income']  ?? 0),
+            'expense' => (float)($ftByMonth[$mk]['expense'] ?? 0),
+        ];
+    }
+}
 
 // KPIs
 $totalMembers = $db->query("SELECT COUNT(*) FROM members WHERE church_id=$churchId AND status='active'")->fetchColumn();
@@ -157,6 +221,40 @@ require_once __DIR__ . '/includes/layout.php';
       </div>
     </div>
     <a href="/pages/finance/index.php" class="btn btn-secondary" style="margin-top:14px;font-size:12px">Ver financeiro</a>
+  </div>
+  <?php endif; ?>
+
+</div>
+
+<!-- Tendências -->
+<p style="font-size:13px;font-weight:500;color:var(--text-muted);margin:24px 0 12px">📈 Tendências (últimos 6 meses)</p>
+<div style="display:grid;grid-template-columns:1fr 1fr;gap:16px">
+
+  <div class="card">
+    <p class="card-title">👥 Crescimento de membros</p>
+    <?= render_line_chart($memberGrowth, '#2a78d6', '%d membros') ?>
+  </div>
+
+  <div class="card">
+    <p class="card-title">🔗 Frequência média em células</p>
+    <?php if ($hasCellData): ?>
+      <?= render_bar_chart($cellAttendance, '#4a3aa7', '%.1f pessoas') ?>
+    <?php else: ?>
+      <?= chart_empty_state('Ainda não há relatórios de célula suficientes pra mostrar uma tendência.') ?>
+    <?php endif; ?>
+  </div>
+
+  <?php if ($canFinance): ?>
+  <div class="card" style="grid-column:1 / -1">
+    <p class="card-title">💰 Entradas × Saídas por mês</p>
+    <?php if ($hasFinanceData): ?>
+      <?= render_grouped_bar_chart($financeTrend, [
+        ['key' => 'income',  'label' => 'Entradas', 'color' => '#2a78d6'],
+        ['key' => 'expense', 'label' => 'Saídas',    'color' => '#e34948'],
+      ], 'R$ %.2f') ?>
+    <?php else: ?>
+      <?= chart_empty_state('Ainda não há lançamentos financeiros suficientes pra mostrar uma tendência.') ?>
+    <?php endif; ?>
   </div>
   <?php endif; ?>
 
