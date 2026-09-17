@@ -112,7 +112,7 @@ require_once __DIR__ . '/../../includes/layout.php';
         🎲 Usar escala automática com funções fixas (vocal, instrumentos, etc.)
       </label>
       <p style="font-size:11px;color:var(--text-muted);margin-top:4px;margin-left:24px">
-        Ative pra ministérios de louvor/música — libera o sorteio automático de escala e as funções fixas na tela de atividade.
+        Libera o sorteio automático de escala com funções fixas (ex: 1 Ministro de Louvor, 2 Recepcionistas…) — depois de salvar, configure as funções em "🎲 Funções da escala" na página do ministério.
       </p>
     </div>
     <div class="form-group" style="margin-top:14px;margin-bottom:0;max-width:220px">

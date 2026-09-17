@@ -23,6 +23,8 @@ $activePage = 'ministries';
 $churchId   = $mn['church_id'];
 $isMusic    = (bool)($mn['auto_scale_enabled'] ?? false);
 $canManage  = auth_can_manage_ministry($id);
+$ministryRoles   = $isMusic ? get_ministry_roles($db, $id) : [];
+$naipeRoleNames  = array_column(array_filter($ministryRoles, fn($r) => $r['use_naipe']), 'name');
 // Buscar todos os líderes do ministério
 $leadersStmt = $db->prepare("
     SELECT m.id, m.name, m.photo_url,
@@ -171,10 +173,15 @@ $actTypeLabels = [
   <div class="card" style="padding:0">
     <div style="padding:14px 18px;border-bottom:1px solid var(--border);display:flex;justify-content:space-between;align-items:center">
       <p style="font-weight:500;font-size:14px">Membros <span style="color:var(--text-muted);font-weight:400">(<?= count($members) ?>)</span></p>
-      <?php if ($canManage): ?>
-        <button onclick="var f=document.getElementById('add-member-form');f.style.display=f.style.display==='none'?'block':'none'"
-                class="btn btn-secondary" style="font-size:12px;padding:5px 12px">+ Vincular</button>
-      <?php endif; ?>
+      <div style="display:flex;gap:8px">
+        <?php if ($canManage && $isMusic): ?>
+          <a href="/pages/ministries/roles.php?ministry_id=<?= $id ?>" class="btn btn-secondary" style="font-size:12px;padding:5px 12px">🎲 Funções da escala</a>
+        <?php endif; ?>
+        <?php if ($canManage): ?>
+          <button onclick="var f=document.getElementById('add-member-form');f.style.display=f.style.display==='none'?'block':'none'"
+                  class="btn btn-secondary" style="font-size:12px;padding:5px 12px">+ Vincular</button>
+        <?php endif; ?>
+      </div>
     </div>
     <?php if ($canManage): ?>
     <!-- Vincular membro -->
@@ -205,8 +212,8 @@ $actTypeLabels = [
           <?php if ($isMusic): ?>
             <select name="role" class="form-control">
               <option value="">Selecione…</option>
-              <?php foreach (MUSIC_ROLE_OPTIONS as $opt): ?>
-                <option value="<?= htmlspecialchars($opt) ?>"><?= htmlspecialchars($opt) ?></option>
+              <?php foreach ($ministryRoles as $r): ?>
+                <option value="<?= htmlspecialchars($r['name']) ?>"><?= htmlspecialchars($r['name']) ?></option>
               <?php endforeach; ?>
             </select>
           <?php else: ?>
@@ -236,7 +243,7 @@ $actTypeLabels = [
             <?php if ($canManage): ?>
             <div class="role-view" id="role-view-<?= $m['id'] ?>" style="font-size:11px;color:var(--text-muted);margin-top:2px;cursor:pointer"
                  onclick="document.getElementById('role-view-<?= $m['id'] ?>').style.display='none';document.getElementById('role-edit-<?= $m['id'] ?>').style.display='flex'">
-              🎵 <?= $m['role'] ? htmlspecialchars($m['role']) : 'Definir função…' ?><?= ($m['role']==='Backing Vocal' && $m['naipe']) ? ' (' . htmlspecialchars($m['naipe']) . ')' : '' ?> ✎
+              🎵 <?= $m['role'] ? htmlspecialchars($m['role']) : 'Definir função…' ?><?= (in_array($m['role'], $naipeRoleNames) && $m['naipe']) ? ' (' . htmlspecialchars($m['naipe']) . ')' : '' ?> ✎
             </div>
             <form method="POST" action="/pages/ministries/update_member_role.php" id="role-edit-<?= $m['id'] ?>" style="display:none;gap:4px;flex-wrap:wrap;margin-top:4px">
               <input type="hidden" name="ministry_id" value="<?= $id ?>">
@@ -244,12 +251,12 @@ $actTypeLabels = [
               <?php if ($isMusic): ?>
                 <select name="role" class="form-control role-select" data-member-id="<?= $m['id'] ?>" style="font-size:12px;padding:4px 8px">
                   <option value="">Selecione…</option>
-                  <?php foreach (MUSIC_ROLE_OPTIONS as $opt): ?>
-                    <option value="<?= htmlspecialchars($opt) ?>" <?= ($m['role'] ?? '')===$opt ? 'selected' : '' ?>><?= htmlspecialchars($opt) ?></option>
+                  <?php foreach ($ministryRoles as $r): ?>
+                    <option value="<?= htmlspecialchars($r['name']) ?>" <?= ($m['role'] ?? '')===$r['name'] ? 'selected' : '' ?>><?= htmlspecialchars($r['name']) ?></option>
                   <?php endforeach; ?>
                 </select>
                 <select name="naipe" class="form-control naipe-select" id="naipe-<?= $m['id'] ?>"
-                        style="font-size:12px;padding:4px 8px;display:<?= ($m['role']??'')==='Backing Vocal'?'inline-block':'none' ?>">
+                        style="font-size:12px;padding:4px 8px;display:<?= in_array($m['role']??'', $naipeRoleNames)?'inline-block':'none' ?>">
                   <option value="">Naipe…</option>
                   <?php foreach (BACKING_VOCAL_NAIPES as $nv): ?>
                     <option value="<?= htmlspecialchars($nv) ?>" <?= ($m['naipe'] ?? '')===$nv ? 'selected' : '' ?>><?= htmlspecialchars($nv) ?></option>
@@ -263,7 +270,7 @@ $actTypeLabels = [
             </form>
             <?php else: ?>
               <div style="font-size:11px;color:var(--text-muted);margin-top:2px">
-                🎵 <?= $m['role'] ? htmlspecialchars($m['role']) : 'Sem função definida' ?><?= ($m['role']==='Backing Vocal' && $m['naipe']) ? ' (' . htmlspecialchars($m['naipe']) . ')' : '' ?>
+                🎵 <?= $m['role'] ? htmlspecialchars($m['role']) : 'Sem função definida' ?><?= (in_array($m['role'], $naipeRoleNames) && $m['naipe']) ? ' (' . htmlspecialchars($m['naipe']) . ')' : '' ?>
               </div>
             <?php endif; ?>
           </div>
@@ -342,13 +349,15 @@ $actTypeLabels = [
 </div>
 
 <?php
+$naipeRoleNamesJson = json_encode($naipeRoleNames);
 $extraJs = <<<JS
 // Mostrar/ocultar o select de Naipe conforme a função escolhida (só faz
-// sentido pra Backing Vocal)
+// sentido pra funções marcadas como "usa naipe" nas Funções da escala)
+const naipeRoleNames = $naipeRoleNamesJson;
 document.querySelectorAll('.role-select').forEach(function (sel) {
   sel.addEventListener('change', function () {
     const naipeSel = document.getElementById('naipe-' + this.dataset.memberId);
-    if (naipeSel) naipeSel.style.display = this.value === 'Backing Vocal' ? 'inline-block' : 'none';
+    if (naipeSel) naipeSel.style.display = naipeRoleNames.includes(this.value) ? 'inline-block' : 'none';
   });
 });
 JS;

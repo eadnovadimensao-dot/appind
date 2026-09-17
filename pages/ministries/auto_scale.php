@@ -33,8 +33,14 @@ if (empty($mn['auto_scale_enabled'])) {
     exit;
 }
 
+$roles = get_ministry_roles($db, $ministryId);
+if (empty($roles)) {
+    echo json_encode(['error' => 'Nenhuma função configurada ainda pra esse ministério (configure em Funções da escala).']);
+    exit;
+}
+
 $churchId = $mn['church_id'];
-$pool     = build_music_pool($db, $ministryId, $churchId);
+$pool     = build_scale_pool($db, $ministryId, $churchId);
 
 // Última escala do mesmo tipo para este ministério (pra poupar quem já serviu)
 $prev = $db->prepare("
@@ -53,4 +59,4 @@ if ($prevActivityId) {
     $prevMemberIds = array_map('intval', $pm->fetchAll(PDO::FETCH_COLUMN));
 }
 
-echo json_encode(draw_music_scale($pool, $prevMemberIds));
+echo json_encode(draw_scale($db, $ministryId, $pool, $prevMemberIds));

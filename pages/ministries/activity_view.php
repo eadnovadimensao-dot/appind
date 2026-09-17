@@ -25,6 +25,7 @@ require_once __DIR__ . '/../../includes/layout.php';
 $pageTitle = $act['title'];
 $isMusic   = (bool)($act['auto_scale_enabled'] ?? false);
 $canManage = auth_can_manage_ministry((int)$act['ministry_id']);
+$ministryRoles = $isMusic ? get_ministry_roles($db, (int)$act['ministry_id']) : [];
 
 // Escala
 $scaled = $db->prepare("
@@ -233,8 +234,8 @@ $at = $actTypeLabels[$act['activity_type']] ?? null;
         <?php if ($isMusic): ?>
           <select name="role" class="form-control" id="add-scale-role">
             <option value="">Selecione…</option>
-            <?php foreach (MUSIC_ROLE_OPTIONS as $opt): ?>
-              <option value="<?= htmlspecialchars($opt) ?>"><?= htmlspecialchars($opt) ?></option>
+            <?php foreach ($ministryRoles as $r): ?>
+              <option value="<?= htmlspecialchars($r['name']) ?>"><?= htmlspecialchars($r['name']) ?></option>
             <?php endforeach; ?>
           </select>
         <?php else: ?>

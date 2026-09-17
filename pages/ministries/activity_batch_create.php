@@ -28,6 +28,8 @@ $days = ['monday'=>'Segunda-feira','tuesday'=>'Terça-feira','wednesday'=>'Quart
 
 if (empty($mn['auto_scale_enabled'])) {
     $errors[] = 'Escala em lote precisa da escala automática ativada pra esse ministério (configure em Editar ministério).';
+} elseif (empty(get_ministry_roles($db, $ministryId))) {
+    $errors[] = 'Nenhuma função configurada ainda pra esse ministério (configure em Funções da escala).';
 }
 
 if ($_SERVER['REQUEST_METHOD'] === 'POST' && empty($errors)) {
@@ -53,7 +55,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && empty($errors)) {
             $d = strtotime('+7 days', $d);
         }
 
-        $pool          = build_music_pool($db, $ministryId, $churchId);
+        $pool          = build_scale_pool($db, $ministryId, $churchId);
         $prevStmt      = $db->prepare("
             SELECT member_id FROM ministry_activity_members
             WHERE activity_id = (
@@ -76,7 +78,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && empty($errors)) {
                 continue;
             }
 
-            $draw        = draw_music_scale($pool, $prevMemberIds);
+            $draw        = draw_scale($db, $ministryId, $pool, $prevMemberIds);
             $assignments = $draw['assignments'];
             $title       = $titlePrefix . ' — ' . date('d/m/Y', strtotime($date));
 
