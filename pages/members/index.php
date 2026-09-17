@@ -91,6 +91,15 @@ $statusLabels = [
   </a>
 <?php endif; ?>
 
+<?php if ($canManageMembers): ?>
+  <a href="/pages/members/absence_radar.php" style="text-decoration:none">
+    <div style="background:#F5F5F5;border:1px solid var(--border);border-radius:8px;padding:12px 16px;margin-bottom:16px;font-size:13px;color:var(--text);display:flex;align-items:center;justify-content:space-between">
+      <span>🔔 Radar de ausência — veja quem sumiu e precisa de um contato pastoral</span>
+      <span style="font-weight:500;color:var(--accent)">Ver →</span>
+    </div>
+  </a>
+<?php endif; ?>
+
 <!-- Filtros -->
 <form method="GET" style="display:flex;gap:10px;margin-bottom:20px;flex-wrap:wrap">
   <input
