@@ -68,14 +68,18 @@ $recurrenceLabels = ['none'=>'Sem recorrência','weekly'=>'Semanal','monthly'=>'
         <?php endif; ?>
       </div>
     </div>
+    <?php
+      $canApproveEvents = auth_can('approve_events');
+      $isOwnRequest     = (int)($ev['requested_by'] ?? 0) === (int)auth_member_id();
+    ?>
     <div style="display:flex;gap:8px;flex-wrap:wrap">
-      <?php if ($ev['status'] === 'pending'): ?>
+      <?php if ($ev['status'] === 'pending' && $canApproveEvents): ?>
         <a href="/pages/events/approve.php?id=<?= $id ?>&action=approve"
            class="btn btn-primary" data-confirm="Aprovar este evento?">✓ Aprovar</a>
         <a href="/pages/events/approve.php?id=<?= $id ?>&action=refuse"
            class="btn btn-secondary" style="color:var(--red)" data-confirm="Recusar este evento?">✗ Recusar</a>
       <?php endif; ?>
-      <?php if (in_array($ev['status'], ['approved','pending'])): ?>
+      <?php if (in_array($ev['status'], ['approved','pending']) && ($canApproveEvents || $isOwnRequest)): ?>
         <a href="/pages/events/edit.php?id=<?= $id ?>" class="btn btn-secondary">Editar</a>
       <?php endif; ?>
       <a href="/pages/events/index.php" class="btn btn-secondary">Voltar</a>

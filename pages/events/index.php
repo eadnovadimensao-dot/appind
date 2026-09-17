@@ -88,7 +88,7 @@ $typeIcons = [
 ?>
 
 <!-- Pendentes de aprovação -->
-<?php if (!empty($pending)): ?>
+<?php if (!empty($pending) && auth_can('approve_events')): ?>
 <div style="background:#FEF3C7;border:1px solid #FCD34D;border-radius:10px;padding:14px 18px;margin-bottom:20px">
   <p style="font-size:13px;font-weight:500;color:#854F0B;margin-bottom:10px">
     ⏳ <?= count($pending) ?> solicitação(ões) aguardando aprovação

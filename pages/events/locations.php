@@ -1,7 +1,7 @@
 <?php
 require_once __DIR__ . "/../../config/database.php";
 require_once __DIR__ . "/../../includes/auth.php";
-auth_check();
+auth_require('approve_events');
 $db       = db();
 $churchId = current_church_id();
 $errors   = [];
@@ -50,6 +50,11 @@ if (isset($_GET['edit'])) {
 <?php if (isset($_GET['saved'])): ?>
   <div class="flash" style="background:#E1F5EE;border:1px solid var(--accent-border);border-radius:8px;padding:12px 16px;margin-bottom:16px;font-size:13px;color:#0F6E56">
     ✓ Local salvo com sucesso.
+  </div>
+<?php endif; ?>
+<?php if (($_GET['error'] ?? '') === 'inuse'): ?>
+  <div style="background:#FCEBEB;border:1px solid #F09595;border-radius:8px;padding:12px 16px;margin-bottom:16px;font-size:13px;color:#A32D2D">
+    Não é possível excluir: esse local ainda tem evento(s) vinculado(s) na agenda. Marque como "Inativo" em vez de excluir, ou cancele os eventos primeiro.
   </div>
 <?php endif; ?>
 

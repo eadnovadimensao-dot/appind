@@ -8,6 +8,14 @@ $stmt = $db->prepare("SELECT * FROM agenda_events WHERE id = ? AND church_id = ?
 $stmt->execute([$id, $churchId]);
 $ev = $stmt->fetch();
 if (!$ev) { header('Location: /pages/events/index.php'); exit; }
+
+// Só admin (approve_events) ou quem solicitou o evento pode editar
+if (!auth_can('approve_events') && (int)$ev['requested_by'] !== (int)auth_member_id()) {
+    http_response_code(403);
+    include __DIR__ . '/../../includes/403.php';
+    exit;
+}
+
 $pageTitle = 'Editar · ' . $ev['title'];
 $locations = $db->query("SELECT id, name FROM locations WHERE church_id = $churchId AND active = 1 ORDER BY name")->fetchAll();
 $ministries = $db->query("SELECT id, name FROM ministries WHERE church_id = $churchId ORDER BY name")->fetchAll();
@@ -28,13 +36,12 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         header('Location: /pages/events/view.php?id='.$id);
         exit;
     }
+    // Erro de validação: repopula o formulário com o que a pessoa digitou
+    $ev = array_merge($ev, $_POST);
 }
 
 $activePage = 'events';
 require_once __DIR__ . '/../../includes/layout.php';
-?>
-  $ev = array_merge($ev, $_POST);
-}
 ?>
 <form method="POST" style="width:100%">
   <div class="card" style="margin-bottom:16px">
