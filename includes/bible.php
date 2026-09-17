@@ -150,16 +150,18 @@ function queue_scripture_meditation(PDO $db, int $serviceId, string $serviceTitl
     }
 
     $churchName = setting('church_name', 'Igreja', $churchId);
-    $message = "🙏 *Preparação para {$serviceTitle}*\n\nMedite nessa Palavra antes do culto:\n\n"
-             . implode("\n\n", $blocks) . "\n\n_{$churchName}_";
+    $body = "🙏 *Preparação para {$serviceTitle}*\n\nMedite nessa Palavra antes do culto:\n\n"
+          . implode("\n\n", $blocks) . "\n\n_{$churchName}_";
 
     $sendAt = strtotime($serviceDate . ' -' . SCRIPTURE_MEDITATION_DAYS_BEFORE . ' days 08:00:00');
     $delayMinutes = max(0, (int)round(($sendAt - time()) / 60));
 
-    $members = $db->prepare("SELECT phone FROM members WHERE church_id = ? AND status = 'active' AND phone IS NOT NULL AND phone != ''");
+    $members = $db->prepare("SELECT name, phone FROM members WHERE church_id = ? AND status = 'active' AND phone IS NOT NULL AND phone != ''");
     $members->execute([$churchId]);
-    foreach ($members->fetchAll(PDO::FETCH_COLUMN) as $phone) {
-        queue_whatsapp($phone, $message, $churchId, null, $delayMinutes, $serviceId);
+    foreach ($members->fetchAll() as $m) {
+        $firstName = explode(' ', trim($m['name']))[0];
+        $message   = "Olá, {$firstName}! 👋\n\n{$body}";
+        queue_whatsapp($m['phone'], $message, $churchId, null, $delayMinutes, $serviceId);
     }
 
     $db->prepare("UPDATE services SET meditation_queued_at = NOW() WHERE id = ?")->execute([$serviceId]);

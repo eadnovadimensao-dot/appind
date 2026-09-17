@@ -23,7 +23,7 @@ function queue_service_checkins(PDO $db, int $serviceId, string $serviceTitle, s
     $delayMinutes = max(0, (int)round(($sendAt - time()) / 60));
 
     $members = $db->prepare("
-        SELECT m.id, m.phone FROM members m
+        SELECT m.id, m.name, m.phone FROM members m
         WHERE m.church_id = ? AND m.status = 'active' AND m.phone IS NOT NULL AND m.phone != ''
           AND m.id NOT IN (SELECT member_id FROM service_scale WHERE service_id = ?)
     ");
@@ -36,7 +36,6 @@ function queue_service_checkins(PDO $db, int $serviceId, string $serviceTitle, s
 
     $insert = $db->prepare("INSERT INTO service_checkins (service_id, member_id, checkin_token) VALUES (?,?,?)");
     $timeLabel = $timeStart ? substr($timeStart, 0, 5) : '';
-    $message = "🙏 *{$serviceTitle}*" . ($timeLabel ? " ($timeLabel)" : '') . "\n\nVocê está no culto hoje? Confirme sua presença!";
 
     foreach ($members as $m) {
         if (isset($existing[$m['id']])) continue; // já convidado (ou já confirmou) antes
@@ -44,6 +43,8 @@ function queue_service_checkins(PDO $db, int $serviceId, string $serviceTitle, s
         $token = bin2hex(random_bytes(32));
         $insert->execute([$serviceId, $m['id'], $token]);
 
+        $firstName  = explode(' ', trim($m['name']))[0];
+        $message    = "Olá, {$firstName}! 👋\n\n🙏 *{$serviceTitle}*" . ($timeLabel ? " ($timeLabel)" : '') . "\n\nVocê está no culto hoje? Confirme sua presença!";
         $checkinUrl = APP_URL . '/checkin.php?token=' . $token;
         queue_whatsapp($m['phone'], $message, $churchId, [['label' => '✅ Presente', 'url' => $checkinUrl]], $delayMinutes, $serviceId);
     }
