@@ -142,6 +142,10 @@ $statusLabels = [
   <?php if ($search || $status): ?>
     <a href="/pages/members/index.php" class="btn btn-secondary">Limpar</a>
   <?php endif; ?>
+  <?php if ($canManageMembers): $exportQs = http_build_query(['q' => $search, 'status' => $status]); ?>
+    <a href="/pages/members/print.php?<?= $exportQs ?>" target="_blank" class="btn btn-secondary" style="margin-left:auto">🖨️ Imprimir / PDF</a>
+    <a href="/pages/members/export_csv.php?<?= $exportQs ?>" class="btn btn-secondary">⬇ CSV</a>
+  <?php endif; ?>
 </form>
 
 <!-- Tabela -->

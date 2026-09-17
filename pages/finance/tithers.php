@@ -52,6 +52,10 @@ $missing = $total - $tithers;
 <div style="display:flex;align-items:center;gap:12px;margin-bottom:20px;flex-wrap:wrap">
   <a href="/pages/finance/index.php?month=<?= $month ?>&year=<?= $year ?>" style="font-size:13px;color:var(--text-muted);text-decoration:none">← Financeiro</a>
   <h2 style="font-size:16px;font-weight:500"><?= $monthNames[$month] ?> <?= $year ?></h2>
+  <div style="display:flex;gap:8px;margin-left:auto">
+    <a href="/pages/finance/tithers_print.php?month=<?= $month ?>&year=<?= $year ?>" target="_blank" class="btn btn-secondary" style="font-size:12px">🖨️ Imprimir / PDF</a>
+    <a href="/pages/finance/tithers_csv.php?month=<?= $month ?>&year=<?= $year ?>" class="btn btn-secondary" style="font-size:12px">⬇ CSV</a>
+  </div>
 </div>
 
 <!-- KPIs -->

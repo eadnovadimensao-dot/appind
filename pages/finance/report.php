@@ -28,7 +28,11 @@ $entries = $entries->fetchAll();
 ?>
 <div style="margin-bottom:20px;display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:10px">
   <h2 style="font-size:16px;font-weight:500">Relatório · <?= $monthNames[$month] ?> <?= $year ?></h2>
-  <a href="/pages/finance/index.php" style="font-size:13px;color:var(--text-muted);text-decoration:none">← Financeiro</a>
+  <div style="display:flex;gap:8px;align-items:center">
+    <a href="/pages/finance/report_print.php?month=<?= $month ?>&year=<?= $year ?>" target="_blank" class="btn btn-secondary" style="font-size:12px">🖨️ Imprimir / PDF</a>
+    <a href="/pages/finance/report_csv.php?month=<?= $month ?>&year=<?= $year ?>" class="btn btn-secondary" style="font-size:12px">⬇ CSV</a>
+    <a href="/pages/finance/index.php" style="font-size:13px;color:var(--text-muted);text-decoration:none">← Financeiro</a>
+  </div>
 </div>
 <div class="card" style="margin-bottom:16px">
   <p class="card-title">Resumo do mês</p>
