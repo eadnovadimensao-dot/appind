@@ -4,6 +4,28 @@
 // data, líderes desses ministérios, pregador e supervisor. Substitui o
 // trabalho manual do supervisor de mandar a programação pros líderes.
 
+/** Nome curto pra lista: primeiro nome + sobrenome ("Juliana Gimenez", "Isaac de Mello"). */
+function program_short_name(string $full): string {
+    $t = preg_split('/[ \t]+/', trim($full));
+    if (count($t) <= 2) return implode(' ', $t);
+    $connectors = ['de', 'da', 'do', 'dos', 'das', 'e'];
+    $suffixes   = ['junior', 'júnior', 'filho', 'neto', 'sobrinho'];
+    $sur = [array_pop($t)];
+    if (in_array(mb_strtolower($sur[0]), $suffixes, true) && count($t) > 1) array_unshift($sur, array_pop($t));
+    if (count($t) > 1 && in_array(mb_strtolower(end($t)), $connectors, true)) array_unshift($sur, array_pop($t));
+    return $t[0] . ' ' . implode(' ', $sur);
+}
+
+/** Nome do item na programação (título, ou o tipo quando o título está vazio). */
+function program_item_label(array $it): string {
+    static $typeLabels = [
+        'welcome' => 'Boas-vindas', 'worship' => 'Louvor', 'prayer' => 'Oração', 'reading' => 'Leitura Bíblica',
+        'sermon' => 'Pregação', 'offering' => 'Oferta', 'announcement' => 'Avisos', 'closing' => 'Encerramento',
+        'communion' => 'Santa Ceia', 'other' => 'Outro',
+    ];
+    return trim((string)$it['title']) !== '' ? $it['title'] : ($typeLabels[$it['type']] ?? $it['type']);
+}
+
 /**
  * Quem é envolvido nesse culto: [member_id => ['name','phone','roles'=>[...]]].
  */
@@ -59,21 +81,36 @@ function service_program_recipients(PDO $db, array $service): array {
         if ($r = $q->fetch()) $add((int)$r['id'], $r['name'], $r['phone'], 'Supervisor do culto');
     }
 
+    // Responsáveis por itens da programação (recebem mesmo sem estar escalados)
+    $q = $db->prepare("
+        SELECT m.id, m.name, m.phone, si.title, si.type
+        FROM service_items si JOIN members m ON m.id = si.member_id
+        WHERE si.service_id = ? ORDER BY si.position
+    ");
+    $q->execute([$service['id']]);
+    $byMember = [];
+    foreach ($q->fetchAll() as $r) {
+        $byMember[(int)$r['id']]['who'] = [$r['name'], $r['phone']];
+        $byMember[(int)$r['id']]['items'][] = program_item_label($r);
+    }
+    foreach ($byMember as $memberId => $d) $add($memberId, $d['who'][0], $d['who'][1], 'Responsável por: ' . implode(', ', $d['items']));
+
     return $people;
 }
 
 function service_program_text(PDO $db, array $service): string {
-    $typeLabels = [
-        'welcome' => 'Boas-vindas', 'worship' => 'Louvor', 'prayer' => 'Oração', 'reading' => 'Leitura Bíblica',
-        'sermon' => 'Pregação', 'offering' => 'Oferta', 'announcement' => 'Avisos', 'closing' => 'Encerramento', 'other' => 'Outro',
-    ];
-    $items = $db->prepare("SELECT type, title, duration FROM service_items WHERE service_id = ? ORDER BY position");
+    $items = $db->prepare("
+        SELECT si.type, si.title, si.duration, m.name AS responsible
+        FROM service_items si LEFT JOIN members m ON m.id = si.member_id
+        WHERE si.service_id = ? ORDER BY si.position
+    ");
     $items->execute([$service['id']]);
 
     $lines = [];
     foreach ($items->fetchAll() as $i => $it) {
-        $label   = trim((string)$it['title']) !== '' ? $it['title'] : ($typeLabels[$it['type']] ?? $it['type']);
-        $lines[] = ($i + 1) . '. ' . $label . ($it['duration'] ? " · {$it['duration']} min" : '');
+        $lines[] = ($i + 1) . '. ' . program_item_label($it)
+                 . ($it['duration'] ? " · {$it['duration']} min" : '')
+                 . ($it['responsible'] ? ' · 👤 ' . program_short_name($it['responsible']) : '');
     }
 
     $when = date_pt($service['service_date']);
@@ -85,7 +122,7 @@ function service_program_text(PDO $db, array $service): string {
     if (!empty($service['preacher_id'])) {
         $p = $db->prepare("SELECT name FROM members WHERE id = ?");
         $p->execute([$service['preacher_id']]);
-        if ($name = $p->fetchColumn()) $text .= "\n🎤 Pregador: {$name}";
+        if ($name = $p->fetchColumn()) $text .= "\n🎤 Pregador: " . program_short_name($name);
     }
     if (!empty($service['sermon_title'])) $text .= "\n🎙️ Tema: {$service['sermon_title']}";
     if (!empty($service['sermon_text']))  $text .= "\n📖 Texto: {$service['sermon_text']}";
