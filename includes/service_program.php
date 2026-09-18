@@ -4,18 +4,6 @@
 // data, líderes desses ministérios, pregador e supervisor. Substitui o
 // trabalho manual do supervisor de mandar a programação pros líderes.
 
-/** Nome curto pra lista: primeiro nome + sobrenome ("Juliana Gimenez", "Isaac de Mello"). */
-function program_short_name(string $full): string {
-    $t = preg_split('/[ \t]+/', trim($full));
-    if (count($t) <= 2) return implode(' ', $t);
-    $connectors = ['de', 'da', 'do', 'dos', 'das', 'e'];
-    $suffixes   = ['junior', 'júnior', 'filho', 'neto', 'sobrinho'];
-    $sur = [array_pop($t)];
-    if (in_array(mb_strtolower($sur[0]), $suffixes, true) && count($t) > 1) array_unshift($sur, array_pop($t));
-    if (count($t) > 1 && in_array(mb_strtolower(end($t)), $connectors, true)) array_unshift($sur, array_pop($t));
-    return $t[0] . ' ' . implode(' ', $sur);
-}
-
 /** Nome do item na programação (título, ou o tipo quando o título está vazio). */
 function program_item_label(array $it): string {
     static $typeLabels = [
@@ -110,7 +98,7 @@ function service_program_text(PDO $db, array $service): string {
     foreach ($items->fetchAll() as $i => $it) {
         $lines[] = ($i + 1) . '. ' . program_item_label($it)
                  . ($it['duration'] ? " · {$it['duration']} min" : '')
-                 . ($it['responsible'] ? ' · 👤 ' . program_short_name($it['responsible']) : '');
+                 . ($it['responsible'] ? ' · 👤 ' . $it['responsible'] : '');
     }
 
     $when = date_pt($service['service_date']);
@@ -122,7 +110,7 @@ function service_program_text(PDO $db, array $service): string {
     if (!empty($service['preacher_id'])) {
         $p = $db->prepare("SELECT name FROM members WHERE id = ?");
         $p->execute([$service['preacher_id']]);
-        if ($name = $p->fetchColumn()) $text .= "\n🎤 Pregador: " . program_short_name($name);
+        if ($name = $p->fetchColumn()) $text .= "\n🎤 Pregador: {$name}";
     }
     if (!empty($service['sermon_title'])) $text .= "\n🎙️ Tema: {$service['sermon_title']}";
     if (!empty($service['sermon_text']))  $text .= "\n📖 Texto: {$service['sermon_text']}";
