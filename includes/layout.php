@@ -121,6 +121,16 @@ if (window.innerWidth <= 900) {
     </nav>
 
     <div class="sb-footer">
+      <?php
+        $roleLabels = ['supermaster'=>'Supermaster','admin'=>'Administrador','leader'=>'Líder','cell_leader'=>'Líder de célula','member'=>'Membro'];
+      ?>
+      <div class="sb-user">
+        <a href="/pages/members/profile.php" class="sb-user-text" title="Meu perfil">
+          <div class="sb-user-name"><?= htmlspecialchars(auth_user()['name'] ?? '') ?></div>
+          <div class="sb-user-role"><?= htmlspecialchars($roleLabels[auth_role()] ?? ucfirst(auth_role())) ?></div>
+        </a>
+        <a href="/logout.php" class="sb-logout" title="Sair" aria-label="Sair"><i class="ti ti-logout"></i></a>
+      </div>
       <div class="sb-church-info">
         <span class="sb-church-name"><?= htmlspecialchars(setting('church_name', 'Igreja')) ?></span>
         <div class="sb-avatar"><?= htmlspecialchars(setting('church_initials', 'IG')) ?></div>
@@ -186,10 +196,6 @@ if (window.innerWidth <= 900) {
         </button>
         <!-- Usuário logado -->
         <div style="display:flex;align-items:center;gap:8px;margin-left:8px">
-          <div style="text-align:right">
-            <div style="font-size:13px;font-weight:500;color:var(--text)"><?= htmlspecialchars(auth_user()['name'] ?? '') ?></div>
-            <div style="font-size:11px;color:var(--text-muted)"><?= htmlspecialchars(ucfirst(auth_role())) ?></div>
-          </div>
           <?php
             // Foto de perfil do usuário logado
             $loggedMemberId = auth_member_id();
@@ -211,11 +217,6 @@ if (window.innerWidth <= 900) {
             <?php else: ?>
               <?= $topbarInitials ?>
             <?php endif; ?>
-          </a>
-          <a href="/logout.php" title="Sair"
-             style="width:32px;height:32px;border-radius:50%;background:var(--content-bg);border:1px solid var(--border);display:flex;align-items:center;justify-content:center;text-decoration:none;font-size:15px;color:var(--text-muted)"
-             onmouseover="this.style.background='#e5e7eb'" onmouseout="this.style.background='var(--content-bg)'">
-            ⏻
           </a>
         </div>
       </div>

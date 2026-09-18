@@ -138,6 +138,22 @@ body {
   border-top: 1px solid var(--sb-border);
   padding: 12px 14px; flex-shrink: 0;
 }
+.sb-user {
+  display: flex; align-items: center; justify-content: space-between; gap: 8px;
+  padding-bottom: 10px; margin-bottom: 10px; border-bottom: 1px solid var(--sb-border);
+}
+.sb-user-text { min-width: 0; text-decoration: none; }
+.sb-user-name { font-size: 13px; font-weight: 500; color: var(--sb-text-on); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.sb-user-role { font-size: 11px; color: var(--sb-text); }
+.sb-logout {
+  width: 32px; height: 32px; flex-shrink: 0;
+  display: flex; align-items: center; justify-content: center;
+  border-radius: 8px; color: var(--sb-text); text-decoration: none; font-size: 18px;
+  transition: color var(--t), background var(--t);
+}
+.sb-logout:hover { color: var(--sb-text-on); background: var(--sb-hover); }
+.sidebar.collapsed .sb-user-text { display: none; }
+.sidebar.collapsed .sb-user { justify-content: center; }
 .sb-church-info { display: flex; align-items: center; justify-content: space-between; gap: 8px; }
 .sb-church-name { font-size: 12px; color: var(--sb-text); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 .sb-avatar {
@@ -276,6 +292,8 @@ tbody tr:hover td { background: #fafafa; }
   .sidebar.collapsed .sb-church-name { display: block !important; }
   .sidebar.collapsed .sb-item { justify-content: flex-start !important; }
   .sidebar.collapsed .sb-church-info { justify-content: space-between !important; }
+  .sidebar.collapsed .sb-user-text { display: block !important; }
+  .sidebar.collapsed .sb-user { justify-content: space-between !important; }
   .sidebar.collapsed .sb-header { justify-content: flex-start !important; padding: 0 14px !important; gap: 10px !important; }
   .sidebar.collapsed .sb-logo-icon { display: flex !important; }
 
