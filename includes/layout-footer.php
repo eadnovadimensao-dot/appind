@@ -65,7 +65,7 @@ function enablePushNotifications() {
           body: JSON.stringify(newSub)
         }).then(() => {
           const btn = document.getElementById('enable-push-btn');
-          if (btn) { btn.innerHTML = '🔔 Ativado!'; setTimeout(() => btn.style.display = 'none', 2000); }
+          if (btn) { btn.innerHTML = '✅'; setTimeout(() => btn.style.display = 'none', 2000); }
         });
       }).catch(() => {});
     });

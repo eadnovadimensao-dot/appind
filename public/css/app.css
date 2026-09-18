@@ -160,6 +160,9 @@ body {
 .topbar-title { font-size: 16px; font-weight: 500; color: var(--text); }
 .topbar-actions { display: flex; align-items: center; gap: 10px; }
 
+/* Barra com o nome da página: só no celular (no desktop o nome fica no topo) */
+.pagebar { display: none; }
+
 .page { padding: 28px; flex: 1; overflow-y: auto; }
 
 /* ── Cards ── */
@@ -299,7 +302,18 @@ tbody tr:hover td { background: #fafafa; }
     top: 0;
     z-index: 100;
   }
-  .topbar-title { font-size: 14px; }
+  /* Nome da página sai do topo (que estava lotado) e vai pra uma barra abaixo dele */
+  .topbar-title { display: none; }
+  .topbar { justify-content: space-between; }
+  .pagebar {
+    display: block;
+    position: sticky; top: 60px; z-index: 99;
+    background: var(--sb-bg); color: #fff;
+    padding: 10px 16px;
+    font-size: 15px; font-weight: 500;
+    white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+    flex-shrink: 0;
+  }
 
   /* Botão hamburguer */
   .sb-hamburger {

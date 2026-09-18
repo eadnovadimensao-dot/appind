@@ -31,7 +31,7 @@ $navItems = [
   <title><?= htmlspecialchars($pageTitle ?? APP_NAME) ?> · <?= APP_NAME ?></title>
   <link rel="manifest" href="/manifest.json">
   <meta name="theme-color" content="<?= setting('primary_color','#012a36') ?>">
-  <link rel="stylesheet" href="/public/css/app.css">
+  <link rel="stylesheet" href="/public/css/app.css?v=<?= @filemtime(__DIR__ . '/../public/css/app.css') ?: 1 ?>">
   <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@tabler/icons-webfont@latest/tabler-icons.min.css">
   <style>
     :root {
@@ -180,9 +180,9 @@ if (window.innerWidth <= 900) {
           </a>
         <?php endif; ?>
         <!-- Botão de ativar push (aparece só se não ativado) -->
-        <button id="enable-push-btn" onclick="enablePushNotifications()"
-                style="display:none;align-items:center;gap:6px;font-size:12px;padding:6px 12px;border-radius:7px;border:1px solid var(--border);background:white;cursor:pointer;color:var(--text)">
-          🔔 Ativar notificações
+        <button id="enable-push-btn" onclick="enablePushNotifications()" title="Ativar notificações" aria-label="Ativar notificações"
+                style="display:none;align-items:center;justify-content:center;font-size:16px;width:36px;height:36px;padding:0;border-radius:7px;border:1px solid var(--border);background:white;cursor:pointer;color:var(--text)">
+          🔔
         </button>
         <!-- Usuário logado -->
         <div style="display:flex;align-items:center;gap:8px;margin-left:8px">
@@ -220,5 +220,8 @@ if (window.innerWidth <= 900) {
         </div>
       </div>
     </header>
+
+    <!-- Nome da página: no celular fica nesta barra, abaixo do topo -->
+    <div class="pagebar"><?= htmlspecialchars($pageTitle ?? '') ?></div>
 
     <div class="page">
