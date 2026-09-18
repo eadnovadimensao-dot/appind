@@ -77,8 +77,6 @@ require_once __DIR__ . '/../../includes/layout.php';
             <th>Filial</th>
             <?php endif; ?>
             <th>Líder</th>
-            <th>Dia / Horário</th>
-            <th>Membros</th>
             <th>Próx. atividades</th>
             <th>Status</th>
             <th></th>
@@ -111,18 +109,6 @@ require_once __DIR__ . '/../../includes/layout.php';
                 <?php else: ?>
                   <span style="color:var(--text-muted)">—</span>
                 <?php endif; ?>
-              </td>
-              <td style="color:var(--text-muted);font-size:13px">
-                <?php
-                  $days = ['monday'=>'Seg','tuesday'=>'Ter','wednesday'=>'Qua',
-                           'thursday'=>'Qui','friday'=>'Sex','saturday'=>'Sáb','sunday'=>'Dom'];
-                  echo $mn['meeting_day'] ? ($days[$mn['meeting_day']] ?? $mn['meeting_day']) : '—';
-                  echo $mn['meeting_time'] ? ' · ' . substr($mn['meeting_time'],0,5) : '';
-                ?>
-              </td>
-              <td>
-                <span style="font-weight:500"><?= $mn['member_count'] ?></span>
-                <span style="color:var(--text-muted);font-size:12px"> membros</span>
               </td>
               <td>
                 <?php if ($mn['activity_count'] > 0): ?>

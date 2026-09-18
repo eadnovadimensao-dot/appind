@@ -139,7 +139,6 @@ $statusLabels = [
             <th>Telefone</th>
             <th>Célula</th>
             <th>Status</th>
-            <th>Ingresso</th>
             <th></th>
           </tr>
         </thead>
@@ -168,9 +167,6 @@ $statusLabels = [
               <td><?= htmlspecialchars($m['phone'] ?? '—') ?></td>
               <td><?= htmlspecialchars($m['cell_name'] ?? '—') ?></td>
               <td><span class="badge <?= $st['badge'] ?>"><?= $st['label'] ?></span></td>
-              <td style="color:var(--text-muted);font-size:13px">
-                <?= $m['join_date'] ? date('d/m/Y', strtotime($m['join_date'])) : '—' ?>
-              </td>
               <td style="text-align:right">
                 <a href="/pages/members/view.php?id=<?= $m['id'] ?>" class="btn btn-secondary" style="font-size:12px;padding:5px 12px">Ver</a>
                 <?php if ($canManageMembers): ?>
