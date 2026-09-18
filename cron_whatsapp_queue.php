@@ -20,8 +20,15 @@ set_time_limit(90);
 
 $db = db();
 
-// Convida pro check-in quem ainda não foi convidado nos cultos de hoje. Se falhar,
-// não pode impedir o envio da fila logo abaixo.
+// Rotinas do culto. Se qualquer uma falhar, não pode impedir o envio da fila logo abaixo.
+// 1) Garante os próximos domingos criados a partir do modelo (idempotente)
+try {
+    require_once __DIR__ . '/includes/service_generate.php';
+    generate_upcoming_services($db);
+} catch (\Throwable $e) {
+    error_log('cron gerar cultos: ' . $e->getMessage());
+}
+// 2) Convida pro check-in quem ainda não foi convidado nos cultos de hoje
 try {
     require_once __DIR__ . '/includes/service_checkin.php';
     queue_service_checkins_for_today($db);
