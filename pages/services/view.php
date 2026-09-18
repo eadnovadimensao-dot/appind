@@ -112,14 +112,16 @@ $totalMin = array_sum(array_column($items, 'duration'));
       <?php endif; ?>
     </div>
     <div style="display:flex;gap:8px;flex-wrap:wrap">
-      <?php if ($service['status'] === 'planning'): ?>
-        <a href="/pages/services/status.php?id=<?= $id ?>&status=confirmed"
-           class="btn btn-primary" data-confirm="Confirmar este culto?">✓ Confirmar</a>
-      <?php elseif ($service['status'] === 'confirmed'): ?>
-        <a href="/pages/services/status.php?id=<?= $id ?>&status=done"
-           class="btn btn-secondary" data-confirm="Marcar como realizado?">✓ Realizado</a>
+      <?php if (auth_can_edit_services()): ?>
+        <?php if ($service['status'] === 'planning'): ?>
+          <a href="/pages/services/status.php?id=<?= $id ?>&status=confirmed"
+             class="btn btn-primary" data-confirm="Confirmar este culto?">✓ Confirmar</a>
+        <?php elseif ($service['status'] === 'confirmed'): ?>
+          <a href="/pages/services/status.php?id=<?= $id ?>&status=done"
+             class="btn btn-secondary" data-confirm="Marcar como realizado?">✓ Realizado</a>
+        <?php endif; ?>
+        <a href="/pages/services/edit.php?id=<?= $id ?>" class="btn btn-secondary">Editar</a>
       <?php endif; ?>
-      <a href="/pages/services/edit.php?id=<?= $id ?>" class="btn btn-secondary">Editar</a>
       <a href="/pages/services/index.php" class="btn btn-secondary">Voltar</a>
     </div>
   </div>

@@ -16,6 +16,7 @@ $stmt = $db->prepare("
 $stmt->execute([$id, $churchId]);
 $act = $stmt->fetch();
 if (!$act) { header('Location: /pages/ministries/index.php'); exit; }
+if (!auth_member_in_ministry((int)$act['ministry_id'])) { header('Location: /dashboard.php?no_access=1'); exit; }
 
 $activePage = 'ministries';
 require_once __DIR__ . '/../../includes/layout.php';

@@ -15,6 +15,7 @@ $stmt = $db->prepare("
 $stmt->execute([$id, SEDE_ID, SEDE_ID]);
 $mn = $stmt->fetch();
 if (!$mn) { header('Location: /pages/ministries/index.php'); exit; }
+if (!auth_member_in_ministry($id)) { header('Location: /dashboard.php?no_access=1'); exit; }
 
 $memberId  = auth_member_id();
 $canManage = auth_can_manage_ministry($id);

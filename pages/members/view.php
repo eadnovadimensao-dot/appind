@@ -20,6 +20,10 @@ if (!$m) {
     header('Location: /pages/members/index.php');
     exit;
 }
+if (!auth_member_can_view_member((int)$m['id'])) {
+    header('Location: /dashboard.php?no_access=1');
+    exit;
+}
 
 $pageTitle  = $m['name'];
 $activePage = 'members';

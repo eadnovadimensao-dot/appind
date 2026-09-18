@@ -1,7 +1,7 @@
 <?php
 require_once __DIR__ . '/../../config/database.php';
 require_once __DIR__ . '/../../includes/auth.php';
-auth_check();
+auth_require_service_editor();
 
 $db       = db();
 $churchId = current_church_id();
@@ -11,6 +11,14 @@ $errors   = [];
 // Processar ações
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     $action = $_POST['action'] ?? '';
+
+    // Quem é supervisor (e portanto pode editar culto) só o supermaster define:
+    // supervisor não cadastra, desativa nem exclui outro supervisor.
+    if (in_array($action, ['save_supervisor', 'toggle', 'delete']) && auth_role() !== 'supermaster') {
+        http_response_code(403);
+        include __DIR__ . '/../../includes/403.php';
+        exit;
+    }
 
     // Salvar supervisor
     if ($action === 'save_supervisor') {

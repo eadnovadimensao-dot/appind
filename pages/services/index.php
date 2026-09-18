@@ -165,7 +165,8 @@ if ($template) {
 
 $pageTitle    = 'Cultos';
 $activePage   = 'services';
-$topbarAction = ['href' => '/pages/services/create.php', 'label' => 'Novo culto'];
+$canEditServices = auth_can_edit_services();
+if ($canEditServices) $topbarAction = ['href' => '/pages/services/create.php', 'label' => 'Novo culto'];
 require_once __DIR__ . '/../../includes/layout.php';
 
 $typeLabels = [
@@ -181,10 +182,12 @@ $statusLabels = [
 ];
 ?>
 
+<?php if ($canEditServices): ?>
 <div style="display:flex;justify-content:flex-end;gap:8px;margin-bottom:16px">
   <a href="/pages/services/template.php" class="btn btn-secondary">⚙ Configurações do culto</a>
   <a href="/pages/services/supervisors.php" class="btn btn-secondary">👥 Supervisores e rotação</a>
 </div>
+<?php endif; ?>
 
 <div class="card" style="padding:0">
   <div style="padding:16px 20px;border-bottom:1px solid var(--border)">
@@ -195,7 +198,9 @@ $statusLabels = [
     <div class="empty-state" style="padding:40px">
       <p style="font-size:32px;margin-bottom:8px">✝️</p>
       <p>Nenhum culto cadastrado ainda.</p>
-      <a href="/pages/services/create.php" class="btn btn-primary" style="margin-top:16px">+ Planejar culto</a>
+      <?php if ($canEditServices): ?>
+        <a href="/pages/services/create.php" class="btn btn-primary" style="margin-top:16px">+ Planejar culto</a>
+      <?php endif; ?>
     </div>
   <?php else: ?>
     <div class="table-wrap">
@@ -230,8 +235,8 @@ $statusLabels = [
               <td><span class="badge <?= $sl['badge'] ?>"><?= $sl['label'] ?></span></td>
               <td style="text-align:right">
                 <a href="/pages/services/view.php?id=<?= $s['id'] ?>" class="btn btn-secondary" style="font-size:12px;padding:5px 12px">Ver</a>
+                <?php if ($canEditServices): ?>
                 <a href="/pages/services/supervisor_view.php?id=<?= $s['id'] ?>" class="btn btn-secondary" style="font-size:12px;padding:5px 12px">📋 Programação</a>
-                <?php if (auth_can('manage_members')): ?>
                 <a href="/pages/services/edit.php?id=<?= $s['id'] ?>" class="btn btn-secondary" style="font-size:12px;padding:5px 12px">Editar</a>
                 <?php endif; ?>
               </td>

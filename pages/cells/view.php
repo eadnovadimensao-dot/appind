@@ -10,6 +10,7 @@ $stmt = $db->prepare("SELECT * FROM cells WHERE id = ? AND church_id = ?");
 $stmt->execute([$id, $churchId]);
 $cell = $stmt->fetch();
 if (!$cell) { header('Location: /pages/cells/index.php'); exit; }
+if (!auth_member_in_cell($id)) { header('Location: /dashboard.php?no_access=1'); exit; }
 
 $activePage = 'cells';
 require_once __DIR__ . '/../../includes/layout.php';

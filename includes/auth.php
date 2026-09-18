@@ -173,6 +173,72 @@ function auth_event_auto_approve(): bool {
     return in_array(auth_role(), ['supermaster', 'admin']);
 }
 
+// Edita culto: só supermaster ou membro cadastrado como supervisor ativo da
+// igreja em Cultos → Supervisores e rotação (normalmente Admin/Pastor).
+function auth_can_edit_services(): bool {
+    if (auth_role() === 'supermaster') return true;
+    $memberId = auth_member_id();
+    if (!$memberId) return false;
+    static $cache = [];
+    $key = $memberId . ':' . current_church_id();
+    if (!array_key_exists($key, $cache)) {
+        $stmt = db()->prepare("SELECT 1 FROM supervisors WHERE member_id = ? AND church_id = ? AND active = 1 LIMIT 1");
+        $stmt->execute([$memberId, current_church_id()]);
+        $cache[$key] = (bool)$stmt->fetchColumn();
+    }
+    return $cache[$key];
+}
+
+function auth_require_service_editor(): void {
+    auth_check();
+    if (!auth_can_edit_services()) {
+        http_response_code(403);
+        include __DIR__ . '/403.php';
+        exit;
+    }
+}
+
+// Membro comum só enxerga pessoas do próprio ministério e da própria célula
+// (e a si mesmo). Os demais papéis mantêm o acesso que já tinham.
+function auth_member_can_view_member(int $targetId): bool {
+    if (auth_role() !== 'member') return true;
+    $me = auth_member_id();
+    if (!$me) return false;
+    if ($me === $targetId) return true;
+    $db = db();
+    $sameMinistry = $db->prepare("
+        SELECT 1 FROM member_ministries a
+        JOIN member_ministries b ON b.ministry_id = a.ministry_id
+        WHERE a.member_id = ? AND b.member_id = ? LIMIT 1
+    ");
+    $sameMinistry->execute([$me, $targetId]);
+    if ($sameMinistry->fetchColumn()) return true;
+    $sameCell = $db->prepare("
+        SELECT 1 FROM members a JOIN members b ON b.cell_id = a.cell_id
+        WHERE a.id = ? AND b.id = ? AND a.cell_id IS NOT NULL LIMIT 1
+    ");
+    $sameCell->execute([$me, $targetId]);
+    return (bool)$sameCell->fetchColumn();
+}
+
+function auth_member_in_ministry(int $ministryId): bool {
+    if (auth_role() !== 'member') return true;
+    $me = auth_member_id();
+    if (!$me) return false;
+    $stmt = db()->prepare("SELECT 1 FROM member_ministries WHERE member_id = ? AND ministry_id = ? LIMIT 1");
+    $stmt->execute([$me, $ministryId]);
+    return (bool)$stmt->fetchColumn();
+}
+
+function auth_member_in_cell(int $cellId): bool {
+    if (auth_role() !== 'member') return true;
+    $me = auth_member_id();
+    if (!$me) return false;
+    $stmt = db()->prepare("SELECT 1 FROM members WHERE id = ? AND cell_id = ? LIMIT 1");
+    $stmt->execute([$me, $cellId]);
+    return (bool)$stmt->fetchColumn();
+}
+
 function auth_require(string $permission): void {
     auth_check();
     if (!auth_can($permission)) {

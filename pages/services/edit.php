@@ -3,7 +3,7 @@ require_once __DIR__ . '/../../config/database.php';
 require_once __DIR__ . '/../../includes/auth.php';
 require_once __DIR__ . '/../../includes/bible.php';
 require_once __DIR__ . '/../../includes/service_checkin.php';
-auth_check();
+auth_require_service_editor();
 $db = db();
 $churchId = current_church_id();
 $id = (int)($_GET['id'] ?? 0);
