@@ -94,6 +94,23 @@ function service_program_text(PDO $db, array $service): string {
 }
 
 /**
+ * Marca o culto como confirmado. Na primeira confirmação (programação ainda
+ * não enviada) manda a programação aos envolvidos e devolve quantas mensagens
+ * foram enfileiradas; nos demais casos devolve null (nada foi enviado).
+ */
+function confirm_service(PDO $db, int $serviceId, int $churchId): ?int {
+    $cur = $db->prepare("SELECT status, program_sent_at FROM services WHERE id = ? AND church_id = ?");
+    $cur->execute([$serviceId, $churchId]);
+    $cur = $cur->fetch();
+    if (!$cur) return null;
+
+    $db->prepare("UPDATE services SET status = 'confirmed' WHERE id = ? AND church_id = ?")->execute([$serviceId, $churchId]);
+
+    if (empty($cur['program_sent_at'])) return queue_service_program($db, $serviceId);
+    return null;
+}
+
+/**
  * Enfileira a programação pra todos os envolvidos. Cancela antes os envios
  * de programação ainda pendentes desse culto (reenvio não duplica na fila).
  * Retorna quantas mensagens foram enfileiradas.

@@ -2,6 +2,7 @@
 require_once __DIR__ . '/../../config/database.php';
 require_once __DIR__ . '/../../includes/auth.php';
 require_once __DIR__ . '/../../includes/bible.php';
+require_once __DIR__ . '/../../includes/service_program.php';
 auth_require_service_editor();
 
 $db       = db();
@@ -117,6 +118,13 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         }
         queue_scripture_meditation($db, (int)$service['id'], $service['title'], $service['service_date'], $churchId);
 
+        // "Salvar e confirmar culto": confirma e, na primeira vez, envia a programação
+        if (isset($_POST['confirm_service'])) {
+            $sent = confirm_service($db, (int)$service['id'], $churchId);
+            header('Location: /pages/services/view.php?id=' . $service['id'] . ($sent !== null ? '&sent=' . $sent : ''));
+            exit;
+        }
+
         header('Location: /pages/services/supervisor_view.php?id='.$service['id'].'&saved=1');
         exit;
     }
@@ -147,6 +155,13 @@ $itemTypes = [
     'closing'      => '🔚 Encerramento',
     'other'        => '📋 Outro',
 ];
+
+// Quantas pessoas receberiam a programação (só faz sentido antes do primeiro envio)
+$programPending = empty($service['program_sent_at']);
+$recipientCount = 0;
+if ($programPending) {
+    foreach (service_program_recipients($db, $service) as $p) if ($p['phone']) $recipientCount++;
+}
 
 $existingRefs = $db->prepare("SELECT raw_reference FROM service_scriptures WHERE service_id = ? ORDER BY position");
 $existingRefs->execute([$service['id']]);
@@ -179,7 +194,7 @@ $existingRefs = $existingRefs->fetchAll(PDO::FETCH_COLUMN);
       <form method="POST" style="display:inline">
         <input type="hidden" name="action" value="confirm_supervision">
         <button type="submit" class="btn btn-primary" style="font-size:13px">
-          ✅ Confirmar minha supervisão
+          ✅ Assumir supervisão deste culto
         </button>
       </form>
     <?php else: ?>
@@ -271,6 +286,12 @@ $existingRefs = $existingRefs->fetchAll(PDO::FETCH_COLUMN);
 
   <div style="display:flex;gap:10px">
     <button type="submit" class="btn btn-primary">Salvar programação</button>
+    <?php if ($programPending): ?>
+      <button type="submit" name="confirm_service" value="1" class="btn btn-secondary"
+              onclick="return confirm('Isso salva a programação, confirma o culto e envia por WhatsApp pra <?= $recipientCount ?> pessoa(s) envolvida(s). Confirmar?')">
+        ✓ Salvar e confirmar culto
+      </button>
+    <?php endif; ?>
     <a href="/pages/services/index.php" class="btn btn-secondary">Voltar</a>
   </div>
 </form>
