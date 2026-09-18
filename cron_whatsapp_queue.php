@@ -20,6 +20,15 @@ set_time_limit(90);
 
 $db = db();
 
+// Convida pro check-in quem ainda não foi convidado nos cultos de hoje. Se falhar,
+// não pode impedir o envio da fila logo abaixo.
+try {
+    require_once __DIR__ . '/includes/service_checkin.php';
+    queue_service_checkins_for_today($db);
+} catch (\Throwable $e) {
+    error_log('cron checkin: ' . $e->getMessage());
+}
+
 // Até 4 mensagens por execução — o cron rodando a cada minuto já dá uma
 // cadência humana; a pausa abaixo evita rajada mesmo dentro dessa leva.
 $batch = $db->query("

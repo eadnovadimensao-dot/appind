@@ -124,7 +124,7 @@ const SCRIPTURE_MEDITATION_DAYS_BEFORE = 2;
 function queue_scripture_meditation(PDO $db, int $serviceId, string $serviceTitle, string $serviceDate, int $churchId): void {
     // Cancela os avisos dessa meditação que ainda não foram entregues,
     // pra não mandar texto desatualizado se o culto for editado de novo.
-    $db->prepare("DELETE FROM whatsapp_queue WHERE service_id = ? AND status = 'pending'")->execute([$serviceId]);
+    $db->prepare("DELETE FROM whatsapp_queue WHERE service_id = ? AND kind = 'meditation' AND status = 'pending'")->execute([$serviceId]);
 
     $refs = $db->prepare("SELECT * FROM service_scriptures WHERE service_id = ? AND book_abbrev IS NOT NULL ORDER BY position");
     $refs->execute([$serviceId]);
@@ -161,7 +161,7 @@ function queue_scripture_meditation(PDO $db, int $serviceId, string $serviceTitl
     foreach ($members->fetchAll() as $m) {
         $firstName = explode(' ', trim($m['name']))[0];
         $message   = "Olá, {$firstName}! 👋\n\n{$body}";
-        queue_whatsapp($m['phone'], $message, $churchId, null, $delayMinutes, $serviceId);
+        queue_whatsapp($m['phone'], $message, $churchId, null, $delayMinutes, $serviceId, 'meditation');
     }
 
     $db->prepare("UPDATE services SET meditation_queued_at = NOW() WHERE id = ?")->execute([$serviceId]);

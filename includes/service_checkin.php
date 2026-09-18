@@ -22,12 +22,21 @@ function queue_service_checkins(PDO $db, int $serviceId, string $serviceTitle, s
     $sendAt  = $startAt + SERVICE_CHECKIN_MINUTES_AFTER_START * 60;
     $delayMinutes = max(0, (int)round(($sendAt - time()) / 60));
 
+    // Fora do convite geral: quem está em service_scale OU já confirmou escala
+    // num ministério nessa data (culto gerado automaticamente não preenche
+    // service_scale, mas essas pessoas recebem o "Cheguei" do ministério).
     $members = $db->prepare("
         SELECT m.id, m.name, m.phone FROM members m
         WHERE m.church_id = ? AND m.status = 'active' AND m.phone IS NOT NULL AND m.phone != ''
           AND m.id NOT IN (SELECT member_id FROM service_scale WHERE service_id = ?)
+          AND m.id NOT IN (
+              SELECT mam.member_id FROM ministry_activity_members mam
+              JOIN ministry_activities ma ON ma.id = mam.activity_id
+              WHERE ma.activity_date = ? AND ma.church_id = ? AND ma.status != 'cancelled'
+                AND mam.status = 'confirmed'
+          )
     ");
-    $members->execute([$churchId, $serviceId]);
+    $members->execute([$churchId, $serviceId, $serviceDate, $churchId]);
     $members = $members->fetchAll();
 
     $existing = $db->prepare("SELECT member_id FROM service_checkins WHERE service_id = ?");
@@ -46,6 +55,28 @@ function queue_service_checkins(PDO $db, int $serviceId, string $serviceTitle, s
         $firstName  = explode(' ', trim($m['name']))[0];
         $message    = "Olá, {$firstName}! 👋\n\n🙏 *{$serviceTitle}*" . ($timeLabel ? " ($timeLabel)" : '') . "\n\nVocê está no culto hoje? Confirme sua presença!";
         $checkinUrl = APP_URL . '/checkin.php?token=' . $token;
-        queue_whatsapp($m['phone'], $message, $churchId, [['label' => '✅ Presente', 'url' => $checkinUrl]], $delayMinutes, $serviceId);
+        queue_whatsapp($m['phone'], $message, $churchId, [['label' => '✅ Presente', 'url' => $checkinUrl]], $delayMinutes, $serviceId, 'checkin');
+    }
+}
+
+/**
+ * Chamada pela rotina que roda a cada minuto (cron_whatsapp_queue.php):
+ * pra cada culto de HOJE (de qualquer igreja), dentro da janela que vai de
+ * 2h antes do início até o fim do culto, convida quem ainda não foi
+ * convidado — inclusive quem se cadastrou depois do último Salvar. Não
+ * depende de ninguém abrir e salvar o culto.
+ */
+function queue_service_checkins_for_today(PDO $db): void {
+    $services = $db->query("
+        SELECT id, church_id, title, service_date, time_start, time_end
+        FROM services WHERE service_date = CURDATE() AND status != 'done'
+    ")->fetchAll();
+
+    foreach ($services as $s) {
+        $start = strtotime($s['service_date'] . ' ' . ($s['time_start'] ?: '09:00:00'));
+        $end   = $s['time_end'] ? strtotime($s['service_date'] . ' ' . $s['time_end']) : $start + 3 * 3600;
+        $now   = time();
+        if ($now < $start - 2 * 3600 || $now > $end) continue;
+        queue_service_checkins($db, (int)$s['id'], $s['title'], $s['service_date'], $s['time_start'], (int)$s['church_id']);
     }
 }

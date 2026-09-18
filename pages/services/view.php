@@ -81,6 +81,12 @@ $sl = $statusLabels[$service['status']] ?? ['label'=>$service['status'], 'badge'
 $totalMin = array_sum(array_column($items, 'duration'));
 ?>
 
+<?php if (isset($_GET['sent'])): ?>
+  <div style="background:#E1F5EE;border:1px solid var(--accent);border-radius:8px;padding:12px 16px;margin-bottom:16px;font-size:13px;color:#0F6E56">
+    📤 Programação enviada por WhatsApp pra <?= (int)$_GET['sent'] ?> pessoa(s) envolvida(s).
+  </div>
+<?php endif; ?>
+
 <!-- Header -->
 <div class="card" style="margin-bottom:16px">
   <div style="display:flex;align-items:flex-start;justify-content:space-between;flex-wrap:wrap;gap:12px">
@@ -104,6 +110,9 @@ $totalMin = array_sum(array_column($items, 'duration'));
         <?php if ($totalMin > 0): ?>
           <span>⏱ ~<?= $totalMin ?> min estimados</span>
         <?php endif; ?>
+        <?php if (!empty($service['program_sent_at'])): ?>
+          <span>📤 programação enviada em <?= date('d/m H:i', strtotime($service['program_sent_at'])) ?></span>
+        <?php endif; ?>
       </div>
       <?php if ($service['sermon_title']): ?>
         <div style="margin-top:6px;font-size:14px;font-style:italic;color:var(--text)">
@@ -119,6 +128,10 @@ $totalMin = array_sum(array_column($items, 'duration'));
         <?php elseif ($service['status'] === 'confirmed'): ?>
           <a href="/pages/services/status.php?id=<?= $id ?>&status=done"
              class="btn btn-secondary" data-confirm="Marcar como realizado?">✓ Realizado</a>
+        <?php endif; ?>
+        <?php if ($service['status'] !== 'planning'): ?>
+          <a href="/pages/services/send_program.php?id=<?= $id ?>" class="btn btn-secondary"
+             data-confirm="Reenviar a programação por WhatsApp pra todos os envolvidos?">📤 Reenviar programação</a>
         <?php endif; ?>
         <a href="/pages/services/edit.php?id=<?= $id ?>" class="btn btn-secondary">Editar</a>
       <?php endif; ?>
