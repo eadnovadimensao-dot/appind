@@ -26,6 +26,9 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         'primary_color', 'accent_color',
     ];
 
+    // E-mail e WhatsApp são sempre os da sede: filial não grava esses campos
+    if ($churchId !== SEDE_ID) $fields = array_values(array_diff($fields, SETTINGS_ALWAYS_FROM_SEDE));
+
     $initials = strtoupper(trim($_POST['church_initials'] ?? ''));
     if (strlen($initials) > 3) $errors[] = 'Sigla deve ter no máximo 3 letras.';
     if (trim($_POST['church_name'] ?? '') === '') $errors[] = 'Nome da igreja é obrigatório.';
@@ -202,6 +205,7 @@ require_once __DIR__ . '/../includes/layout.php';
     </div>
   </div>
 
+  <?php if ($churchId === SEDE_ID): ?>
   <!-- SMTP -->
   <div class="card" style="margin-bottom:16px">
     <p class="card-title">Configurações de e-mail (SMTP)</p>
@@ -268,6 +272,14 @@ require_once __DIR__ . '/../includes/layout.php';
              value="<?= htmlspecialchars($s['zapi_client_token'] ?? '') ?>">
     </div>
   </div>
+
+  <?php else: ?>
+  <div class="card" style="margin-bottom:16px;background:#F5F5F5;border:none">
+    <p style="font-size:13px;line-height:1.7">
+      ✉️ E-mail e 💬 WhatsApp desta filial usam as configurações da Sede (só a Sede altera). O Pix é o único que cada igreja configura separadamente.
+    </p>
+  </div>
+  <?php endif; ?>
 
   <!-- Cadastro público -->
   <div class="card" style="margin-bottom:16px">

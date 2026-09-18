@@ -1,7 +1,13 @@
 <?php
 require_once __DIR__ . '/../config/database.php';
 require_once __DIR__ . '/../includes/auth.php';
-auth_require('manage_users');
+auth_check();
+// Criar/editar/excluir filiais: só supermaster
+if (auth_role() !== 'supermaster') {
+    http_response_code(403);
+    include __DIR__ . '/../includes/403.php';
+    exit;
+}
 
 $db     = db();
 $errors = [];
@@ -40,11 +46,14 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 $db->prepare("INSERT INTO churches (name,slug,type,parent_id,address,phone) VALUES (?,?,'branch',?,?,?)")
                    ->execute([$name,$slug,SEDE_ID,$address?:null,$phone?:null]);
                 $churchId = $db->lastInsertId();
-                // Copiar configurações da sede
+                // Copiar a identidade da sede (cores, contato...). Pix nunca é copiado (cada
+                // igreja tem a sua chave) e e-mail/WhatsApp/push já vêm sempre da sede.
+                $skip = array_merge(SETTINGS_PER_CHURCH_ONLY, SETTINGS_ALWAYS_FROM_SEDE);
+                $ph   = implode(',', array_fill(0, count($skip), '?'));
                 $db->prepare("
                     INSERT IGNORE INTO church_settings (church_id, `key`, `value`)
-                    SELECT ?, `key`, `value` FROM church_settings WHERE church_id = ?
-                ")->execute([$churchId, SEDE_ID]);
+                    SELECT ?, `key`, `value` FROM church_settings WHERE church_id = ? AND `key` NOT IN ($ph)
+                ")->execute(array_merge([$churchId, SEDE_ID], $skip));
                 $db->prepare("UPDATE church_settings SET `value`=? WHERE church_id=? AND `key`='church_name'")
                    ->execute([$name, $churchId]);
             }

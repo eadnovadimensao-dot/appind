@@ -88,6 +88,7 @@ if (window.innerWidth <= 900) {
       }
 
       foreach ($navItems as $item):
+        if ($item['key'] === 'branches' && $role !== 'supermaster') continue; // Filiais: só supermaster
         if ($role === 'member') {
           $memberAllowed = ['dashboard','events','communication','offering'];
           if ($memberCellId) $memberAllowed[] = 'cells';
