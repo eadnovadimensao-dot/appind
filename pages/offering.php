@@ -5,10 +5,11 @@ require_once __DIR__ . '/../includes/pix.php';
 auth_check();
 
 $churchId = current_church_id();
-$pixKey   = setting('pix_key', '', $churchId);
-$pixType  = setting('pix_key_type', '', $churchId);
-$pixName  = setting('pix_receiver_name', '', $churchId);
-$pixCity  = setting('pix_receiver_city', '', $churchId);
+$pix      = pix_settings($churchId);
+$pixKey   = $pix['pix_key'];
+$pixType  = $pix['pix_key_type'];
+$pixName  = $pix['pix_receiver_name'];
+$pixCity  = $pix['pix_receiver_city'];
 $churchName = setting('church_name', 'Igreja', $churchId);
 
 $typeLabels = ['cpf'=>'CPF','cnpj'=>'CNPJ','email'=>'E-mail','phone'=>'Telefone','random'=>'Chave aleatória'];

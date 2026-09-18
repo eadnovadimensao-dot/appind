@@ -69,6 +69,13 @@ function pix_generate_code(string $pixKey, string $receiverName, string $receive
     return $payload;
 }
 
-function pix_is_configured(int $churchId): bool {
-    return setting('pix_key', '', $churchId) !== '';
+// Lê o Pix SÓ da própria igreja/filial. setting() herda da sede quando a
+// filial não tem nenhuma configuração, e pra dinheiro isso mandaria a oferta
+// da filial pra conta da sede sem ninguém ter escolhido isso.
+function pix_settings(int $churchId): array {
+    $stmt = db()->prepare("SELECT `key`, `value` FROM church_settings WHERE church_id = ? AND `key` IN ('pix_key','pix_key_type','pix_receiver_name','pix_receiver_city')");
+    $stmt->execute([$churchId]);
+    $s = ['pix_key' => '', 'pix_key_type' => '', 'pix_receiver_name' => '', 'pix_receiver_city' => ''];
+    foreach ($stmt->fetchAll() as $row) $s[$row['key']] = (string)$row['value'];
+    return $s;
 }

@@ -2,7 +2,7 @@
 // Processar ANTES de incluir o layout (evita headers already sent)
 require_once __DIR__ . '/../config/database.php';
 require_once __DIR__ . '/../includes/auth.php';
-auth_check();
+auth_require('manage_users');
 
 $db       = db();
 $churchId = current_church_id();

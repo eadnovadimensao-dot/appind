@@ -170,15 +170,20 @@ $doneCount = count(array_filter($steps, fn($s) => $s['completed_at'] !== null));
     <?php endif; ?>
   </div>
   <div style="padding:16px 18px;display:flex;flex-direction:column;gap:4px">
+    <?php $canToggleTrail = auth_can('manage_members'); ?>
     <?php foreach ($steps as $s): $isDone = $s['completed_at'] !== null; ?>
       <form method="POST" action="/pages/members/growth_toggle.php" style="display:flex;align-items:center;gap:12px;padding:8px 0">
         <input type="hidden" name="member_id" value="<?= $m['id'] ?>">
         <input type="hidden" name="step_id" value="<?= $s['id'] ?>">
         <input type="hidden" name="done" value="<?= $isDone ? '0' : '1' ?>">
-        <button type="submit" style="border:none;background:none;cursor:pointer;padding:0;font-size:20px;line-height:1;flex-shrink:0"
-                title="<?= $isDone ? 'Desmarcar' : 'Marcar como concluído' ?>">
-          <?= $isDone ? '✅' : '⬜' ?>
-        </button>
+        <?php if ($canToggleTrail): ?>
+          <button type="submit" style="border:none;background:none;cursor:pointer;padding:0;font-size:20px;line-height:1;flex-shrink:0"
+                  title="<?= $isDone ? 'Desmarcar' : 'Marcar como concluído' ?>">
+            <?= $isDone ? '✅' : '⬜' ?>
+          </button>
+        <?php else: ?>
+          <span style="font-size:20px;line-height:1;flex-shrink:0"><?= $isDone ? '✅' : '⬜' ?></span>
+        <?php endif; ?>
         <div style="font-size:16px;flex-shrink:0"><?= htmlspecialchars($s['icon']) ?></div>
         <div style="flex:1">
           <div style="font-size:13px;font-weight:500;<?= $isDone ? '' : 'color:var(--text-muted)' ?>"><?= htmlspecialchars($s['name']) ?></div>

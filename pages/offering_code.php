@@ -6,9 +6,10 @@ auth_check();
 header('Content-Type: application/json; charset=utf-8');
 
 $churchId = current_church_id();
-$pixKey   = setting('pix_key', '', $churchId);
-$pixName  = setting('pix_receiver_name', '', $churchId) ?: setting('church_name', 'Igreja', $churchId);
-$pixCity  = setting('pix_receiver_city', '', $churchId);
+$pix      = pix_settings($churchId);
+$pixKey   = $pix['pix_key'];
+$pixName  = $pix['pix_receiver_name'] ?: setting('church_name', 'Igreja', $churchId);
+$pixCity  = $pix['pix_receiver_city'];
 
 if (!$pixKey) { echo json_encode(['error' => 'Pix não configurado.']); exit; }
 

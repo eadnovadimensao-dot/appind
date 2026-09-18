@@ -13,11 +13,16 @@ const ABSENCE_WARNING_DAYS = 14;
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     $memberId = (int)($_POST['member_id'] ?? 0);
     $notes    = trim($_POST['notes'] ?? '');
-    $stmt = $db->prepare("SELECT id FROM members WHERE id = ? AND church_id = ?");
-    $stmt->execute([$memberId, $churchId]);
-    if ($stmt->fetch()) {
+    // Mesmo escopo da listagem: supermaster na sede também registra contato de membro de filial
+    $stmt = $db->prepare("
+        SELECT m.id, m.church_id FROM members m LEFT JOIN churches ch ON ch.id = m.church_id
+        WHERE m.id = ? AND (m.church_id = ? OR (? AND ch.parent_id = ?))
+    ");
+    $seesAll = ($churchId === SEDE_ID && auth_role() === 'supermaster') ? 1 : 0;
+    $stmt->execute([$memberId, $churchId, $seesAll, $churchId]);
+    if ($target = $stmt->fetch()) {
         $db->prepare("INSERT INTO pastoral_contacts (member_id, church_id, contacted_by, contacted_at, notes) VALUES (?,?,?,CURDATE(),?)")
-           ->execute([$memberId, $churchId, auth_member_id(), $notes ?: null]);
+           ->execute([$memberId, $target['church_id'], auth_member_id(), $notes ?: null]);
     }
     header('Location: /pages/members/absence_radar.php?registered=1');
     exit;

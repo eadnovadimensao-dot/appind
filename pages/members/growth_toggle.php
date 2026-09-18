@@ -9,14 +9,16 @@ $stepId   = (int)($_POST['step_id'] ?? 0);
 $done     = ($_POST['done'] ?? '') === '1';
 
 $m = $db->prepare("
-    SELECT m.id FROM members m LEFT JOIN churches ch ON ch.id = m.church_id
+    SELECT m.id, m.church_id FROM members m LEFT JOIN churches ch ON ch.id = m.church_id
     WHERE m.id = ? AND (ch.id = ? OR ch.parent_id = ?)
 ");
 $m->execute([$memberId, SEDE_ID, SEDE_ID]);
-if (!$m->fetch()) { header('Location: /pages/members/index.php'); exit; }
+$member = $m->fetch();
+if (!$member) { header('Location: /pages/members/index.php'); exit; }
 
-$s = $db->prepare("SELECT id FROM growth_steps WHERE id = ?");
-$s->execute([$stepId]);
+// A etapa precisa ser da mesma igreja do membro (cada filial tem a sua trilha)
+$s = $db->prepare("SELECT id FROM growth_steps WHERE id = ? AND church_id = ?");
+$s->execute([$stepId, $member['church_id']]);
 if ($s->fetch()) {
     if ($done) {
         $db->prepare("INSERT IGNORE INTO member_growth_progress (member_id, step_id, completed_at, marked_by) VALUES (?,?,CURDATE(),?)")
