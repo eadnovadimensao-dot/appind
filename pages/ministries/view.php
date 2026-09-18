@@ -12,9 +12,9 @@ $stmt = $db->prepare("
     FROM ministries mn
     LEFT JOIN members m   ON m.id  = mn.leader_id
     LEFT JOIN churches ch ON ch.id = mn.church_id
-    WHERE mn.id = ? AND (ch.id = ? OR ch.parent_id = ?)
+    WHERE mn.id = ? AND ch.id = ?
 ");
-$stmt->execute([$id, SEDE_ID, SEDE_ID]);
+$stmt->execute([$id, current_church_id()]);
 $mn = $stmt->fetch();
 if (!$mn) { header('Location: /pages/ministries/index.php'); exit; }
 if (!auth_member_in_ministry($id)) { header('Location: /dashboard.php?no_access=1'); exit; }

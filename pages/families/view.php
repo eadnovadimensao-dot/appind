@@ -32,11 +32,11 @@ $familyMembers = $familyMembers->fetchAll();
 $availableMembers = $db->prepare("
     SELECT m.id, m.name FROM members m
     JOIN churches ch ON ch.id = m.church_id
-    WHERE (ch.id = ? OR ch.parent_id = ?) AND m.status='active'
+    WHERE ch.id = ? AND m.status='active'
       AND (m.family_id IS NULL OR m.family_id = ?)
     ORDER BY m.name
 ");
-$availableMembers->execute([SEDE_ID, SEDE_ID, $id]);
+$availableMembers->execute([current_church_id(), $id]);
 $availableMembers = $availableMembers->fetchAll();
 
 if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['add_member'])) {

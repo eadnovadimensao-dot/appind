@@ -14,9 +14,9 @@ $mn = $db->prepare("
     SELECT mn.*
     FROM ministries mn
     JOIN churches ch ON ch.id = mn.church_id
-    WHERE mn.id = ? AND (ch.id = ? OR ch.parent_id = ?)
+    WHERE mn.id = ? AND ch.id = ?
 ");
-$mn->execute([$ministryId, SEDE_ID, SEDE_ID]);
+$mn->execute([$ministryId, current_church_id()]);
 $mn = $mn->fetch();
 if (!$mn) { header('Location: /pages/ministries/index.php'); exit; }
 

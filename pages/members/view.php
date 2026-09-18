@@ -11,9 +11,9 @@ $member = $db->prepare("
     FROM members m
     LEFT JOIN cells c    ON c.id  = m.cell_id
     LEFT JOIN churches ch ON ch.id = m.church_id
-    WHERE m.id = ? AND (ch.id = ? OR ch.parent_id = ?)
+    WHERE m.id = ? AND ch.id = ?
 ");
-$member->execute([$id, SEDE_ID, SEDE_ID]);
+$member->execute([$id, current_church_id()]);
 $m = $member->fetch();
 
 if (!$m) {

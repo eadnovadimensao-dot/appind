@@ -12,12 +12,12 @@ $members_without_user = $db->prepare("
     SELECT m.id, m.name, m.email, ch.name AS branch_name
     FROM members m
     JOIN churches ch ON ch.id = m.church_id
-    WHERE (ch.id = ? OR ch.parent_id = ?)
+    WHERE ch.id = ?
       AND m.status = 'active'
       AND m.id NOT IN (SELECT member_id FROM users WHERE member_id IS NOT NULL)
     ORDER BY m.name
 ");
-$members_without_user->execute([SEDE_ID, SEDE_ID]);
+$members_without_user->execute([current_church_id()]);
 $members_without_user = $members_without_user->fetchAll();
 
 // Processar convite

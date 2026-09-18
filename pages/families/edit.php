@@ -10,8 +10,8 @@ $f->execute([$id]);
 $family = $f->fetch();
 if (!$family) { header('Location: /pages/families/index.php'); exit; }
 
-$members = $db->prepare("SELECT m.id, m.name FROM members m JOIN churches ch ON ch.id=m.church_id WHERE (ch.id=? OR ch.parent_id=?) AND m.status='active' ORDER BY m.name");
-$members->execute([SEDE_ID, SEDE_ID]);
+$members = $db->prepare("SELECT m.id, m.name FROM members m JOIN churches ch ON ch.id=m.church_id WHERE ch.id=? AND m.status='active' ORDER BY m.name");
+$members->execute([current_church_id()]);
 $members = $members->fetchAll();
 $errors  = [];
 

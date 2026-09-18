@@ -10,7 +10,6 @@ $role     = auth_role();
 $errors   = [];
 
 // Carregar destinos disponíveis
-$branches   = get_branches();
 $cells      = $db->query("SELECT id, name FROM cells WHERE church_id=$churchId AND active=1 ORDER BY name")->fetchAll();
 $ministries = $db->query("SELECT id, name FROM ministries WHERE church_id=$churchId AND active=1 ORDER BY name")->fetchAll();
 
@@ -71,21 +70,18 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 
 // Funções auxiliares
 function getRecipients(PDO $db, int $churchId, string $targetType, ?int $targetId): array {
-    $sql    = "SELECT m.id, m.name, m.email, m.phone FROM members m JOIN churches ch ON ch.id = m.church_id WHERE m.status = 'active'";
-    $params = [];
+    // Sempre só a igreja selecionada: "todos", célula e ministério nunca alcançam outra igreja
+    $sql    = "SELECT m.id, m.name, m.email, m.phone FROM members m WHERE m.status = 'active' AND m.church_id = ?";
+    $params = [$churchId];
 
-    if ($targetType === 'all') {
-        $sql .= " AND (ch.id = ? OR ch.parent_id = ?)";
-        $params = [$churchId, $churchId];
-    } elseif ($targetType === 'branch') {
-        $sql .= " AND m.church_id = ?";
-        $params = [$targetId];
-    } elseif ($targetType === 'cell') {
+    if ($targetType === 'cell') {
         $sql .= " AND m.cell_id = ?";
-        $params = [$targetId];
+        $params[] = $targetId;
     } elseif ($targetType === 'ministry') {
         $sql .= " AND m.id IN (SELECT member_id FROM member_ministries WHERE ministry_id = ?)";
-        $params = [$targetId];
+        $params[] = $targetId;
+    } elseif ($targetType !== 'all') {
+        return [];
     }
 
     $stmt = $db->prepare($sql);
@@ -252,7 +248,6 @@ require_once __DIR__ . '/../../includes/layout.php';
         <select name="target_type" class="form-control" id="target-type" onchange="updateTargetId()">
           <?php if ($isAdmin): ?>
             <option value="all"      <?= ($_POST['target_type']??'all')==='all'     ?'selected':''?>>👥 Todos os membros</option>
-            <option value="branch"   <?= ($_POST['target_type']??'')==='branch'     ?'selected':''?>>🏛️ Por filial</option>
           <?php endif; ?>
           <option value="cell"       <?= ($_POST['target_type']??'')==='cell'       ?'selected':''?>>🔗 Por célula</option>
           <option value="ministry"   <?= ($_POST['target_type']??'')==='ministry'   ?'selected':''?>>✝️ Por ministério</option>
@@ -333,13 +328,11 @@ require_once __DIR__ . '/../../includes/layout.php';
 
 <?php
 // Dados para JS
-$branchesJson   = json_encode(array_map(fn($b) => ['id'=>$b['id'],'name'=>$b['name']], $branches));
 $cellsJson      = json_encode(array_map(fn($c) => ['id'=>$c['id'],'name'=>$c['name']], $cells));
 $ministriesJson = json_encode(array_map(fn($m) => ['id'=>$m['id'],'name'=>$m['name']], $ministries));
 $churchName     = htmlspecialchars(setting('church_name', 'Igreja'), ENT_QUOTES);
 
 $extraJs = <<<JS
-const branches   = $branchesJson;
 const cells      = $cellsJson;
 const ministries = $ministriesJson;
 
@@ -349,7 +342,7 @@ function updateTargetId() {
   const label   = document.getElementById('target-id-label');
   const select  = document.getElementById('target-id-select');
 
-  const maps = { branch: [branches,'Selecione a filial'], cell: [cells,'Selecione a célula'], ministry: [ministries,'Selecione o ministério'] };
+  const maps = { cell: [cells,'Selecione a célula'], ministry: [ministries,'Selecione o ministério'] };
 
   if (maps[type]) {
     const [items, placeholder] = maps[type];

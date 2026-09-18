@@ -7,8 +7,8 @@ auth_require('manage_members');
 $db = db();
 $id = (int)($_GET['id'] ?? 0);
 
-$stmt = $db->prepare("SELECT * FROM member_signups WHERE id = ? AND status = 'pending'");
-$stmt->execute([$id]);
+$stmt = $db->prepare("SELECT * FROM member_signups WHERE id = ? AND status = 'pending' AND church_id = ?");
+$stmt->execute([$id, current_church_id()]);
 $signup = $stmt->fetch();
 
 if ($signup) {

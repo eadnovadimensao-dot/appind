@@ -12,9 +12,9 @@ $stmt = $db->prepare("
     SELECT m.*, ch.name AS branch_name, ch.type AS branch_type
     FROM members m
     JOIN churches ch ON ch.id = m.church_id
-    WHERE m.id = ? AND (ch.id = ? OR ch.parent_id = ?)
+    WHERE m.id = ? AND ch.id = ?
 ");
-$stmt->execute([$id, SEDE_ID, SEDE_ID]);
+$stmt->execute([$id, current_church_id()]);
 $m = $stmt->fetch();
 if (!$m) { header('Location: /pages/members/index.php'); exit; }
 
@@ -36,6 +36,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     $status         = trim($_POST['status']          ?? 'active');
     $cellId         = trim($_POST['cell_id']         ?? '') ?: null;
     $newChurchId    = (int)($_POST['church_id']      ?? $churchId);
+    // Só igrejas que o usuário pode escolher (não-supermaster fica na própria)
+    if (!in_array($newChurchId, array_map('intval', array_column(get_branches(), 'id')), true)) $newChurchId = (int)$churchId;
     $joinDate       = trim($_POST['join_date']       ?? '') ?: null;
     $baptism        = trim($_POST['baptism_date']    ?? '') ?: null;
     $conversion     = trim($_POST['conversion_date'] ?? '') ?: null;

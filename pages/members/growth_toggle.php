@@ -10,9 +10,9 @@ $done     = ($_POST['done'] ?? '') === '1';
 
 $m = $db->prepare("
     SELECT m.id, m.church_id FROM members m LEFT JOIN churches ch ON ch.id = m.church_id
-    WHERE m.id = ? AND (ch.id = ? OR ch.parent_id = ?)
+    WHERE m.id = ? AND ch.id = ?
 ");
-$m->execute([$memberId, SEDE_ID, SEDE_ID]);
+$m->execute([$memberId, current_church_id()]);
 $member = $m->fetch();
 if (!$member) { header('Location: /pages/members/index.php'); exit; }
 

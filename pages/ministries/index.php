@@ -27,23 +27,7 @@ if ($role === 'member') {
     ");
     $stmt->execute([$memberId, $churchId]);
     $ministries = $stmt->fetchAll();
-}
-// Admin da sede vê todos; outros veem só a sua filial
-elseif ($isAdmin && $churchId === SEDE_ID) {
-    $ministries = $db->query("
-        SELECT mn.*, m.name AS leader_name, ch.name AS branch_name, ch.type AS branch_type,
-               COUNT(DISTINCT mm.member_id) AS member_count,
-               COUNT(DISTINCT ma.id) AS activity_count
-        FROM ministries mn
-        LEFT JOIN members m   ON m.id  = mn.leader_id
-        LEFT JOIN churches ch ON ch.id = mn.church_id
-        LEFT JOIN member_ministries mm  ON mm.ministry_id = mn.id
-        LEFT JOIN ministry_activities ma ON ma.ministry_id = mn.id AND ma.status='scheduled' AND ma.activity_date >= CURDATE()
-        WHERE ch.id = " . SEDE_ID . " OR ch.parent_id = " . SEDE_ID . "
-        GROUP BY mn.id
-        ORDER BY ch.type DESC, ch.name, mn.name
-    ")->fetchAll();
-} else {
+} else { // Demais papéis: só a igreja selecionada
     $stmt = $db->prepare("
         SELECT mn.*, m.name AS leader_name, ch.name AS branch_name, ch.type AS branch_type,
                COUNT(DISTINCT mm.member_id) AS member_count,

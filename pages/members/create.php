@@ -17,8 +17,8 @@ $branches   = get_branches();
 // a pessoa enviou, pra admin só conferir/completar antes de aprovar.
 $signup = null;
 if (!empty($_GET['from_signup']) && $_SERVER['REQUEST_METHOD'] !== 'POST') {
-    $sg = $db->prepare("SELECT * FROM member_signups WHERE id = ? AND status = 'pending'");
-    $sg->execute([(int)$_GET['from_signup']]);
+    $sg = $db->prepare("SELECT * FROM member_signups WHERE id = ? AND status = 'pending' AND church_id = ?");
+    $sg->execute([(int)$_GET['from_signup'], $churchId]);
     $signup = $sg->fetch();
     if ($signup) {
         $_POST = [

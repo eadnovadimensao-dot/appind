@@ -7,27 +7,16 @@ auth_require('manage_members');
 $db       = db();
 $churchId = current_church_id();
 
-// Supermaster na sede vê pendentes de todas as filiais; os demais só da própria igreja
-if ($churchId === SEDE_ID && auth_role() === 'supermaster') {
-    $signups = $db->query("
-        SELECT s.*, c.name AS cell_name, ch.name AS branch_name
-        FROM member_signups s
-        LEFT JOIN cells c     ON c.id = s.cell_interest_id
-        LEFT JOIN churches ch ON ch.id = s.church_id
-        WHERE s.status = 'pending' AND (ch.id = " . SEDE_ID . " OR ch.parent_id = " . SEDE_ID . ")
-        ORDER BY s.created_at ASC
-    ")->fetchAll();
-} else {
-    $stmt = $db->prepare("
-        SELECT s.*, c.name AS cell_name
-        FROM member_signups s
-        LEFT JOIN cells c ON c.id = s.cell_interest_id
-        WHERE s.status = 'pending' AND s.church_id = ?
-        ORDER BY s.created_at ASC
-    ");
-    $stmt->execute([$churchId]);
-    $signups = $stmt->fetchAll();
-}
+// Só os cadastros pendentes da igreja selecionada
+$stmt = $db->prepare("
+    SELECT s.*, c.name AS cell_name
+    FROM member_signups s
+    LEFT JOIN cells c ON c.id = s.cell_interest_id
+    WHERE s.status = 'pending' AND s.church_id = ?
+    ORDER BY s.created_at ASC
+");
+$stmt->execute([$churchId]);
+$signups = $stmt->fetchAll();
 
 $pageTitle  = 'Cadastros pendentes';
 $activePage = 'members';

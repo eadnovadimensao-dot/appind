@@ -29,6 +29,8 @@ if ($branchId > 0) {
     $_SESSION['user']['viewing_branch_name'] = null;
 }
 
+// Só volta pra caminho interno (evita redirecionar pra fora do sistema)
 $next = $_GET['next'] ?? '/dashboard.php';
+if (!preg_match('#^/[^/\\\\]#', $next)) $next = '/dashboard.php';
 header('Location: ' . $next);
 exit;

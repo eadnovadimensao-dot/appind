@@ -12,10 +12,10 @@ $membersStmt = $db->prepare("
     SELECT m.id, m.name, ch.name AS branch_name
     FROM members m
     JOIN churches ch ON ch.id = m.church_id
-    WHERE (ch.id = ? OR ch.parent_id = ?) AND m.status = 'active'
+    WHERE ch.id = ? AND m.status = 'active'
     ORDER BY m.name
 ");
-$membersStmt->execute([SEDE_ID, SEDE_ID]);
+$membersStmt->execute([current_church_id()]);
 $members = $membersStmt->fetchAll();
 
 $paymentMethods = ['dinheiro'=>'Dinheiro','pix'=>'PIX','cartão'=>'Cartão','transferência'=>'Transferência','cheque'=>'Cheque'];

@@ -112,6 +112,16 @@ function auth_member_redirect(): void {
 // ministério) — admin/supermaster sempre podem; qualquer outro papel só se estiver
 // de fato cadastrado como líder daquele ministério (tabela ministry_leaders).
 function auth_can_manage_ministry(int $ministryId): bool {
+    // Ministério de outra igreja nunca, nem pra admin/supermaster: cada igreja
+    // só mexe no que é dela (supermaster troca de igreja pelo seletor do topo).
+    static $church = [];
+    if (!array_key_exists($ministryId, $church)) {
+        $q = db()->prepare("SELECT church_id FROM ministries WHERE id=?");
+        $q->execute([$ministryId]);
+        $church[$ministryId] = $q->fetchColumn();
+    }
+    if ($church[$ministryId] === false || (int)$church[$ministryId] !== current_church_id()) return false;
+
     if (auth_can('all') || auth_role() === 'admin') return true;
     $memberId = auth_member_id();
     if (!$memberId) return false;
@@ -128,6 +138,14 @@ function auth_can_manage_ministry(int $ministryId): bool {
 // Mesma lógica pra células: admin/supermaster sempre podem; qualquer outro papel só
 // se estiver cadastrado como líder daquela célula específica (tabela cell_leaders).
 function auth_can_manage_cell(int $cellId): bool {
+    static $church = [];
+    if (!array_key_exists($cellId, $church)) {
+        $q = db()->prepare("SELECT church_id FROM cells WHERE id=?");
+        $q->execute([$cellId]);
+        $church[$cellId] = $q->fetchColumn();
+    }
+    if ($church[$cellId] === false || (int)$church[$cellId] !== current_church_id()) return false;
+
     if (auth_can('all') || auth_role() === 'admin') return true;
     $memberId = auth_member_id();
     if (!$memberId) return false;

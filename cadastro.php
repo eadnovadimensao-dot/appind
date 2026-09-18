@@ -9,7 +9,7 @@ if (session_status() === PHP_SESSION_NONE) {
 $db = db();
 
 // Filial (opcional via ?filial=ID) — padrão é a sede
-$branches = get_branches();
+$branches = get_branches(true);
 $branchIds = array_column($branches, 'id');
 $churchId = (int)($_GET['filial'] ?? SEDE_ID);
 if (!in_array($churchId, $branchIds, true)) $churchId = SEDE_ID;

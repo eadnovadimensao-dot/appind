@@ -16,31 +16,18 @@ $churchId = current_church_id();
 // Cadastros públicos aguardando revisão
 $pendingSignups = 0;
 if ($canManageMembers) {
-    if ($churchId === SEDE_ID && auth_role() === 'supermaster') {
-        $pendingSignups = (int)$db->query("
-            SELECT COUNT(*) FROM member_signups s
-            LEFT JOIN churches ch ON ch.id = s.church_id
-            WHERE s.status = 'pending' AND (ch.id = " . SEDE_ID . " OR ch.parent_id = " . SEDE_ID . ")
-        ")->fetchColumn();
-    } else {
-        $stmt = $db->prepare("SELECT COUNT(*) FROM member_signups WHERE status = 'pending' AND church_id = ?");
-        $stmt->execute([$churchId]);
-        $pendingSignups = (int)$stmt->fetchColumn();
-    }
+    $stmt = $db->prepare("SELECT COUNT(*) FROM member_signups WHERE status = 'pending' AND church_id = ?");
+    $stmt->execute([$churchId]);
+    $pendingSignups = (int)$stmt->fetchColumn();
 }
 
 // Filtros
 $search   = trim($_GET['q']         ?? '');
 $status   = trim($_GET['status']    ?? '');
 
-// Supermaster na sede vê todos; outros veem só a sua filial
-if ($churchId === SEDE_ID && auth_role() === 'supermaster') {
-    $where  = ['(m.church_id = :church_id OR ch.parent_id = :church_id)'];
-    $params = [':church_id' => SEDE_ID];
-} else {
-    $where  = ['m.church_id = :church_id'];
-    $params = [':church_id' => $churchId];
-}
+// Só a igreja selecionada (Sede mostra só a Sede; filial só quando selecionada)
+$where  = ['m.church_id = :church_id'];
+$params = [':church_id' => $churchId];
 
 if ($search !== '') {
     $where[]          = '(m.name LIKE :q OR m.phone LIKE :q OR m.email LIKE :q)';
@@ -118,35 +105,6 @@ $statusLabels = [
       </option>
     <?php endforeach; ?>
   </select>
-  <?php if (auth_role() === 'supermaster' && $churchId === SEDE_ID):
-    $branchId = (int)($_GET['branch_id'] ?? 0);
-  ?>
-  <select name="branch_id" class="form-control" style="width:180px" onchange="this.form.submit()">
-    <option value="0">Todas as filiais</option>
-    <?php foreach (get_branches() as $b): ?>
-      <option value="<?= $b['id'] ?>" <?= $branchId==$b['id']?'selected':''?>>
-        <?= htmlspecialchars($b['name']) ?> <?= $b['type']==='sede'?'(Sede)':'' ?>
-      </option>
-    <?php endforeach; ?>
-  </select>
-  <?php
-    // Aplicar filtro de filial se selecionado
-    if ($branchId) {
-        $where  = ['m.church_id = :church_id'];
-        $params = [':church_id' => $branchId];
-        if ($search !== '') { $where[] = '(m.name LIKE :q OR m.phone LIKE :q OR m.email LIKE :q)'; $params[':q'] = "%$search%"; }
-        if ($status !== '') { $where[] = 'm.status = :status'; $params[':status'] = $status; }
-        $sql = 'SELECT m.*, c.name AS cell_name, ch.name AS branch_name, ch.type AS branch_type
-                FROM members m
-                LEFT JOIN cells c ON c.id = m.cell_id
-                LEFT JOIN churches ch ON ch.id = m.church_id
-                WHERE ' . implode(' AND ', $where) . ' ORDER BY m.name ASC';
-        $stmt = $db->prepare($sql);
-        $stmt->execute($params);
-        $members = $stmt->fetchAll();
-    }
-  ?>
-  <?php endif; ?>
   <button type="submit" class="btn btn-secondary">Buscar</button>
   <?php if ($search || $status): ?>
     <a href="/pages/members/index.php" class="btn btn-secondary">Limpar</a>

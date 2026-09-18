@@ -10,13 +10,9 @@ $churchId = current_church_id();
 $search = trim($_GET['q']      ?? '');
 $status = trim($_GET['status'] ?? '');
 
-if ($churchId === SEDE_ID && auth_role() === 'supermaster') {
-    $where  = ['(m.church_id = :church_id OR ch.parent_id = :church_id)'];
-    $params = [':church_id' => SEDE_ID];
-} else {
-    $where  = ['m.church_id = :church_id'];
-    $params = [':church_id' => $churchId];
-}
+// Só a igreja selecionada
+$where  = ['m.church_id = :church_id'];
+$params = [':church_id' => $churchId];
 if ($search !== '') { $where[] = '(m.name LIKE :q OR m.phone LIKE :q OR m.email LIKE :q)'; $params[':q'] = "%$search%"; }
 if ($status !== '') { $where[] = 'm.status = :status'; $params[':status'] = $status; }
 
