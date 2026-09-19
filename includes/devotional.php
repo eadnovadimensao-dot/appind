@@ -59,7 +59,7 @@ function devotional_save_scriptures(PDO $db, int $devotionalId, array $rawRefs):
     return $unknown;
 }
 
-function devotional_message(PDO $db, array $dev, string $firstName, string $optOutUrl): string {
+function devotional_message(PDO $db, array $dev, string $firstName): string {
     $text = "Olá, {$firstName}! 👋\n\n🌅 *Devocional de hoje*\n*{$dev['title']}*";
     foreach (devotional_verse_blocks($db, (int)$dev['id']) as $b) {
         $text .= "\n\n📖 *{$b['reference']}*\n" . bible_format_text($b['verses']);
@@ -67,7 +67,6 @@ function devotional_message(PDO $db, array $dev, string $firstName, string $optO
     $text .= "\n\n" . trim($dev['body']);
     $text .= "\n\n✍️ {$dev['author_name']}";
     $text .= "\n_" . setting('church_name', 'Igreja', SEDE_ID) . "_";
-    $text .= "\n\nPara parar de receber o devocional: {$optOutUrl}";
     return $text;
 }
 
@@ -81,6 +80,11 @@ function devotional_token(PDO $db, int $memberId): string {
         $db->prepare("UPDATE members SET devotional_token = ? WHERE id = ?")->execute([$t, $memberId]);
     }
     return $t;
+}
+
+/** Link do botão "Parar de receber" (abre a página pública de descadastro). */
+function devotional_optout_url(PDO $db, int $memberId): string {
+    return APP_URL . '/devocional_sair.php?token=' . devotional_token($db, $memberId);
 }
 
 /**
@@ -122,9 +126,9 @@ function devotional_recipients(PDO $db): array {
 }
 
 function devotional_queue_for_member(PDO $db, array $dev, array $member): void {
-    $url  = APP_URL . '/devocional_sair.php?token=' . devotional_token($db, (int)$member['id']);
-    $msg  = devotional_message($db, $dev, explode(' ', trim($member['name']))[0], $url);
-    queue_whatsapp($member['phone'], $msg, (int)$member['church_id'], null, 0, null, 'devotional');
+    $url = devotional_optout_url($db, (int)$member['id']);
+    $msg = devotional_message($db, $dev, explode(' ', trim($member['name']))[0]);
+    queue_whatsapp($member['phone'], $msg, (int)$member['church_id'], [['label' => '🔕 Parar de receber', 'url' => $url]], 0, null, 'devotional');
 }
 
 /**
