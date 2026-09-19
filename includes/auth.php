@@ -68,6 +68,7 @@ function auth_member_redirect(): void {
             '/dashboard.php',
             '/pages/events/index.php',
             '/pages/communication/index.php',
+            '/pages/devotional/',
             '/logout.php',
             '/api/',
         ];

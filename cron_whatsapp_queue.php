@@ -28,7 +28,14 @@ try {
 } catch (\Throwable $e) {
     error_log('cron gerar cultos: ' . $e->getMessage());
 }
-// 2) Convida pro check-in quem ainda não foi convidado nos cultos de hoje
+// 2) Devocional agendado pra hoje: a partir das 6h enfileira pros membros
+try {
+    require_once __DIR__ . '/includes/devotional.php';
+    queue_due_devotionals($db);
+} catch (Throwable $e) {
+    error_log('cron devocional: ' . $e->getMessage());
+}
+// 3) Convida pro check-in quem ainda não foi convidado nos cultos de hoje
 try {
     require_once __DIR__ . '/includes/service_checkin.php';
     queue_service_checkins_for_today($db);
