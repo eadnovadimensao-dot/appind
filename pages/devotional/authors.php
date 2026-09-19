@@ -27,14 +27,16 @@ $authors = $db->query("
     ORDER BY m.name
 ")->fetchAll();
 
-// Candidatos: membros ativos da igreja selecionada no topo (troque de igreja pra ver as outras)
-$stmt = $db->prepare("
-    SELECT id, name FROM members
-    WHERE church_id = ? AND status = 'active' AND id NOT IN (SELECT member_id FROM devotional_authors)
-    ORDER BY name
-");
-$stmt->execute([current_church_id()]);
-$candidates = $stmt->fetchAll();
+// Candidatos: membros ativos de TODAS as igrejas (o devocional é único pra todas), agrupados por igreja
+$candidates = [];
+foreach ($db->query("
+    SELECT m.id, m.name, COALESCE(ch.name, 'Sem igreja') AS church_name, ch.type
+    FROM members m LEFT JOIN churches ch ON ch.id = m.church_id
+    WHERE m.status = 'active' AND m.id NOT IN (SELECT member_id FROM devotional_authors)
+    ORDER BY (ch.type = 'sede') DESC, ch.name, m.name
+")->fetchAll() as $c) {
+    $candidates[$c['church_name']][] = $c;
+}
 
 $pageTitle  = 'Quem pode escrever devocional';
 $activePage = 'devotional';
@@ -47,7 +49,7 @@ require_once __DIR__ . '/../../includes/layout.php';
 
 <div class="card" style="margin-bottom:16px;background:#F5F5F5;border:none">
   <p style="font-size:13px;line-height:1.7">
-    ✍️ O supermaster sempre pode escrever. Aqui você libera pastores (de qualquer igreja) pra escrever e enviar devocionais.
+    ✍️ O supermaster sempre pode escrever. Aqui você libera pastores (da Sede ou de qualquer filial) pra escrever e enviar devocionais.
     Cada um só edita os próprios devocionais, e a assinatura na mensagem é o nome de quem escreveu.
   </p>
 </div>
@@ -73,7 +75,11 @@ require_once __DIR__ . '/../../includes/layout.php';
     <input type="hidden" name="action" value="add">
     <select name="member_id" class="form-control" style="flex:1;min-width:220px" required>
       <option value="">Selecione o membro…</option>
-      <?php foreach ($candidates as $c): ?><option value="<?= $c['id'] ?>"><?= htmlspecialchars($c['name']) ?></option><?php endforeach; ?>
+      <?php foreach ($candidates as $churchName => $list): ?>
+        <optgroup label="<?= htmlspecialchars($churchName) ?>">
+          <?php foreach ($list as $c): ?><option value="<?= $c['id'] ?>"><?= htmlspecialchars($c['name']) ?></option><?php endforeach; ?>
+        </optgroup>
+      <?php endforeach; ?>
     </select>
     <button type="submit" class="btn btn-primary">Liberar</button>
   </form>
