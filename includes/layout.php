@@ -21,6 +21,7 @@ $navItems = [
   ['href' => '/pages/ministries/index.php',     'icon' => 'ti-star',             'label' => 'Ministérios',  'key' => 'ministries'],
   ['href' => '/pages/users/index.php',          'icon' => 'ti-lock',             'label' => 'Usuários',     'key' => 'users'],
   ['href' => '/pages/branches.php',             'icon' => 'ti-building',         'label' => 'Filiais',      'key' => 'branches'],
+  ['href' => '/pages/whatsapp.php',             'icon' => 'ti-brand-whatsapp',  'label' => 'WhatsApp',     'key' => 'whatsapp'],
   ['href' => '/pages/settings.php',             'icon' => 'ti-settings',         'label' => 'Configurações','key' => 'settings'],
 ];
 ?>
@@ -89,7 +90,7 @@ if (window.innerWidth <= 900) {
       }
 
       foreach ($navItems as $item):
-        if ($item['key'] === 'branches' && $role !== 'supermaster') continue; // Filiais: só supermaster
+        if (in_array($item['key'], ['branches','whatsapp']) && $role !== 'supermaster') continue; // Filiais e WhatsApp: só supermaster
         if ($role === 'member') {
           $memberAllowed = ['dashboard','events','communication','offering','devotional'];
           if ($memberCellId) $memberAllowed[] = 'cells';
