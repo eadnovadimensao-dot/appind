@@ -64,8 +64,8 @@ if (!zapi_is_connected(SEDE_ID)) {
     exit("Paused: WhatsApp desconectado (fila mantida)\n");
 }
 
-// 3) teto diário: o que passar dele fica pra amanhã
-const WA_DAILY_CAP = 100;
+// 3) teto diário de segurança (só contra erro de laço/duplicação, não pra frear o uso normal)
+const WA_DAILY_CAP = 300;
 $sentToday = (int)$db->query("SELECT COUNT(*) FROM whatsapp_queue WHERE status = 'sent' AND sent_at >= CURDATE()")->fetchColumn();
 $room = WA_DAILY_CAP - $sentToday;
 if ($room <= 0) {
