@@ -123,12 +123,12 @@ if (window.innerWidth <= 900) {
 
     <div class="sb-footer">
       <?php
-        $roleLabels = ['supermaster'=>'Supermaster','admin'=>'Administrador','leader'=>'Líder','cell_leader'=>'Líder de célula','member'=>'Membro'];
+        $sbRoleLabels = ['supermaster'=>'Supermaster','admin'=>'Administrador','leader'=>'Líder','cell_leader'=>'Líder de célula','member'=>'Membro'];
       ?>
       <div class="sb-user">
         <a href="/pages/members/profile.php" class="sb-user-text" title="Meu perfil">
           <div class="sb-user-name"><?= htmlspecialchars(auth_user()['name'] ?? '') ?></div>
-          <div class="sb-user-role"><?= htmlspecialchars($roleLabels[auth_role()] ?? ucfirst(auth_role())) ?></div>
+          <div class="sb-user-role"><?= htmlspecialchars($sbRoleLabels[auth_role()] ?? ucfirst(auth_role())) ?></div>
         </a>
         <a href="/logout.php" class="sb-logout" title="Sair" aria-label="Sair"><i class="ti ti-logout"></i></a>
       </div>
