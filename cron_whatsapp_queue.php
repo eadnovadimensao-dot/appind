@@ -20,6 +20,14 @@ set_time_limit(90);
 
 $db = db();
 
+// Só uma execução por vez (o lock some sozinho quando a execução termina): se duas
+// chamadas coincidirem (várias linhas de cron, execução manual), a segunda sai
+// em vez de mandar a mesma mensagem duas vezes.
+if (!$db->query("SELECT GET_LOCK('wa_queue_cron', 0)")->fetchColumn()) {
+    header('Content-Type: text/plain; charset=utf-8');
+    exit("busy\n");
+}
+
 // Rotinas do culto. Se qualquer uma falhar, não pode impedir o envio da fila logo abaixo.
 // 1) Garante os próximos domingos criados a partir do modelo (idempotente)
 try {
