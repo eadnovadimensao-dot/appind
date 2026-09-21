@@ -36,16 +36,10 @@ $scale->execute([$id]);
 $scale = $scale->fetchAll();
 
 // Check-in geral de culto
-$checkins = $db->prepare("
-    SELECT sci.checked_in_at, m.name AS member_name
-    FROM service_checkins sci
-    JOIN members m ON m.id = sci.member_id
-    WHERE sci.service_id = ?
-    ORDER BY sci.checked_in_at IS NULL, sci.checked_in_at DESC, m.name
-");
-$checkins->execute([$id]);
-$checkins = $checkins->fetchAll();
-$checkedInCount = count(array_filter($checkins, fn($c) => $c['checked_in_at']));
+require_once __DIR__ . '/../../includes/service_checkin.php';
+$att       = service_attendance($db, $service);
+$attTotal  = count($att['rows']);
+$visitors  = (int)($service['visitors_count'] ?? 0);
 
 $pageTitle  = $service['title'];
 $activePage = 'services';
@@ -211,30 +205,16 @@ $totalMin = array_sum(array_column($items, 'duration'));
     <!-- Presença -->
     <div class="card" style="padding:0">
       <div style="padding:14px 18px;border-bottom:1px solid var(--border)">
-        <p style="font-weight:500;font-size:14px">
-          🙋 Presença
-          <span style="color:var(--text-muted);font-weight:400">
-            (<?= $checkedInCount ?> confirmado<?= $checkedInCount === 1 ? '' : 's' ?><?= count($checkins) ? ' de ' . count($checkins) . ' convidados' : '' ?>)
-          </span>
-        </p>
+        <p style="font-weight:500;font-size:14px">🙋 Presença</p>
       </div>
-      <?php if ($checkedInCount === 0): ?>
-        <div class="empty-state" style="padding:20px;font-size:13px">
-          <?= empty($checkins) ? 'Convite de check-in ainda não enviado.' : 'Ninguém confirmou presença ainda.' ?>
-        </div>
-      <?php else: ?>
-        <?php foreach ($checkins as $c): if (!$c['checked_in_at']) continue; ?>
-          <div style="display:flex;align-items:center;gap:10px;padding:10px 14px;border-bottom:1px solid var(--border)">
-            <div class="avatar" style="width:30px;height:30px;font-size:11px;flex-shrink:0">
-              <?= strtoupper(substr($c['member_name'],0,2)) ?>
-            </div>
-            <div style="flex:1;min-width:0">
-              <div style="font-size:13px;font-weight:500"><?= htmlspecialchars($c['member_name']) ?></div>
-            </div>
-            <span style="font-size:11px;color:var(--text-muted);flex-shrink:0"><?= date('H:i', strtotime($c['checked_in_at'])) ?></span>
-          </div>
-        <?php endforeach; ?>
-      <?php endif; ?>
+      <div style="padding:16px 18px;font-size:13px;line-height:1.8">
+        <div><strong style="font-size:20px;color:var(--accent)"><?= $att["present"] ?></strong> de <?= $attTotal ?> membros presentes
+          <?= $attTotal ? "(" . round($att["present"] / $attTotal * 100) . "%)" : "" ?></div>
+        <?php if ($visitors): ?><div style="color:var(--text-muted)">+ <?= $visitors ?> visitante<?= $visitors === 1 ? "" : "s" ?></div><?php endif; ?>
+        <?php if (auth_can_take_attendance()): ?>
+          <a href="/pages/services/attendance.php?id=<?= $id ?>" class="btn btn-primary" style="margin-top:10px;display:inline-block">📋 Controle de presença</a>
+        <?php endif; ?>
+      </div>
     </div>
 
     <!-- Observações -->

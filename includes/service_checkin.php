@@ -80,3 +80,61 @@ function queue_service_checkins_for_today(PDO $db): void {
         queue_service_checkins($db, (int)$s['id'], $s['title'], $s['service_date'], $s['time_start'], (int)$s['church_id']);
     }
 }
+
+/** Pode ver e marcar presença: supermaster, supervisor de culto ou admin/pastor. */
+function auth_can_take_attendance(): bool {
+    return auth_can_edit_services() || auth_can('manage_members');
+}
+
+/**
+ * Presença de um culto, uma linha por membro ativo da igreja:
+ * status 'present' (via WhatsApp, marcação manual ou escala do ministério),
+ * 'invited' (convite enviado, sem resposta) ou 'none' (sem convite).
+ * Retorna ['rows' => [...], 'present' => n, 'invited' => n].
+ */
+function service_attendance(PDO $db, array $service): array {
+    $sid = (int)$service['id'];
+    $cid = (int)$service['church_id'];
+
+    $sc = [];
+    $q = $db->prepare("SELECT member_id, checked_in_at, checkin_source FROM service_checkins WHERE service_id = ?");
+    $q->execute([$sid]);
+    foreach ($q->fetchAll() as $r) $sc[(int)$r['member_id']] = $r;
+
+    $mam = [];
+    $q = $db->prepare("
+        SELECT mam.member_id, MIN(mam.checked_in_at) AS at
+        FROM ministry_activity_members mam
+        JOIN ministry_activities ma ON ma.id = mam.activity_id
+        WHERE ma.activity_date = ? AND ma.church_id = ? AND mam.checked_in_at IS NOT NULL
+        GROUP BY mam.member_id
+    ");
+    $q->execute([$service['service_date'], $cid]);
+    foreach ($q->fetchAll() as $r) $mam[(int)$r['member_id']] = $r['at'];
+
+    $scaled = [];
+    $q = $db->prepare("SELECT member_id FROM service_scale WHERE service_id = ?");
+    $q->execute([$sid]);
+    foreach ($q->fetchAll(PDO::FETCH_COLUMN) as $m) $scaled[(int)$m] = true;
+
+    $q = $db->prepare("SELECT id, name, phone FROM members WHERE church_id = ? AND status = 'active' ORDER BY name");
+    $q->execute([$cid]);
+
+    $rows = []; $present = 0; $invited = 0;
+    foreach ($q->fetchAll() as $m) {
+        $id = (int)$m['id'];
+        $status = 'none'; $source = null; $at = null;
+        if (!empty($sc[$id]['checked_in_at'])) {
+            $status = 'present'; $source = $sc[$id]['checkin_source'] ?: 'whatsapp'; $at = $sc[$id]['checked_in_at'];
+        } elseif (isset($mam[$id])) {
+            $status = 'present'; $source = 'escala'; $at = $mam[$id];
+        } elseif (isset($sc[$id])) {
+            $status = 'invited';
+        }
+        if ($status === 'present') $present++;
+        if ($status === 'invited') $invited++;
+        $rows[] = ['id' => $id, 'name' => $m['name'], 'phone' => $m['phone'], 'status' => $status,
+                   'source' => $source, 'at' => $at, 'scaled' => isset($scaled[$id])];
+    }
+    return ['rows' => $rows, 'present' => $present, 'invited' => $invited];
+}
