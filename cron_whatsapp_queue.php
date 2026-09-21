@@ -51,14 +51,38 @@ try {
     error_log('cron checkin: ' . $e->getMessage());
 }
 
+// Proteção do número (o WhatsApp bloqueou por 24h depois de 135 envios num dia):
+// 1) convite de check-in que não saiu em 3h perdeu o sentido: vence, não vai depois
+$db->exec("UPDATE whatsapp_queue SET status = 'expired'
+           WHERE status = 'pending' AND kind = 'checkin'
+             AND COALESCE(not_before, created_at) < DATE_SUB(NOW(), INTERVAL 3 HOUR)");
+
+header('Content-Type: text/plain; charset=utf-8');
+
+// 2) número desconectado: segura a fila inteira, sem gastar tentativas
+if (!zapi_is_connected(SEDE_ID)) {
+    exit("Paused: WhatsApp desconectado (fila mantida)\n");
+}
+
+// 3) teto diário: o que passar dele fica pra amanhã
+const WA_DAILY_CAP = 100;
+$sentToday = (int)$db->query("SELECT COUNT(*) FROM whatsapp_queue WHERE status = 'sent' AND sent_at >= CURDATE()")->fetchColumn();
+$room = WA_DAILY_CAP - $sentToday;
+if ($room <= 0) {
+    exit("Paused: teto diário de " . WA_DAILY_CAP . " mensagens atingido\n");
+}
+
 // Até 4 mensagens por execução — o cron rodando a cada minuto já dá uma
 // cadência humana; a pausa abaixo evita rajada mesmo dentro dessa leva.
+// Prioridade: avisos de culto primeiro, devocional (volume alto, não urgente) por último.
+$limit = min(4, $room);
 $batch = $db->query("
     SELECT * FROM whatsapp_queue
     WHERE status = 'pending' AND attempts < 3
       AND (not_before IS NULL OR not_before <= NOW())
-    ORDER BY created_at ASC
-    LIMIT 4
+    ORDER BY CASE kind WHEN 'checkin' THEN 1 WHEN 'program' THEN 2 WHEN 'meditation' THEN 3 WHEN 'devotional' THEN 5 ELSE 4 END,
+             created_at ASC
+    LIMIT $limit
 ")->fetchAll();
 
 $sent = 0;
@@ -74,6 +98,8 @@ foreach ($batch as $i => $item) {
         $db->prepare("UPDATE whatsapp_queue SET status='sent', sent_at=NOW() WHERE id=?")->execute([$item['id']]);
         $sent++;
     } else {
+        // Falhou porque o número caiu no meio da leva? Para tudo, sem queimar tentativas
+        if (!zapi_is_connected(SEDE_ID)) break;
         $attempts = $item['attempts'] + 1;
         $status   = $attempts >= 3 ? 'failed' : 'pending';
         $db->prepare("UPDATE whatsapp_queue SET attempts=?, status=? WHERE id=?")->execute([$attempts, $status, $item['id']]);
@@ -89,5 +115,4 @@ foreach ($batch as $i => $item) {
 // Limpeza: some com registros antigos já processados (mantém a tabela enxuta)
 $db->exec("DELETE FROM whatsapp_queue WHERE status IN ('sent','failed') AND created_at < DATE_SUB(NOW(), INTERVAL 7 DAY)");
 
-header('Content-Type: text/plain; charset=utf-8');
 echo "Processed: " . count($batch) . " | sent: $sent | failed: $failed\n";
