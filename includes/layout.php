@@ -78,32 +78,32 @@ if (window.innerWidth <= 900) {
 
     <nav class="sb-nav">
       <?php
-      $role     = auth_role();
-      $memberId = auth_member_id();
+      $role       = auth_role();
+      $memberId   = auth_member_id();
       $inMinistry = false;
-      $memberCellId = null;
+      $relatedCells = [];
 
       if ($memberId && $role === 'member') {
-          $mInfo = db()->query("SELECT cell_id FROM members WHERE id=$memberId")->fetch();
-          $memberCellId = $mInfo['cell_id'] ?? null;
-          $inMinistry = (bool)db()->query("SELECT COUNT(*) FROM member_ministries WHERE member_id=$memberId")->fetchColumn();
-          // Anfitrião de célula diferente da própria também precisa de um jeito de chegar lá
-          if (!$memberCellId) {
-              $memberCellId = db()->query("SELECT cell_id FROM cell_hosts WHERE member_id=$memberId LIMIT 1")->fetchColumn() ?: null;
-          }
+          $relatedCells = member_related_cells($memberId);
+          $inMinistry   = (bool)db()->query("SELECT COUNT(*) FROM member_ministries WHERE member_id=$memberId")->fetchColumn();
       }
 
       foreach ($navItems as $item):
         if (in_array($item['key'], ['branches','whatsapp']) && $role !== 'supermaster') continue; // Filiais e WhatsApp: só supermaster
         if ($role === 'member') {
           $memberAllowed = ['dashboard','events','communication','offering','devotional'];
-          if ($memberCellId) $memberAllowed[] = 'cells';
+          if ($relatedCells) $memberAllowed[] = 'cells';
           if ($inMinistry) $memberAllowed[] = 'ministries';
           if (!in_array($item['key'], $memberAllowed)) continue;
-          // Célula: redirecionar direto para a célula do membro (ou a que ele recebe em casa)
+          // Célula: com uma só, vai direto; com mais de uma (ex: supervisor de várias), lista
           if ($item['key'] === 'cells') {
-            $item['href'] = '/pages/cells/view.php?id=' . $memberCellId;
-            $item['label'] = 'Minha Célula';
+            if (count($relatedCells) === 1) {
+              $item['href']  = '/pages/cells/view.php?id=' . $relatedCells[0]['id'];
+              $item['label'] = 'Minha Célula';
+            } else {
+              $item['href']  = '/pages/cells/my_cells.php';
+              $item['label'] = 'Minhas Células';
+            }
           }
         }
         if ($role === 'leader') {

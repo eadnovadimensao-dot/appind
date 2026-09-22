@@ -73,11 +73,11 @@ function auth_member_redirect(): void {
             '/api/',
         ];
 
-        // Pode ver própria célula, ou a que recebe em casa como anfitrião
+        // Pode ver as células com que tem alguma relação (própria, lidera,
+        // supervisiona ou recebe em casa) e a lista "Minhas células"
         if ($memberId) {
-            $cell = $db->query("SELECT cell_id FROM members WHERE id=$memberId")->fetchColumn();
-            $isHost = (bool)$db->query("SELECT 1 FROM cell_hosts WHERE member_id=$memberId LIMIT 1")->fetchColumn();
-            if ($cell || $isHost) {
+            $allowed[] = '/pages/cells/my_cells.php';
+            if (member_related_cells($memberId)) {
                 $allowed[] = '/pages/cells/view.php';
             }
         }
@@ -250,19 +250,47 @@ function auth_member_in_ministry(int $ministryId): bool {
     return (bool)$stmt->fetchColumn();
 }
 
+/**
+ * Todas as células com que o membro tem alguma relação: a própria (membro),
+ * as que lidera, as que supervisiona e as que recebe em casa (anfitrião).
+ * Uma célula pode aparecer com mais de um papel ao mesmo tempo (ex: líder
+ * que também é anfitrião). Usado tanto pra liberar acesso quanto pra listar
+ * "Minhas células" no menu.
+ */
+function member_related_cells(int $memberId): array {
+    $db = db();
+    $cells = [];
+
+    $own = $db->prepare("SELECT c.id, c.name FROM members m JOIN cells c ON c.id = m.cell_id WHERE m.id = ?");
+    $own->execute([$memberId]);
+    $own = $own->fetch();
+    if ($own) $cells[$own['id']] = ['id' => (int)$own['id'], 'name' => $own['name'], 'roles' => ['membro']];
+
+    $rels = ['cell_leaders' => 'líder', 'cell_supervisors' => 'supervisor', 'cell_hosts' => 'anfitrião'];
+    foreach ($rels as $table => $roleLabel) {
+        $stmt = $db->prepare("SELECT c.id, c.name FROM $table t JOIN cells c ON c.id = t.cell_id WHERE t.member_id = ?");
+        $stmt->execute([$memberId]);
+        foreach ($stmt->fetchAll() as $c) {
+            $id = (int)$c['id'];
+            if (!isset($cells[$id])) $cells[$id] = ['id' => $id, 'name' => $c['name'], 'roles' => []];
+            $cells[$id]['roles'][] = $roleLabel;
+        }
+    }
+
+    return array_values($cells);
+}
+
 // Além de quem tem essa célula como a própria (members.cell_id), também vê
-// quem foi definido como anfitrião: recebe a célula em casa mesmo que, por
-// algum motivo, não esteja com o cell_id apontando pra ela.
+// quem lidera, supervisiona ou recebe (anfitrião) a célula — mesmo que não
+// seja formalmente membro dela.
 function auth_member_in_cell(int $cellId): bool {
     if (auth_role() !== 'member') return true;
     $me = auth_member_id();
     if (!$me) return false;
-    $stmt = db()->prepare("SELECT 1 FROM members WHERE id = ? AND cell_id = ? LIMIT 1");
-    $stmt->execute([$me, $cellId]);
-    if ($stmt->fetchColumn()) return true;
-    $stmt = db()->prepare("SELECT 1 FROM cell_hosts WHERE cell_id = ? AND member_id = ? LIMIT 1");
-    $stmt->execute([$cellId, $me]);
-    return (bool)$stmt->fetchColumn();
+    foreach (member_related_cells($me) as $c) {
+        if ($c['id'] === $cellId) return true;
+    }
+    return false;
 }
 
 function auth_require(string $permission): void {
