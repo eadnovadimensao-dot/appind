@@ -17,6 +17,22 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     $d->execute([$id, $churchId]);
     $d = $d->fetch();
 
+    if ($d && $action === 'discipler_decide' && $memberId === (int)$d['discipler_member_id'] && $d['status'] === 'pending_discipler') {
+        $approve = ($_POST['approve'] ?? '') === '1';
+        $status  = $approve ? 'pending_leader' : 'rejected';
+        $db->prepare("UPDATE discipleships SET status=?, discipler_decided_by=?, discipler_decided_at=NOW(), discipler_approved=?, discipler_notes=? WHERE id=?")
+           ->execute([$status, $memberId, $approve ? 1 : 0, trim($_POST['notes'] ?? '') ?: null, $id]);
+        $full = $db->prepare("SELECT d.*, c.name AS cell_name, ds.name AS discipler_name FROM discipleships d JOIN cells c ON c.id=d.cell_id JOIN members ds ON ds.id=d.discipler_member_id WHERE d.id=?");
+        $full->execute([$id]);
+        if ($approve) {
+            discipleship_notify_leader($db, $id);
+        } else {
+            discipleship_notify_discipler_declined($db, $full->fetch());
+        }
+        header('Location: /pages/discipleship/index.php?ok=1');
+        exit;
+    }
+
     if ($d && $action === 'leader_decide' && auth_can_decide_discipleship_as_leader((int)$d['cell_id']) && $d['status'] === 'pending_leader') {
         $approve = ($_POST['approve'] ?? '') === '1';
         $status  = $approve ? 'pending_coordination' : 'rejected';
@@ -62,6 +78,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 
 $myDiscipleship = $memberId ? member_current_discipleship_as_disciple($db, $memberId) : null;
 $myDisciples    = $memberId ? member_current_disciples($db, $memberId) : [];
+$myInvites      = $memberId ? member_pending_discipler_invites($db, $memberId) : [];
 $pendingLeader  = discipleships_pending_leader($db, $churchId);
 $pendingCoord   = $isCoordinator ? discipleships_pending_coordination($db, $churchId) : [];
 $activeAll      = $isCoordinator ? discipleships_active($db, $churchId) : [];
@@ -72,6 +89,7 @@ if ($memberId) {
 }
 
 $statusLabels = [
+    'pending_discipler'    => ['label' => 'Aguardando aceite',     'badge' => 'badge-amber'],
     'pending_leader'       => ['label' => 'Aguardando líder',      'badge' => 'badge-amber'],
     'pending_coordination' => ['label' => 'Aguardando coordenação','badge' => 'badge-amber'],
     'active'               => ['label' => 'Em andamento',          'badge' => 'badge-green'],
@@ -93,8 +111,9 @@ require_once __DIR__ . '/../../includes/layout.php';
 
 <div class="card" style="margin-bottom:16px;background:#F5F5F5;border:none">
   <p style="font-size:13px;line-height:1.7">
-    🤝 O discipulado acontece dentro da célula: você escolhe alguém da sua própria célula que já concluiu o 1º Passo,
-    o líder da célula dá o aval e a coordenação do discipulado confirma. Só depois disso o acompanhamento começa.
+    🤝 O discipulado acontece dentro da célula: você escolhe alguém da sua própria célula que já concluiu o 1º Passo.
+    Essa pessoa precisa aceitar, depois o líder da célula dá o aval e a coordenação do discipulado confirma.
+    Só depois de tudo isso o acompanhamento começa.
   </p>
 </div>
 
@@ -120,6 +139,30 @@ require_once __DIR__ . '/../../includes/layout.php';
     <?php endif; ?>
   </div>
 </div>
+
+<!-- Convites de discipulado aguardando minha resposta -->
+<?php if ($myInvites): ?>
+<div class="card" style="padding:0;margin-bottom:16px">
+  <div style="padding:14px 18px;border-bottom:1px solid var(--border)">
+    <p style="font-weight:500;font-size:14px">💌 Convites pra discipular <span style="color:var(--text-muted);font-weight:400">(<?= count($myInvites) ?>)</span></p>
+  </div>
+  <?php foreach ($myInvites as $d): ?>
+    <div style="padding:14px 18px;border-bottom:1px solid var(--border)">
+      <p style="font-size:13px;margin-bottom:8px">
+        <strong><?= htmlspecialchars($d['disciple_name']) ?></strong> gostaria que você fosse discipulador(a) dela(e)
+        · Célula <?= htmlspecialchars($d['cell_name']) ?>
+      </p>
+      <form method="POST" style="display:flex;gap:8px">
+        <input type="hidden" name="action" value="discipler_decide">
+        <input type="hidden" name="id" value="<?= $d['id'] ?>">
+        <button type="submit" name="approve" value="1" class="btn btn-primary" style="font-size:12px;padding:6px 14px">✅ Aceito</button>
+        <button type="submit" name="approve" value="0" class="btn btn-secondary" style="font-size:12px;padding:6px 14px;color:var(--red)"
+                data-confirm="Recusar esse convite?">❌ Não posso agora</button>
+      </form>
+    </div>
+  <?php endforeach; ?>
+</div>
+<?php endif; ?>
 
 <!-- Quem estou discipulando -->
 <?php if ($myDisciples): ?>

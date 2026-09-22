@@ -89,7 +89,8 @@ if (window.innerWidth <= 900) {
       if ($memberId && $role === 'member') {
           $relatedCells   = member_related_cells($memberId);
           $inMinistry     = (bool)db()->query("SELECT COUNT(*) FROM member_ministries WHERE member_id=$memberId")->fetchColumn();
-          $hasDiscipleship = member_current_discipleship_as_disciple(db(), $memberId) || member_current_disciples(db(), $memberId) || auth_is_discipleship_coordinator();
+          $hasDiscipleship = member_current_discipleship_as_disciple(db(), $memberId) || member_current_disciples(db(), $memberId)
+                              || member_pending_discipler_invites(db(), $memberId) || auth_is_discipleship_coordinator();
       }
 
       foreach ($navItems as $item):

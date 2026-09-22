@@ -1,9 +1,10 @@
 <?php
 // Discipulado um a um dentro da célula: o membro escolhe um discipulador da
-// própria célula (que já tenha concluído o 1º Passo), o líder da célula dá o
-// aval e a coordenação do discipulado confirma. Só depois disso começa.
-// Fluxo de status: pending_leader -> pending_coordination -> active -> (completed | cancelled)
-// Pode ser recusado em qualquer uma das duas aprovações: rejected.
+// própria célula (que já tenha concluído o 1º Passo). Antes de qualquer coisa,
+// a pessoa escolhida precisa aceitar — ninguém vira discipulador sem topar.
+// Só depois disso o líder da célula dá o aval e a coordenação confirma.
+// Fluxo de status: pending_discipler -> pending_leader -> pending_coordination -> active -> (completed | cancelled)
+// Pode ser recusado em qualquer uma das três etapas: rejected (não trava pedido futuro).
 
 const DISCIPLESHIP_STEP_LABELS = [0 => 'Nenhum', 1 => '1º Passo concluído', 2 => '2º Passo concluído'];
 
@@ -33,7 +34,7 @@ function member_current_discipleship_as_disciple(PDO $db, int $memberId): ?array
         FROM discipleships d
         JOIN cells c ON c.id = d.cell_id
         JOIN members ds ON ds.id = d.discipler_member_id
-        WHERE d.disciple_member_id = ? AND d.status IN ('pending_leader','pending_coordination','active')
+        WHERE d.disciple_member_id = ? AND d.status IN ('pending_discipler','pending_leader','pending_coordination','active')
         ORDER BY d.id DESC LIMIT 1
     ");
     $q->execute([$memberId]);
@@ -49,6 +50,20 @@ function member_current_disciples(PDO $db, int $memberId): array {
         JOIN members dc ON dc.id = d.disciple_member_id
         WHERE d.discipler_member_id = ? AND d.status IN ('pending_leader','pending_coordination','active')
         ORDER BY d.requested_at DESC
+    ");
+    $q->execute([$memberId]);
+    return $q->fetchAll();
+}
+
+/** Convites aguardando resposta desse membro como discipulador escolhido. */
+function member_pending_discipler_invites(PDO $db, int $memberId): array {
+    $q = $db->prepare("
+        SELECT d.*, c.name AS cell_name, dc.name AS disciple_name
+        FROM discipleships d
+        JOIN cells c ON c.id = d.cell_id
+        JOIN members dc ON dc.id = d.disciple_member_id
+        WHERE d.discipler_member_id = ? AND d.status = 'pending_discipler'
+        ORDER BY d.requested_at
     ");
     $q->execute([$memberId]);
     return $q->fetchAll();
@@ -121,14 +136,38 @@ function discipleship_request(PDO $db, int $discipleId, int $disciplerId): ?stri
     if ((int)$discipler['cell_id'] !== (int)$disciple['cell_id']) return 'O discipulador precisa ser da sua própria célula.';
     if ((int)$discipler['discipleship_step'] < 1) return htmlspecialchars($discipler['name']) . ' ainda não concluiu o 1º Passo.';
 
+    $token = bin2hex(random_bytes(32));
     $db->prepare("
-        INSERT INTO discipleships (church_id, cell_id, disciple_member_id, discipler_member_id, status)
-        VALUES (?,?,?,?,'pending_leader')
-    ")->execute([$disciple['church_id'], $disciple['cell_id'], $discipleId, $disciplerId]);
+        INSERT INTO discipleships (church_id, cell_id, disciple_member_id, discipler_member_id, status, decision_token)
+        VALUES (?,?,?,?,'pending_discipler',?)
+    ")->execute([$disciple['church_id'], $disciple['cell_id'], $discipleId, $disciplerId, $token]);
 
     $id = (int)$db->lastInsertId();
-    discipleship_notify_leader($db, $id);
+    discipleship_notify_discipler($db, $id);
     return null;
+}
+
+/** Avisa a pessoa escolhida, com um link de um toque (sem precisar entrar no sistema) pra aceitar ou recusar. */
+function discipleship_notify_discipler(PDO $db, int $discipleshipId): void {
+    $d = $db->prepare("
+        SELECT d.*, c.name AS cell_name, dc.name AS disciple_name, ds.name AS discipler_name, ds.phone AS discipler_phone
+        FROM discipleships d
+        JOIN cells c ON c.id = d.cell_id
+        JOIN members dc ON dc.id = d.disciple_member_id
+        JOIN members ds ON ds.id = d.discipler_member_id
+        WHERE d.id = ?
+    ");
+    $d->execute([$discipleshipId]);
+    $d = $d->fetch();
+    if (!$d || !$d['discipler_phone']) return;
+
+    $first = explode(' ', trim($d['discipler_name']))[0];
+    $msg = "🤝 *Convite pra discipular*\n\nOlá, {$first}! {$d['disciple_name']}, da célula {$d['cell_name']}, gostaria que você fosse discipulador(a) dela(e).\n\nVocê topa caminhar com essa pessoa?";
+    $buttons = [
+        ['label' => '✅ Aceito',       'url' => APP_URL . '/pages/discipleship/respond.php?token=' . $d['decision_token'] . '&action=accept'],
+        ['label' => '❌ Não posso agora', 'url' => APP_URL . '/pages/discipleship/respond.php?token=' . $d['decision_token'] . '&action=decline'],
+    ];
+    queue_whatsapp($d['discipler_phone'], $msg, (int)$d['church_id'], $buttons, 0, null, 'discipleship');
 }
 
 /** Avisa por WhatsApp quem gerencia a célula (líder/admin) que há um pedido pra avaliar. */
@@ -179,6 +218,17 @@ function discipleship_notify_coordination(PDO $db, int $discipleshipId): void {
     foreach ($coords->fetchAll() as $c) {
         queue_whatsapp($c['phone'], $msg, (int)$d['church_id'], null, 0, null, 'discipleship');
     }
+}
+
+/** A pessoa escolhida recusou: só o discípulo precisa saber (o discipulador já sabe, foi ele que recusou). */
+function discipleship_notify_discipler_declined(PDO $db, array $d): void {
+    $p = $db->prepare("SELECT phone, name FROM members WHERE id = ?");
+    $p->execute([$d['disciple_member_id']]);
+    $p = $p->fetch();
+    if (!$p || !$p['phone']) return;
+    $first = explode(' ', trim($p['name']))[0];
+    $msg = "Olá, {$first}. {$d['discipler_name']} não pôde aceitar ser seu(sua) discipulador(a) agora. Você já pode escolher outra pessoa da célula {$d['cell_name']}.";
+    queue_whatsapp($p['phone'], $msg, (int)$d['church_id'], null, 0, null, 'discipleship');
 }
 
 /** Avisa discípulo e discipulador que o discipulado começou de verdade, ou que foi recusado. */
