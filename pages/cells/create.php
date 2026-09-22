@@ -14,6 +14,7 @@ $days = ['monday'=>'Segunda-feira','tuesday'=>'Terça-feira','wednesday'=>'Quart
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     $name         = trim($_POST['name']         ?? '');
     $leaderIds    = $_POST['leader_ids']         ?? [];
+    $supervisorId = trim($_POST['supervisor_id'] ?? '') ?: null;
     $day          = trim($_POST['day_of_week']   ?? '') ?: null;
     $time         = trim($_POST['time_start']    ?? '') ?: null;
     $zip          = trim($_POST['zip_code']      ?? '');
@@ -27,20 +28,21 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 
     if (empty($errors)) {
         $stmt = $db->prepare("
-            INSERT INTO cells (church_id, name, day_of_week, time_start, zip_code, street, number, neighborhood, city, active)
-            VALUES (:church_id,:name,:day,:time,:zip,:street,:number,:neighborhood,:city,:active)
+            INSERT INTO cells (church_id, name, day_of_week, time_start, zip_code, street, number, neighborhood, city, active, supervisor_id)
+            VALUES (:church_id,:name,:day,:time,:zip,:street,:number,:neighborhood,:city,:active,:supervisor_id)
         ");
         $stmt->execute([
-            ':church_id'    => $churchId,
-            ':name'         => $name,
-            ':day'          => $day,
-            ':time'         => $time,
-            ':zip'          => $zip ?: null,
-            ':street'       => $street ?: null,
-            ':number'       => $number ?: null,
-            ':neighborhood' => $neighborhood ?: null,
-            ':city'         => $city ?: null,
-            ':active'       => $active,
+            ':church_id'     => $churchId,
+            ':name'          => $name,
+            ':day'           => $day,
+            ':time'          => $time,
+            ':zip'           => $zip ?: null,
+            ':street'        => $street ?: null,
+            ':number'        => $number ?: null,
+            ':neighborhood'  => $neighborhood ?: null,
+            ':city'          => $city ?: null,
+            ':active'        => $active,
+            ':supervisor_id' => $supervisorId,
         ]);
         $cellId = $db->lastInsertId();
 
@@ -128,6 +130,16 @@ require_once __DIR__ . '/../../includes/layout.php';
         <?php endforeach; ?>
       </div>
       <span style="font-size:11px;color:var(--text-muted)">O primeiro selecionado será o líder principal</span>
+    </div>
+
+    <div class="form-group" style="margin-bottom:0">
+      <label class="form-label">Supervisor <span style="font-weight:400;color:var(--text-muted)">(quem acompanha essa célula)</span></label>
+      <select name="supervisor_id" class="form-control">
+        <option value="">Sem supervisor definido</option>
+        <?php foreach ($members_list as $m): ?>
+          <option value="<?= $m['id'] ?>" <?= ($_POST['supervisor_id'] ?? '') == $m['id'] ? 'selected' : '' ?>><?= htmlspecialchars($m['name']) ?></option>
+        <?php endforeach; ?>
+      </select>
     </div>
   </div>
 

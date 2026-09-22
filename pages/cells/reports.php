@@ -58,6 +58,15 @@ $reports = $reports->fetchAll();
         </thead>
         <tbody>
           <?php foreach ($reports as $r): ?>
+            <?php if (!$r['happened']): ?>
+            <tr>
+              <td style="font-weight:500"><?= date('d/m/Y', strtotime($r['report_date'])) ?></td>
+              <td colspan="4"><span class="badge badge-gray">Não houve reunião</span> <span style="color:var(--text-muted);font-size:12px"><?= htmlspecialchars($r['no_meeting_reason'] ?? '') ?></span></td>
+              <td style="text-align:right">
+                <a href="/pages/cells/report_view.php?id=<?= $r['id'] ?>" class="btn btn-secondary" style="font-size:12px;padding:5px 12px">Ver</a>
+              </td>
+            </tr>
+            <?php else: ?>
             <tr>
               <td style="font-weight:500"><?= date('d/m/Y', strtotime($r['report_date'])) ?></td>
               <td style="color:var(--text-muted)"><?= htmlspecialchars($r['subject'] ?? '—') ?></td>
@@ -68,6 +77,7 @@ $reports = $reports->fetchAll();
                 <a href="/pages/cells/report_view.php?id=<?= $r['id'] ?>" class="btn btn-secondary" style="font-size:12px;padding:5px 12px">Ver</a>
               </td>
             </tr>
+            <?php endif; ?>
           <?php endforeach; ?>
         </tbody>
       </table>

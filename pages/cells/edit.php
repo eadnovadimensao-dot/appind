@@ -13,38 +13,61 @@ $cell = $stmt->fetch();
 if (!$cell) { header('Location: /pages/cells/index.php'); exit; }
 auth_require_cell($id);
 
-$pageTitle = 'Editar · ' . $cell['name'];
-$leaders   = $db->query("SELECT id, name FROM members WHERE church_id = $churchId AND status = 'active' ORDER BY name")->fetchAll();
+$pageTitle    = 'Editar · ' . $cell['name'];
+$canSetSupervisor = auth_can('manage_cells');
+$members_list = $db->query("SELECT id, name FROM members WHERE church_id = $churchId AND status = 'active' ORDER BY name")->fetchAll();
+
+$curLeaders = $db->prepare("SELECT member_id FROM cell_leaders WHERE cell_id = ? ORDER BY (role='leader') DESC");
+$curLeaders->execute([$id]);
+$curLeaderIds = $curLeaders->fetchAll(PDO::FETCH_COLUMN);
 
 $days = ['monday'=>'Segunda-feira','tuesday'=>'Terça-feira','wednesday'=>'Quarta-feira',
          'thursday'=>'Quinta-feira','friday'=>'Sexta-feira','saturday'=>'Sábado','sunday'=>'Domingo'];
 
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
-    $name     = trim($_POST['name']        ?? '');
-    $leaderId = trim($_POST['leader_id']   ?? '') ?: null;
-    $day      = trim($_POST['day_of_week'] ?? '') ?: null;
-    $time     = trim($_POST['time_start']  ?? '') ?: null;
-    $address  = trim($_POST['address']     ?? '');
-    $active   = isset($_POST['active']) ? 1 : 0;
+    $name         = trim($_POST['name']         ?? '');
+    $leaderIds    = $_POST['leader_ids']         ?? [];
+    $day          = trim($_POST['day_of_week']   ?? '') ?: null;
+    $time         = trim($_POST['time_start']    ?? '') ?: null;
+    $zip          = trim($_POST['zip_code']      ?? '');
+    $street       = trim($_POST['street']        ?? '');
+    $number       = trim($_POST['number']        ?? '');
+    $neighborhood = trim($_POST['neighborhood']  ?? '');
+    $city         = trim($_POST['city']          ?? '');
+    $active       = isset($_POST['active']) ? 1 : 0;
 
     if ($name === '') $errors[] = 'Nome da célula é obrigatório.';
 
     if (empty($errors)) {
         $stmt = $db->prepare("
             UPDATE cells SET
-              name=:name, leader_id=:leader_id, day_of_week=:day,
-              time_start=:time, address=:address, active=:active
+              name=:name, day_of_week=:day, time_start=:time,
+              zip_code=:zip, street=:street, number=:number, neighborhood=:neighborhood, city=:city,
+              active=:active, leader_id=:leader_id" . ($canSetSupervisor ? ', supervisor_id=:supervisor_id' : '') . "
             WHERE id=:id AND church_id=:church_id
         ");
-        $stmt->execute([
-            ':name'=>$name,':leader_id'=>$leaderId,':day'=>$day,
-            ':time'=>$time,':address'=>$address?:null,':active'=>$active,
-            ':id'=>$id,':church_id'=>$churchId,
-        ]);
+        $params = [
+            ':name'=>$name, ':day'=>$day, ':time'=>$time,
+            ':zip'=>$zip?:null, ':street'=>$street?:null, ':number'=>$number?:null,
+            ':neighborhood'=>$neighborhood?:null, ':city'=>$city?:null,
+            ':active'=>$active, ':leader_id'=>$leaderIds ? (int)$leaderIds[0] : null,
+            ':id'=>$id, ':church_id'=>$churchId,
+        ];
+        if ($canSetSupervisor) $params[':supervisor_id'] = trim($_POST['supervisor_id'] ?? '') ?: null;
+        $stmt->execute($params);
+
+        // Ressincroniza a liderança (cell_leaders é a fonte usada no resto do sistema)
+        $db->prepare("DELETE FROM cell_leaders WHERE cell_id = ?")->execute([$id]);
+        if (!empty($leaderIds)) {
+            $sl = $db->prepare("INSERT IGNORE INTO cell_leaders (cell_id, member_id, role) VALUES (?, ?, ?)");
+            foreach ($leaderIds as $i => $mid) $sl->execute([$id, (int)$mid, $i === 0 ? 'leader' : 'co-leader']);
+        }
+
         header('Location: /pages/cells/view.php?id='.$id.'&saved=1');
         exit;
     }
     $cell = array_merge($cell, $_POST);
+    $curLeaderIds = $leaderIds;
 }
 
 $activePage = 'cells';
@@ -66,18 +89,6 @@ require_once __DIR__ . '/../../includes/layout.php';
       <input type="text" name="name" class="form-control" value="<?= htmlspecialchars($cell['name']) ?>" required>
     </div>
 
-    <div class="form-group">
-      <label class="form-label">Líder responsável</label>
-      <select name="leader_id" class="form-control">
-        <option value="">Selecione um líder</option>
-        <?php foreach ($leaders as $l): ?>
-          <option value="<?= $l['id'] ?>" <?= $cell['leader_id']==$l['id']?'selected':''?>>
-            <?= htmlspecialchars($l['name']) ?>
-          </option>
-        <?php endforeach; ?>
-      </select>
-    </div>
-
     <div class="form-row">
       <div class="form-group">
         <label class="form-label">Dia da semana</label>
@@ -97,10 +108,29 @@ require_once __DIR__ . '/../../includes/layout.php';
       </div>
     </div>
 
+    <div class="form-row">
+      <div class="form-group">
+        <label class="form-label">CEP</label>
+        <input type="text" name="zip_code" class="form-control" maxlength="9" value="<?= htmlspecialchars($cell['zip_code'] ?? '') ?>">
+      </div>
+      <div class="form-group">
+        <label class="form-label">Cidade</label>
+        <input type="text" name="city" class="form-control" value="<?= htmlspecialchars($cell['city'] ?? '') ?>">
+      </div>
+    </div>
+    <div class="form-row">
+      <div class="form-group" style="flex:2">
+        <label class="form-label">Rua / Logradouro</label>
+        <input type="text" name="street" class="form-control" value="<?= htmlspecialchars($cell['street'] ?? '') ?>">
+      </div>
+      <div class="form-group" style="flex:0 0 100px">
+        <label class="form-label">Número</label>
+        <input type="text" name="number" class="form-control" value="<?= htmlspecialchars($cell['number'] ?? '') ?>">
+      </div>
+    </div>
     <div class="form-group">
-      <label class="form-label">Endereço de reunião</label>
-      <input type="text" name="address" class="form-control"
-             value="<?= htmlspecialchars($cell['address'] ?? '') ?>">
+      <label class="form-label">Bairro</label>
+      <input type="text" name="neighborhood" class="form-control" value="<?= htmlspecialchars($cell['neighborhood'] ?? '') ?>">
     </div>
 
     <div class="form-group" style="margin-bottom:0">
@@ -108,6 +138,46 @@ require_once __DIR__ . '/../../includes/layout.php';
         <input type="checkbox" name="active" value="1" <?= $cell['active']?'checked':''?>>
         Célula ativa
       </label>
+    </div>
+  </div>
+
+  <!-- Líderes -->
+  <div class="card" style="margin-bottom:16px">
+    <p class="card-title">Liderança</p>
+    <div class="form-group" style="margin-bottom:4px">
+      <label class="form-label">Líderes <span style="font-weight:400;color:var(--text-muted)">(selecione um ou mais — ex: casal)</span></label>
+      <div style="border:1px solid var(--border);border-radius:7px;overflow:hidden;max-height:200px;overflow-y:auto">
+        <?php foreach ($members_list as $m): ?>
+          <label style="display:flex;align-items:center;gap:10px;padding:9px 12px;cursor:pointer;border-bottom:1px solid var(--border);font-size:13px">
+            <input type="checkbox" name="leader_ids[]" value="<?= $m['id'] ?>" <?= in_array($m['id'], $curLeaderIds) ? 'checked' : '' ?>>
+            <div class="avatar" style="width:26px;height:26px;font-size:10px;flex-shrink:0"><?= strtoupper(substr($m['name'],0,2)) ?></div>
+            <?= htmlspecialchars($m['name']) ?>
+          </label>
+        <?php endforeach; ?>
+      </div>
+      <span style="font-size:11px;color:var(--text-muted)">O primeiro selecionado será o líder principal</span>
+    </div>
+
+    <div class="form-group" style="margin-bottom:0">
+      <label class="form-label">Supervisor <span style="font-weight:400;color:var(--text-muted)">(quem acompanha essa célula)</span></label>
+      <?php if ($canSetSupervisor): ?>
+        <select name="supervisor_id" class="form-control">
+          <option value="">Sem supervisor definido</option>
+          <?php foreach ($members_list as $m): ?>
+            <option value="<?= $m['id'] ?>" <?= $cell['supervisor_id'] == $m['id'] ? 'selected' : '' ?>><?= htmlspecialchars($m['name']) ?></option>
+          <?php endforeach; ?>
+        </select>
+      <?php else: ?>
+        <?php
+          $supName = null;
+          if ($cell['supervisor_id']) {
+              $sq = $db->prepare("SELECT name FROM members WHERE id = ?");
+              $sq->execute([$cell['supervisor_id']]);
+              $supName = $sq->fetchColumn();
+          }
+        ?>
+        <div style="font-size:13px;color:var(--text-muted)"><?= $supName ? htmlspecialchars($supName) : 'Sem supervisor definido' ?> <span style="font-size:11px">(somente admin/supermaster altera)</span></div>
+      <?php endif; ?>
     </div>
   </div>
 

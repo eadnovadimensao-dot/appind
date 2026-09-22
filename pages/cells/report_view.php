@@ -48,12 +48,18 @@ $present = $present->fetchAll();
       <h1 style="font-size:17px;font-weight:500;margin-bottom:4px">
         Relatório de <?= date('d/m/Y', strtotime($report['report_date'])) ?>
       </h1>
-      <?php if ($report['subject']): ?>
+      <?php if ($report['happened'] && $report['subject']): ?>
         <p style="font-size:14px;color:var(--text-muted)">📖 <?= htmlspecialchars($report['subject']) ?></p>
       <?php endif; ?>
     </div>
   </div>
 
+  <?php if (!$report['happened']): ?>
+    <div style="margin-top:16px;padding-top:16px;border-top:1px solid var(--border)">
+      <span class="badge badge-gray" style="margin-bottom:8px;display:inline-block">✕ Não houve reunião</span>
+      <p style="font-size:13px;line-height:1.7;white-space:pre-line"><?= htmlspecialchars($report['no_meeting_reason'] ?? '') ?></p>
+    </div>
+  <?php else: ?>
   <!-- KPIs -->
   <div style="display:flex;gap:24px;margin-top:16px;padding-top:16px;border-top:1px solid var(--border);flex-wrap:wrap">
     <div style="text-align:center">
@@ -69,8 +75,10 @@ $present = $present->fetchAll();
       <div style="font-size:12px;color:var(--text-muted)">Oferta</div>
     </div>
   </div>
+  <?php endif; ?>
 </div>
 
+<?php if ($report['happened']): ?>
 <div style="display:grid;grid-template-columns:1fr 1fr;gap:16px">
 
   <!-- Presença -->
@@ -113,5 +121,6 @@ $present = $present->fetchAll();
   <?php endif; ?>
 
 </div>
+<?php endif; ?>
 
 <?php require_once __DIR__ . '/../../includes/layout-footer.php'; ?>

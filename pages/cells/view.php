@@ -30,6 +30,13 @@ $leaders = $db->prepare("
 $leaders->execute([$id]);
 $leaders = $leaders->fetchAll();
 
+$supervisor = null;
+if ($cell['supervisor_id']) {
+    $sq = $db->prepare("SELECT name FROM members WHERE id = ?");
+    $sq->execute([$cell['supervisor_id']]);
+    $supervisor = $sq->fetchColumn() ?: null;
+}
+
 // Membros vinculados
 $members = $db->prepare("
     SELECT id, name, phone, status
@@ -98,6 +105,9 @@ $addressStr = implode(', ', $address);
             <?php endforeach; ?>
           </span>
         <?php endif; ?>
+        <?php if ($supervisor): ?>
+          <span>🧭 Supervisor: <strong style="color:var(--text)"><?= htmlspecialchars($supervisor) ?></strong></span>
+        <?php endif; ?>
         <?php if ($cell['day_of_week']): ?>
           <span>📅 <?= $days[$cell['day_of_week']] ?? $cell['day_of_week'] ?>
             <?= $cell['time_start'] ? ' às ' . substr($cell['time_start'],0,5) : '' ?></span>
@@ -153,7 +163,9 @@ $addressStr = implode(', ', $address);
         <div style="font-size:22px;font-weight:500;color:var(--accent)">
           R$ <?= $lastReport ? number_format($lastReport['offering'], 2, ',', '.') : '0,00' ?>
         </div>
-        <?php if ($lastReport): ?>
+        <?php if ($lastReport && !$lastReport['happened']): ?>
+          <div style="font-size:11px;color:var(--text-muted);margin-top:2px">não houve reunião</div>
+        <?php elseif ($lastReport): ?>
           <div style="font-size:11px;color:var(--text-muted);margin-top:2px">
             <?= $lastReport['total_present'] ?> presentes · <?= $lastReport['visitors'] ?> visitante(s)
           </div>
@@ -245,9 +257,15 @@ $addressStr = implode(', ', $address);
             <span style="font-size:13px;font-weight:500">
               <?= date('d/m/Y', strtotime($r['report_date'])) ?>
             </span>
-            <span style="font-size:12px;color:var(--text-muted)"><?= $r['total_present'] ?> presentes</span>
+            <?php if (!$r['happened']): ?>
+              <span class="badge badge-gray">Não houve</span>
+            <?php else: ?>
+              <span style="font-size:12px;color:var(--text-muted)"><?= $r['total_present'] ?> presentes</span>
+            <?php endif; ?>
           </div>
-          <?php if ($r['subject']): ?>
+          <?php if (!$r['happened']): ?>
+            <div style="font-size:12px;color:var(--text-muted)"><?= htmlspecialchars($r['no_meeting_reason'] ?? '') ?></div>
+          <?php elseif ($r['subject']): ?>
             <div style="font-size:12px;color:var(--text-muted)"><?= htmlspecialchars($r['subject']) ?></div>
           <?php endif; ?>
         </a>
