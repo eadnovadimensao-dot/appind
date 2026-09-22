@@ -87,6 +87,10 @@ if (window.innerWidth <= 900) {
           $mInfo = db()->query("SELECT cell_id FROM members WHERE id=$memberId")->fetch();
           $memberCellId = $mInfo['cell_id'] ?? null;
           $inMinistry = (bool)db()->query("SELECT COUNT(*) FROM member_ministries WHERE member_id=$memberId")->fetchColumn();
+          // Anfitrião de célula diferente da própria também precisa de um jeito de chegar lá
+          if (!$memberCellId) {
+              $memberCellId = db()->query("SELECT cell_id FROM cell_hosts WHERE member_id=$memberId LIMIT 1")->fetchColumn() ?: null;
+          }
       }
 
       foreach ($navItems as $item):
@@ -96,7 +100,7 @@ if (window.innerWidth <= 900) {
           if ($memberCellId) $memberAllowed[] = 'cells';
           if ($inMinistry) $memberAllowed[] = 'ministries';
           if (!in_array($item['key'], $memberAllowed)) continue;
-          // Célula: redirecionar direto para a célula do membro
+          // Célula: redirecionar direto para a célula do membro (ou a que ele recebe em casa)
           if ($item['key'] === 'cells') {
             $item['href'] = '/pages/cells/view.php?id=' . $memberCellId;
             $item['label'] = 'Minha Célula';

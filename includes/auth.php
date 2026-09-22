@@ -73,10 +73,11 @@ function auth_member_redirect(): void {
             '/api/',
         ];
 
-        // Pode ver própria célula
+        // Pode ver própria célula, ou a que recebe em casa como anfitrião
         if ($memberId) {
             $cell = $db->query("SELECT cell_id FROM members WHERE id=$memberId")->fetchColumn();
-            if ($cell) {
+            $isHost = (bool)$db->query("SELECT 1 FROM cell_hosts WHERE member_id=$memberId LIMIT 1")->fetchColumn();
+            if ($cell || $isHost) {
                 $allowed[] = '/pages/cells/view.php';
             }
         }
@@ -249,12 +250,18 @@ function auth_member_in_ministry(int $ministryId): bool {
     return (bool)$stmt->fetchColumn();
 }
 
+// Além de quem tem essa célula como a própria (members.cell_id), também vê
+// quem foi definido como anfitrião: recebe a célula em casa mesmo que, por
+// algum motivo, não esteja com o cell_id apontando pra ela.
 function auth_member_in_cell(int $cellId): bool {
     if (auth_role() !== 'member') return true;
     $me = auth_member_id();
     if (!$me) return false;
     $stmt = db()->prepare("SELECT 1 FROM members WHERE id = ? AND cell_id = ? LIMIT 1");
     $stmt->execute([$me, $cellId]);
+    if ($stmt->fetchColumn()) return true;
+    $stmt = db()->prepare("SELECT 1 FROM cell_hosts WHERE cell_id = ? AND member_id = ? LIMIT 1");
+    $stmt->execute([$cellId, $me]);
     return (bool)$stmt->fetchColumn();
 }
 
