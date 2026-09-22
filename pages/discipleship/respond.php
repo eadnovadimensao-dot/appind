@@ -3,48 +3,60 @@ require_once __DIR__ . '/../../config/database.php';
 require_once __DIR__ . '/../../includes/discipleship.php';
 
 $token  = trim($_GET['token'] ?? '');
+$stage  = $_GET['stage'] ?? '';
 $action = $_GET['action'] ?? '';
+$as     = (int)($_GET['as'] ?? 0);
 
 $db = db();
 $error = null; $success = null; $already = false;
 
-$stmt = $db->prepare("
-    SELECT d.*, c.name AS cell_name, dc.name AS disciple_name, ds.name AS discipler_name
-    FROM discipleships d
-    JOIN cells c ON c.id = d.cell_id
-    JOIN members dc ON dc.id = d.disciple_member_id
-    JOIN members ds ON ds.id = d.discipler_member_id
-    WHERE d.decision_token = ?
-");
-$stmt->execute([$token]);
-$d = $stmt->fetch();
+$d = discipleship_with_cell_by_token($db, $token);
+
+$stageLabels = [
+    'pending_discipler'    => 'Você já aceitou. Aguardando o líder da célula.',
+    'pending_leader'       => 'Já aprovado. Aguardando a coordenação.',
+    'pending_coordination' => 'Já confirmado pela coordenação.',
+    'active'               => 'Esse discipulado já está confirmado e em andamento.',
+    'rejected'             => 'Esse pedido não está mais em aberto.',
+    'completed'            => 'Esse discipulado já foi concluído.',
+    'cancelled'            => 'Esse discipulado foi cancelado.',
+];
+
+// Qual etapa o status atual representa, e se bate com o que o link promete
+$expectedStatus = ['discipler' => 'pending_discipler', 'leader' => 'pending_leader', 'coordination' => 'pending_coordination'][$stage] ?? null;
 
 if (!$d) {
     $error = 'Link inválido.';
-} elseif ($d['status'] !== 'pending_discipler') {
-    $already = true;
-    $labels = ['pending_leader' => 'Você já aceitou. Aguardando o líder da célula.',
-               'pending_coordination' => 'Você já aceitou. Aguardando a coordenação.',
-               'active' => 'Você já aceitou e o discipulado está em andamento.',
-               'rejected' => 'Esse pedido não está mais em aberto.',
-               'completed' => 'Esse discipulado já foi concluído.',
-               'cancelled' => 'Esse discipulado foi cancelado.'];
-    $success = $labels[$d['status']] ?? 'Esse pedido já foi respondido.';
-} elseif (!in_array($action, ['accept', 'decline'])) {
+} elseif (!$expectedStatus || !in_array($action, ['accept', 'decline'])) {
     $error = 'Link inválido.';
+} elseif ($d['status'] !== $expectedStatus) {
+    $already = true;
+    $success = $stageLabels[$d['status']] ?? 'Esse pedido já foi respondido.';
 } else {
     $approve = $action === 'accept';
-    $db->prepare("
-        UPDATE discipleships SET status = ?, discipler_decided_by = discipler_member_id, discipler_decided_at = NOW(), discipler_approved = ?
-        WHERE id = ?
-    ")->execute([$approve ? 'pending_leader' : 'rejected', $approve ? 1 : 0, $d['id']]);
 
-    if ($approve) {
-        discipleship_notify_leader($db, (int)$d['id']);
-        $success = "🎉 Combinado! Você agora é discipulador(a) de {$d['disciple_name']}. O líder da célula {$d['cell_name']} vai avaliar em seguida.";
-    } else {
-        discipleship_notify_discipler_declined($db, $d);
-        $success = 'Tudo bem, obrigado por avisar. Não vamos prosseguir com esse pedido agora.';
+    if ($stage === 'discipler') {
+        discipleship_decide_discipler($db, (int)$d['id'], $approve, (int)$d['discipler_member_id']);
+        $success = $approve
+            ? "🎉 Combinado! Você agora é discipulador(a) de {$d['disciple_name']}. O líder da célula {$d['cell_name']} vai avaliar em seguida."
+            : 'Tudo bem, obrigado por avisar. Não vamos prosseguir com esse pedido agora.';
+    } elseif ($stage === 'leader') {
+        // Só registra quem decidiu se "as" for de fato líder dessa célula; senão aplica a decisão do mesmo jeito, sem autor.
+        $chk = $db->prepare("SELECT 1 FROM cell_leaders WHERE cell_id = ? AND member_id = ?");
+        $chk->execute([$d['cell_id'], $as]);
+        $decidedBy = $chk->fetchColumn() ? $as : null;
+        discipleship_decide_leader($db, (int)$d['id'], $approve, $decidedBy);
+        $success = $approve
+            ? "✓ Aprovado! {$d['disciple_name']} e {$d['discipler_name']} seguem agora pra confirmação da coordenação."
+            : 'Recusado. O discípulo já foi avisado e pode escolher outra pessoa.';
+    } elseif ($stage === 'coordination') {
+        $chk = $db->prepare("SELECT 1 FROM discipleship_coordinators WHERE member_id = ?");
+        $chk->execute([$as]);
+        $decidedBy = $chk->fetchColumn() ? $as : null;
+        discipleship_decide_coordination($db, (int)$d['id'], $approve, $decidedBy);
+        $success = $approve
+            ? "🎉 Confirmado! O discipulado de {$d['disciple_name']} com {$d['discipler_name']} já começou."
+            : 'Recusado. Os dois já foram avisados.';
     }
 }
 

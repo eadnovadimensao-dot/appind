@@ -19,46 +19,21 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 
     if ($d && $action === 'discipler_decide' && $memberId === (int)$d['discipler_member_id'] && $d['status'] === 'pending_discipler') {
         $approve = ($_POST['approve'] ?? '') === '1';
-        $status  = $approve ? 'pending_leader' : 'rejected';
-        $db->prepare("UPDATE discipleships SET status=?, discipler_decided_by=?, discipler_decided_at=NOW(), discipler_approved=?, discipler_notes=? WHERE id=?")
-           ->execute([$status, $memberId, $approve ? 1 : 0, trim($_POST['notes'] ?? '') ?: null, $id]);
-        $full = $db->prepare("SELECT d.*, c.name AS cell_name, ds.name AS discipler_name FROM discipleships d JOIN cells c ON c.id=d.cell_id JOIN members ds ON ds.id=d.discipler_member_id WHERE d.id=?");
-        $full->execute([$id]);
-        if ($approve) {
-            discipleship_notify_leader($db, $id);
-        } else {
-            discipleship_notify_discipler_declined($db, $full->fetch());
-        }
+        discipleship_decide_discipler($db, $id, $approve, $memberId);
         header('Location: /pages/discipleship/index.php?ok=1');
         exit;
     }
 
     if ($d && $action === 'leader_decide' && auth_can_decide_discipleship_as_leader((int)$d['cell_id']) && $d['status'] === 'pending_leader') {
         $approve = ($_POST['approve'] ?? '') === '1';
-        $status  = $approve ? 'pending_coordination' : 'rejected';
-        $db->prepare("UPDATE discipleships SET status=?, leader_decided_by=?, leader_decided_at=NOW(), leader_approved=?, leader_notes=? WHERE id=?")
-           ->execute([$status, $memberId, $approve ? 1 : 0, trim($_POST['notes'] ?? '') ?: null, $id]);
-        if ($approve) {
-            discipleship_notify_coordination($db, $id);
-        } else {
-            $full = $db->prepare("SELECT d.*, c.name AS cell_name FROM discipleships d JOIN cells c ON c.id=d.cell_id WHERE d.id=?");
-            $full->execute([$id]);
-            discipleship_notify_decision($db, $full->fetch(), false, trim($_POST['notes'] ?? '') ?: 'o líder da célula não aprovou');
-        }
+        discipleship_decide_leader($db, $id, $approve, $memberId, trim($_POST['notes'] ?? '') ?: null);
         header('Location: /pages/discipleship/index.php?ok=1');
         exit;
     }
 
     if ($d && $action === 'coordination_decide' && $isCoordinator && $d['status'] === 'pending_coordination') {
         $approve = ($_POST['approve'] ?? '') === '1';
-        $status  = $approve ? 'active' : 'rejected';
-        $db->prepare("
-            UPDATE discipleships SET status=?, coordination_decided_by=?, coordination_decided_at=NOW(), coordination_approved=?, coordination_notes=?, started_at=" . ($approve ? 'NOW()' : 'NULL') . "
-            WHERE id=?
-        ")->execute([$status, $memberId, $approve ? 1 : 0, trim($_POST['notes'] ?? '') ?: null, $id]);
-        $full = $db->prepare("SELECT d.*, c.name AS cell_name FROM discipleships d JOIN cells c ON c.id=d.cell_id WHERE d.id=?");
-        $full->execute([$id]);
-        discipleship_notify_decision($db, $full->fetch(), $approve, $approve ? null : (trim($_POST['notes'] ?? '') ?: 'a coordenação não confirmou'));
+        discipleship_decide_coordination($db, $id, $approve, $memberId, trim($_POST['notes'] ?? '') ?: null);
         header('Location: /pages/discipleship/index.php?ok=1');
         exit;
     }
