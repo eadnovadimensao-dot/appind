@@ -284,8 +284,12 @@ function member_related_cells(int $memberId): array {
 // Além de quem tem essa célula como a própria (members.cell_id), também vê
 // quem lidera, supervisiona ou recebe (anfitrião) a célula — mesmo que não
 // seja formalmente membro dela.
+// Ver uma célula específica depende de ter relação de verdade com ela (ser
+// membro, líder, supervisor ou anfitrião), não do papel de login. Um líder de
+// ministério não é automaticamente líder de célula, e vice-versa — só
+// admin/supermaster têm acesso livre a todas as células da igreja.
 function auth_member_in_cell(int $cellId): bool {
-    if (auth_role() !== 'member') return true;
+    if (in_array(auth_role(), ['admin', 'supermaster'])) return true;
     $me = auth_member_id();
     if (!$me) return false;
     foreach (member_related_cells($me) as $c) {

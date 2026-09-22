@@ -85,8 +85,11 @@ if (window.innerWidth <= 900) {
       $inMinistry = false;
       $relatedCells   = [];
       $hasDiscipleship = false;
+      // Célula é por relação de verdade (membro/líder/supervisor/anfitrião), não pelo
+      // papel de login: um líder de ministério não vira líder de célula de graça.
+      $cellScopedRoles = ['member', 'leader', 'cell_leader'];
 
-      if ($memberId && $role === 'member') {
+      if ($memberId && in_array($role, $cellScopedRoles)) {
           $relatedCells   = member_related_cells($memberId);
           $inMinistry     = (bool)db()->query("SELECT COUNT(*) FROM member_ministries WHERE member_id=$memberId")->fetchColumn();
           $hasDiscipleship = member_current_discipleship_as_disciple(db(), $memberId) || member_current_disciples(db(), $memberId)
@@ -101,24 +104,28 @@ if (window.innerWidth <= 900) {
           if ($inMinistry) $memberAllowed[] = 'ministries';
           if ($relatedCells || $hasDiscipleship) $memberAllowed[] = 'discipleship';
           if (!in_array($item['key'], $memberAllowed)) continue;
-          // Célula: com uma só, vai direto; com mais de uma (ex: supervisor de várias), lista
-          if ($item['key'] === 'cells') {
-            if (count($relatedCells) === 1) {
-              $item['href']  = '/pages/cells/view.php?id=' . $relatedCells[0]['id'];
-              $item['label'] = 'Minha Célula';
-            } else {
-              $item['href']  = '/pages/cells/my_cells.php';
-              $item['label'] = 'Minhas Células';
-            }
-          }
         }
         if ($role === 'leader') {
-          $leaderAllowed = ['dashboard','events','communication','ministries','cells','discipleship','offering','devotional'];
+          $leaderAllowed = ['dashboard','events','communication','ministries','offering','devotional'];
+          if ($relatedCells) $leaderAllowed[] = 'cells';
+          if ($relatedCells || $hasDiscipleship) $leaderAllowed[] = 'discipleship';
           if (!in_array($item['key'], $leaderAllowed)) continue;
         }
         if ($role === 'cell_leader') {
-          $cellLeaderAllowed = ['dashboard','events','communication','cells','ministries','discipleship','offering','devotional'];
+          $cellLeaderAllowed = ['dashboard','events','communication','ministries','offering','devotional'];
+          if ($relatedCells) $cellLeaderAllowed[] = 'cells';
+          if ($relatedCells || $hasDiscipleship) $cellLeaderAllowed[] = 'discipleship';
           if (!in_array($item['key'], $cellLeaderAllowed)) continue;
+        }
+        // Célula: com uma só, vai direto; com mais de uma (ex: supervisor de várias), lista
+        if (in_array($role, $cellScopedRoles) && $item['key'] === 'cells') {
+          if (count($relatedCells) === 1) {
+            $item['href']  = '/pages/cells/view.php?id=' . $relatedCells[0]['id'];
+            $item['label'] = 'Minha Célula';
+          } else {
+            $item['href']  = '/pages/cells/my_cells.php';
+            $item['label'] = 'Minhas Células';
+          }
         }
       ?>
         <a href="<?= $item['href'] ?>"

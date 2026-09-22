@@ -2,12 +2,19 @@
 require_once __DIR__ . '/../../config/database.php';
 require_once __DIR__ . '/../../includes/auth.php';
 auth_check();
+
+// A listagem completa (todas as células da igreja) é só pra quem administra
+// células de verdade. Os demais papéis (inclusive líder/líder de célula sem
+// relação com nenhuma célula) vão pra "Minhas células".
+if (!auth_can('manage_cells')) {
+    header('Location: /pages/cells/my_cells.php');
+    exit;
+}
+
 $pageTitle    = 'Células';
 $activePage   = 'cells';
-$canManageCells = auth_can('manage_cells');
-if ($canManageCells) {
-    $topbarAction = ['href' => '/pages/cells/create.php', 'label' => 'Nova célula'];
-}
+$canManageCells = true;
+$topbarAction = ['href' => '/pages/cells/create.php', 'label' => 'Nova célula'];
 require_once __DIR__ . '/../../includes/layout.php';
 
 $db       = db();
