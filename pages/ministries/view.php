@@ -2,6 +2,7 @@
 require_once __DIR__ . "/../../config/database.php";
 require_once __DIR__ . "/../../includes/auth.php";
 require_once __DIR__ . "/../../includes/music_roles.php";
+require_once __DIR__ . "/../../includes/ministry_interest.php";
 auth_check();
 
 $db = db();
@@ -17,13 +18,19 @@ $stmt = $db->prepare("
 $stmt->execute([$id, current_church_id()]);
 $mn = $stmt->fetch();
 if (!$mn) { header('Location: /pages/ministries/index.php'); exit; }
-if (!auth_member_in_ministry($id)) { header('Location: /dashboard.php?no_access=1'); exit; }
+// Qualquer um vê que o ministério existe; só quem participa (ou lidera) vê
+// o conteúdo de dentro (programação, materiais, pertences).
+$isParticipant = auth_member_in_ministry($id);
 
 $pageTitle  = $mn['name'];
 $activePage = 'ministries';
 $churchId   = $mn['church_id'];
 $isMusic    = (bool)($mn['auto_scale_enabled'] ?? false);
 $canManage  = auth_can_manage_ministry($id);
+
+$myMemberId      = auth_member_id();
+$myPendingInterest = ($myMemberId && !$isParticipant && !$canManage) ? ministry_member_pending_interest($db, $id, $myMemberId) : null;
+$pendingInterests  = $canManage ? ministry_pending_interests($db, $id) : [];
 $ministryRoles   = $isMusic ? get_ministry_roles($db, $id) : [];
 $naipeRoleNames  = array_column(array_filter($ministryRoles, fn($r) => $r['use_naipe']), 'name');
 // Buscar todos os líderes do ministério
@@ -135,14 +142,26 @@ $actTypeLabels = [
       </div>
     </div>
     <div style="display:flex;gap:8px;flex-wrap:wrap">
-      <a href="/pages/ministries/resources.php?ministry_id=<?= $id ?>" class="btn btn-secondary">📁 Materiais</a>
-      <a href="/pages/ministries/items.php?ministry_id=<?= $id ?>" class="btn btn-secondary">🎒 Pertences</a>
+      <?php if ($isParticipant || $canManage): ?>
+        <a href="/pages/ministries/resources.php?ministry_id=<?= $id ?>" class="btn btn-secondary">📁 Materiais</a>
+        <a href="/pages/ministries/items.php?ministry_id=<?= $id ?>" class="btn btn-secondary">🎒 Pertences</a>
+      <?php endif; ?>
       <?php if ($canManage): ?>
         <a href="/pages/ministries/activity_create.php?ministry_id=<?= $id ?>" class="btn btn-primary">+ Atividade</a>
         <?php if ($isMusic): ?>
           <a href="/pages/ministries/activity_batch_create.php?ministry_id=<?= $id ?>" class="btn btn-secondary">🎲 Escala em lote</a>
         <?php endif; ?>
         <a href="/pages/ministries/edit.php?id=<?= $id ?>" class="btn btn-secondary">Editar</a>
+      <?php endif; ?>
+      <?php if ($myMemberId && !$isParticipant && !$canManage): ?>
+        <?php if ($myPendingInterest): ?>
+          <span class="btn btn-secondary" style="cursor:default">✓ Interesse enviado</span>
+        <?php else: ?>
+          <form method="POST" action="/pages/ministries/interest.php" style="display:inline">
+            <input type="hidden" name="ministry_id" value="<?= $id ?>">
+            <button type="submit" class="btn btn-primary">✋ Quero participar</button>
+          </form>
+        <?php endif; ?>
       <?php endif; ?>
       <a href="/pages/ministries/index.php" class="btn btn-secondary">Voltar</a>
     </div>
@@ -288,6 +307,13 @@ $actTypeLabels = [
     <?php endif; ?>
   </div>
 
+  <?php if (!$isParticipant && !$canManage): ?>
+  <!-- Não participa: programação fica restrita -->
+  <div class="card">
+    <p class="card-title">Próximas atividades</p>
+    <p style="font-size:13px;color:var(--text-muted)">A programação é visível só pra quem participa do ministério.</p>
+  </div>
+  <?php else: ?>
   <!-- Próximas atividades -->
   <div class="card" style="padding:0">
     <div style="padding:14px 18px;border-bottom:1px solid var(--border);display:flex;justify-content:space-between;align-items:center">
@@ -346,8 +372,39 @@ $actTypeLabels = [
       </div>
     <?php endif; ?>
   </div>
+  <?php endif; ?>
 
 </div>
+
+<?php if ($canManage && $pendingInterests): ?>
+<!-- Interesses pendentes -->
+<div class="card" style="padding:0;margin-top:16px">
+  <div style="padding:14px 18px;border-bottom:1px solid var(--border)">
+    <p style="font-weight:500;font-size:14px">✋ Interesses em participar <span style="color:var(--text-muted);font-weight:400">(<?= count($pendingInterests) ?>)</span></p>
+  </div>
+  <?php foreach ($pendingInterests as $pi): ?>
+    <div style="display:flex;align-items:center;justify-content:space-between;gap:12px;padding:12px 18px;border-bottom:1px solid var(--border)">
+      <div style="display:flex;align-items:center;gap:10px">
+        <div class="avatar" style="width:28px;height:28px;font-size:10px"><?= strtoupper(substr($pi['member_name'],0,2)) ?></div>
+        <span style="font-size:13px"><?= htmlspecialchars($pi['member_name']) ?></span>
+      </div>
+      <div style="display:flex;gap:6px">
+        <form method="POST" action="/pages/ministries/add_member.php" style="display:inline">
+          <input type="hidden" name="ministry_id" value="<?= $id ?>">
+          <input type="hidden" name="member_id" value="<?= $pi['member_id'] ?>">
+          <button type="submit" class="btn btn-primary" style="font-size:11px;padding:5px 10px">+ Vincular</button>
+        </form>
+        <form method="POST" action="/pages/ministries/interest.php" style="display:inline" data-confirm="Dispensar esse interesse?">
+          <input type="hidden" name="action" value="dismiss">
+          <input type="hidden" name="interest_id" value="<?= $pi['id'] ?>">
+          <input type="hidden" name="ministry_id" value="<?= $id ?>">
+          <button type="submit" class="btn btn-secondary" style="font-size:11px;padding:5px 10px">Dispensar</button>
+        </form>
+      </div>
+    </div>
+  <?php endforeach; ?>
+</div>
+<?php endif; ?>
 
 <?php
 $naipeRoleNamesJson = json_encode($naipeRoleNames);

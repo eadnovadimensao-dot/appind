@@ -82,7 +82,6 @@ if (window.innerWidth <= 900) {
       <?php
       $role       = auth_role();
       $memberId   = auth_member_id();
-      $inMinistry = false;
       $relatedCells   = [];
       $hasDiscipleship = false;
       // Célula é por relação de verdade (membro/líder/supervisor/anfitrião), não pelo
@@ -91,7 +90,6 @@ if (window.innerWidth <= 900) {
 
       if ($memberId && in_array($role, $cellScopedRoles)) {
           $relatedCells   = member_related_cells($memberId);
-          $inMinistry     = (bool)db()->query("SELECT COUNT(*) FROM member_ministries WHERE member_id=$memberId")->fetchColumn();
           $hasDiscipleship = member_current_discipleship_as_disciple(db(), $memberId) || member_current_disciples(db(), $memberId)
                               || member_pending_discipler_invites(db(), $memberId) || auth_is_discipleship_coordinator();
       }
@@ -99,9 +97,10 @@ if (window.innerWidth <= 900) {
       foreach ($navItems as $item):
         if (in_array($item['key'], ['branches','whatsapp']) && $role !== 'supermaster') continue; // Filiais e WhatsApp: só supermaster
         if ($role === 'member') {
-          $memberAllowed = ['dashboard','events','communication','offering','devotional'];
+          // Ministérios agora é um diretório aberto (qualquer um vê quais existem);
+          // o que fica restrito é o conteúdo de dentro, filtrado na própria tela.
+          $memberAllowed = ['dashboard','events','communication','offering','devotional','ministries'];
           if ($relatedCells) $memberAllowed[] = 'cells';
-          if ($inMinistry) $memberAllowed[] = 'ministries';
           if ($relatedCells || $hasDiscipleship) $memberAllowed[] = 'discipleship';
           if (!in_array($item['key'], $memberAllowed)) continue;
         }

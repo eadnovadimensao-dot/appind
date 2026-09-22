@@ -9,41 +9,27 @@ $churchId = current_church_id();
 $isAdmin  = in_array($role, ['supermaster','admin']);
 $memberId = auth_member_id();
 
-// Membro comum só vê os ministérios em que participa
-if ($role === 'member') {
-    $stmt = $db->prepare("
-        SELECT mn.*, m.name AS leader_name, ch.name AS branch_name, ch.type AS branch_type,
-               COUNT(DISTINCT mm.member_id) AS member_count,
-               COUNT(DISTINCT ma.id) AS activity_count
-        FROM ministries mn
-        JOIN member_ministries mine ON mine.ministry_id = mn.id AND mine.member_id = ?
-        LEFT JOIN members m   ON m.id  = mn.leader_id
-        LEFT JOIN churches ch ON ch.id = mn.church_id
-        LEFT JOIN member_ministries mm  ON mm.ministry_id = mn.id
-        LEFT JOIN ministry_activities ma ON ma.ministry_id = mn.id AND ma.status='scheduled' AND ma.activity_date >= CURDATE()
-        WHERE mn.church_id = ?
-        GROUP BY mn.id
-        ORDER BY mn.name
-    ");
-    $stmt->execute([$memberId, $churchId]);
-    $ministries = $stmt->fetchAll();
-} else { // Demais papéis: só a igreja selecionada
-    $stmt = $db->prepare("
-        SELECT mn.*, m.name AS leader_name, ch.name AS branch_name, ch.type AS branch_type,
-               COUNT(DISTINCT mm.member_id) AS member_count,
-               COUNT(DISTINCT ma.id) AS activity_count
-        FROM ministries mn
-        LEFT JOIN members m   ON m.id  = mn.leader_id
-        LEFT JOIN churches ch ON ch.id = mn.church_id
-        LEFT JOIN member_ministries mm  ON mm.ministry_id = mn.id
-        LEFT JOIN ministry_activities ma ON ma.ministry_id = mn.id AND ma.status='scheduled' AND ma.activity_date >= CURDATE()
-        WHERE mn.church_id = ?
-        GROUP BY mn.id
-        ORDER BY mn.name
-    ");
-    $stmt->execute([$churchId]);
-    $ministries = $stmt->fetchAll();
-}
+// Todo mundo vê a lista de ministérios que existem (é só um diretório: nome,
+// líder, quantas atividades agendadas). O que fica restrito é o conteúdo de
+// dentro de cada um (programação, materiais, pertences) — isso é filtrado na
+// própria tela do ministério, não aqui.
+$stmt = $db->prepare("
+    SELECT mn.*, m.name AS leader_name, ch.name AS branch_name, ch.type AS branch_type,
+           COUNT(DISTINCT mm.member_id) AS member_count,
+           COUNT(DISTINCT ma.id) AS activity_count,
+           (mine.member_id IS NOT NULL) AS i_participate
+    FROM ministries mn
+    LEFT JOIN members m   ON m.id  = mn.leader_id
+    LEFT JOIN churches ch ON ch.id = mn.church_id
+    LEFT JOIN member_ministries mm  ON mm.ministry_id = mn.id
+    LEFT JOIN member_ministries mine ON mine.ministry_id = mn.id AND mine.member_id = ?
+    LEFT JOIN ministry_activities ma ON ma.ministry_id = mn.id AND ma.status='scheduled' AND ma.activity_date >= CURDATE()
+    WHERE mn.church_id = ?
+    GROUP BY mn.id
+    ORDER BY mn.name
+");
+$stmt->execute([$memberId ?: 0, $churchId]);
+$ministries = $stmt->fetchAll();
 
 $pageTitle       = 'Ministérios';
 $activePage      = 'ministries';
@@ -86,7 +72,10 @@ require_once __DIR__ . '/../../includes/layout.php';
           <?php foreach ($ministries as $mn): ?>
             <tr>
               <td>
-                <div style="font-weight:500"><?= htmlspecialchars($mn['name']) ?></div>
+                <div style="display:flex;align-items:center;gap:6px">
+                  <span style="font-weight:500"><?= htmlspecialchars($mn['name']) ?></span>
+                  <?php if ($mn['i_participate']): ?><span class="badge badge-green" style="font-size:10px">Participo</span><?php endif; ?>
+                </div>
                 <?php if ($mn['description']): ?>
                   <div style="font-size:12px;color:var(--text-muted)"><?= htmlspecialchars(mb_substr($mn['description'],0,60)) ?>…</div>
                 <?php endif; ?>

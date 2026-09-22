@@ -83,12 +83,17 @@ function auth_member_redirect(): void {
             }
         }
 
-        // Pode ver atividades e materiais do próprio ministério
+        // Ministérios é um diretório aberto: qualquer um vê quais existem e entra na
+        // tela de cada um (o conteúdo sensível é filtrado lá dentro, não aqui).
+        $allowed[] = '/pages/ministries/index.php';
+        $allowed[] = '/pages/ministries/view.php';
+        $allowed[] = '/pages/ministries/interest.php';
+
+        // Atividades e materiais continuam só pra quem participa de algum ministério
         if ($inMinistry) {
             $allowed[] = '/pages/ministries/activity_view.php';
-            $allowed[] = '/pages/ministries/index.php';
-            $allowed[] = '/pages/ministries/view.php';
             $allowed[] = '/pages/ministries/resources.php';
+            $allowed[] = '/pages/ministries/items.php';
         }
 
         // Pode solicitar evento se for de ministério
