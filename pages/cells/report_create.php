@@ -71,8 +71,6 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 $activePage = 'cells';
 require_once __DIR__ . '/../../includes/layout.php';
 ?>
-}
-?>
 
 <?php if (!empty($errors)): ?>
   <div style="background:#FCEBEB;border:1px solid #F09595;border-radius:8px;padding:12px 16px;margin-bottom:20px;font-size:13px;color:#A32D2D">
