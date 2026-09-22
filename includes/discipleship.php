@@ -288,6 +288,23 @@ function discipleship_notify_discipler_declined(PDO $db, array $d): void {
     queue_whatsapp($p['phone'], $msg, (int)$d['church_id'], null, 0, null, 'discipleship');
 }
 
+/** Quem pode registrar/ver os encontros de um discipulado: o próprio discipulador ou a coordenação. */
+function auth_can_see_discipleship_reports(array $discipleship): bool {
+    return auth_member_id() === (int)$discipleship['discipler_member_id'] || auth_is_discipleship_coordinator();
+}
+
+/** Só o discipulador registra encontro, e só enquanto o discipulado está ativo. */
+function auth_can_log_discipleship_report(array $discipleship): bool {
+    return auth_member_id() === (int)$discipleship['discipler_member_id'] && $discipleship['status'] === 'active';
+}
+
+/** Encontros registrados de um discipulado, mais recente primeiro. */
+function discipleship_reports(PDO $db, int $discipleshipId): array {
+    $q = $db->prepare("SELECT * FROM discipleship_reports WHERE discipleship_id = ? ORDER BY meeting_date DESC, id DESC");
+    $q->execute([$discipleshipId]);
+    return $q->fetchAll();
+}
+
 /** Avisa discípulo e discipulador que o discipulado começou de verdade, ou que foi recusado. */
 function discipleship_notify_decision(PDO $db, array $d, bool $started, ?string $reason = null): void {
     $people = $db->prepare("SELECT id, phone, name FROM members WHERE id IN (?,?)");

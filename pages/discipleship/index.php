@@ -151,7 +151,12 @@ require_once __DIR__ . '/../../includes/layout.php';
         <div style="font-size:13px;font-weight:500"><?= htmlspecialchars($d['disciple_name']) ?></div>
         <div style="font-size:11px;color:var(--text-muted)">Célula <?= htmlspecialchars($d['cell_name']) ?></div>
       </div>
-      <span class="badge <?= $statusLabels[$d['status']]['badge'] ?>"><?= $statusLabels[$d['status']]['label'] ?></span>
+      <div style="display:flex;align-items:center;gap:8px">
+        <span class="badge <?= $statusLabels[$d['status']]['badge'] ?>"><?= $statusLabels[$d['status']]['label'] ?></span>
+        <?php if ($d['status'] === 'active'): ?>
+          <a href="/pages/discipleship/reports.php?id=<?= $d['id'] ?>" class="btn btn-secondary" style="font-size:11px;padding:5px 10px">Encontros</a>
+        <?php endif; ?>
+      </div>
     </div>
   <?php endforeach; ?>
 </div>
@@ -225,12 +230,15 @@ require_once __DIR__ . '/../../includes/layout.php';
             <div style="font-size:13px"><strong><?= htmlspecialchars($d['disciple_name']) ?></strong> com <strong><?= htmlspecialchars($d['discipler_name']) ?></strong></div>
             <div style="font-size:11px;color:var(--text-muted)">Célula <?= htmlspecialchars($d['cell_name']) ?> · desde <?= date('d/m/Y', strtotime($d['started_at'])) ?></div>
           </div>
-          <form method="POST" style="display:flex;gap:6px" data-confirm="Encerrar esse discipulado?">
-            <input type="hidden" name="action" value="end">
-            <input type="hidden" name="id" value="<?= $d['id'] ?>">
-            <button type="submit" name="result" value="completed" class="btn btn-secondary" style="font-size:11px;padding:5px 10px">Concluir</button>
-            <button type="submit" name="result" value="cancelled" class="btn btn-secondary" style="font-size:11px;padding:5px 10px;color:var(--red)">Cancelar</button>
-          </form>
+          <div style="display:flex;align-items:center;gap:6px">
+            <a href="/pages/discipleship/reports.php?id=<?= $d['id'] ?>" class="btn btn-secondary" style="font-size:11px;padding:5px 10px">Encontros</a>
+            <form method="POST" style="display:flex;gap:6px" data-confirm="Encerrar esse discipulado?">
+              <input type="hidden" name="action" value="end">
+              <input type="hidden" name="id" value="<?= $d['id'] ?>">
+              <button type="submit" name="result" value="completed" class="btn btn-secondary" style="font-size:11px;padding:5px 10px">Concluir</button>
+              <button type="submit" name="result" value="cancelled" class="btn btn-secondary" style="font-size:11px;padding:5px 10px;color:var(--red)">Cancelar</button>
+            </form>
+          </div>
         </div>
       <?php endforeach; ?>
     <?php endif; ?>
