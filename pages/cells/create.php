@@ -13,8 +13,9 @@ $days = ['monday'=>'Segunda-feira','tuesday'=>'Terça-feira','wednesday'=>'Quart
 
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     $name         = trim($_POST['name']         ?? '');
-    $leaderIds    = $_POST['leader_ids']         ?? [];
-    $supervisorId = trim($_POST['supervisor_id'] ?? '') ?: null;
+    $leaderIds     = $_POST['leader_ids']     ?? [];
+    $supervisorIds = $_POST['supervisor_ids'] ?? [];
+    $hostIds       = $_POST['host_ids']       ?? [];
     $day          = trim($_POST['day_of_week']   ?? '') ?: null;
     $time         = trim($_POST['time_start']    ?? '') ?: null;
     $zip          = trim($_POST['zip_code']      ?? '');
@@ -28,21 +29,20 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 
     if (empty($errors)) {
         $stmt = $db->prepare("
-            INSERT INTO cells (church_id, name, day_of_week, time_start, zip_code, street, number, neighborhood, city, active, supervisor_id)
-            VALUES (:church_id,:name,:day,:time,:zip,:street,:number,:neighborhood,:city,:active,:supervisor_id)
+            INSERT INTO cells (church_id, name, day_of_week, time_start, zip_code, street, number, neighborhood, city, active)
+            VALUES (:church_id,:name,:day,:time,:zip,:street,:number,:neighborhood,:city,:active)
         ");
         $stmt->execute([
-            ':church_id'     => $churchId,
-            ':name'          => $name,
-            ':day'           => $day,
-            ':time'          => $time,
-            ':zip'           => $zip ?: null,
-            ':street'        => $street ?: null,
-            ':number'        => $number ?: null,
-            ':neighborhood'  => $neighborhood ?: null,
-            ':city'          => $city ?: null,
-            ':active'        => $active,
-            ':supervisor_id' => $supervisorId,
+            ':church_id'    => $churchId,
+            ':name'         => $name,
+            ':day'          => $day,
+            ':time'         => $time,
+            ':zip'          => $zip ?: null,
+            ':street'       => $street ?: null,
+            ':number'       => $number ?: null,
+            ':neighborhood' => $neighborhood ?: null,
+            ':city'         => $city ?: null,
+            ':active'       => $active,
         ]);
         $cellId = $db->lastInsertId();
 
@@ -55,6 +55,11 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             // Manter compatibilidade com campo leader_id
             $db->prepare("UPDATE cells SET leader_id = ? WHERE id = ?")->execute([(int)$leaderIds[0], $cellId]);
         }
+        // Supervisores e anfitriões (pode ter mais de um — ex: casal)
+        $si = $db->prepare("INSERT IGNORE INTO cell_supervisors (cell_id, member_id) VALUES (?, ?)");
+        foreach ($supervisorIds as $mid) $si->execute([$cellId, (int)$mid]);
+        $hi = $db->prepare("INSERT IGNORE INTO cell_hosts (cell_id, member_id) VALUES (?, ?)");
+        foreach ($hostIds as $mid) $hi->execute([$cellId, (int)$mid]);
 
         header('Location: /pages/cells/index.php?saved=1');
         exit;
@@ -133,13 +138,33 @@ require_once __DIR__ . '/../../includes/layout.php';
     </div>
 
     <div class="form-group" style="margin-bottom:0">
-      <label class="form-label">Supervisor <span style="font-weight:400;color:var(--text-muted)">(quem acompanha essa célula)</span></label>
-      <select name="supervisor_id" class="form-control">
-        <option value="">Sem supervisor definido</option>
+      <label class="form-label">Supervisores <span style="font-weight:400;color:var(--text-muted)">(quem acompanha essa célula — pode ser mais de um, ex: casal)</span></label>
+      <div style="border:1px solid var(--border);border-radius:7px;overflow:hidden;max-height:200px;overflow-y:auto">
         <?php foreach ($members_list as $m): ?>
-          <option value="<?= $m['id'] ?>" <?= ($_POST['supervisor_id'] ?? '') == $m['id'] ? 'selected' : '' ?>><?= htmlspecialchars($m['name']) ?></option>
+          <label style="display:flex;align-items:center;gap:10px;padding:9px 12px;cursor:pointer;border-bottom:1px solid var(--border);font-size:13px">
+            <input type="checkbox" name="supervisor_ids[]" value="<?= $m['id'] ?>" <?= in_array($m['id'], $_POST['supervisor_ids']??[]) ? 'checked' : '' ?>>
+            <div class="avatar" style="width:26px;height:26px;font-size:10px;flex-shrink:0"><?= strtoupper(substr($m['name'],0,2)) ?></div>
+            <?= htmlspecialchars($m['name']) ?>
+          </label>
         <?php endforeach; ?>
-      </select>
+      </div>
+    </div>
+  </div>
+
+  <!-- Anfitriões -->
+  <div class="card" style="margin-bottom:16px">
+    <p class="card-title">Anfitriões</p>
+    <div class="form-group" style="margin-bottom:0">
+      <label class="form-label">Quem recebe a célula <span style="font-weight:400;color:var(--text-muted)">(dono(a) da casa — pode ser mais de um, ex: casal)</span></label>
+      <div style="border:1px solid var(--border);border-radius:7px;overflow:hidden;max-height:200px;overflow-y:auto">
+        <?php foreach ($members_list as $m): ?>
+          <label style="display:flex;align-items:center;gap:10px;padding:9px 12px;cursor:pointer;border-bottom:1px solid var(--border);font-size:13px">
+            <input type="checkbox" name="host_ids[]" value="<?= $m['id'] ?>" <?= in_array($m['id'], $_POST['host_ids']??[]) ? 'checked' : '' ?>>
+            <div class="avatar" style="width:26px;height:26px;font-size:10px;flex-shrink:0"><?= strtoupper(substr($m['name'],0,2)) ?></div>
+            <?= htmlspecialchars($m['name']) ?>
+          </label>
+        <?php endforeach; ?>
+      </div>
     </div>
   </div>
 

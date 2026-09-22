@@ -30,12 +30,19 @@ $leaders = $db->prepare("
 $leaders->execute([$id]);
 $leaders = $leaders->fetchAll();
 
-$supervisor = null;
-if ($cell['supervisor_id']) {
-    $sq = $db->prepare("SELECT name FROM members WHERE id = ?");
-    $sq->execute([$cell['supervisor_id']]);
-    $supervisor = $sq->fetchColumn() ?: null;
-}
+$supervisors = $db->prepare("
+    SELECT m.name FROM cell_supervisors cs JOIN members m ON m.id = cs.member_id
+    WHERE cs.cell_id = ? ORDER BY m.name
+");
+$supervisors->execute([$id]);
+$supervisors = $supervisors->fetchAll(PDO::FETCH_COLUMN);
+
+$hosts = $db->prepare("
+    SELECT m.name FROM cell_hosts ch JOIN members m ON m.id = ch.member_id
+    WHERE ch.cell_id = ? ORDER BY m.name
+");
+$hosts->execute([$id]);
+$hosts = $hosts->fetchAll(PDO::FETCH_COLUMN);
 
 // Membros vinculados
 $members = $db->prepare("
@@ -105,8 +112,11 @@ $addressStr = implode(', ', $address);
             <?php endforeach; ?>
           </span>
         <?php endif; ?>
-        <?php if ($supervisor): ?>
-          <span>🧭 Supervisor: <strong style="color:var(--text)"><?= htmlspecialchars($supervisor) ?></strong></span>
+        <?php if ($supervisors): ?>
+          <span>🧭 Supervisor<?= count($supervisors) > 1 ? 'es' : '' ?>: <strong style="color:var(--text)"><?= htmlspecialchars(implode(', ', $supervisors)) ?></strong></span>
+        <?php endif; ?>
+        <?php if ($hosts): ?>
+          <span>🏠 Anfitri<?= count($hosts) > 1 ? 'ões' : 'ão' ?>: <strong style="color:var(--text)"><?= htmlspecialchars(implode(', ', $hosts)) ?></strong></span>
         <?php endif; ?>
         <?php if ($cell['day_of_week']): ?>
           <span>📅 <?= $days[$cell['day_of_week']] ?? $cell['day_of_week'] ?>

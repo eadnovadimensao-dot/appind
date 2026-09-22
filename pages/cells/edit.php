@@ -21,12 +21,21 @@ $curLeaders = $db->prepare("SELECT member_id FROM cell_leaders WHERE cell_id = ?
 $curLeaders->execute([$id]);
 $curLeaderIds = $curLeaders->fetchAll(PDO::FETCH_COLUMN);
 
+$curSupervisors = $db->prepare("SELECT member_id FROM cell_supervisors WHERE cell_id = ?");
+$curSupervisors->execute([$id]);
+$curSupervisorIds = $curSupervisors->fetchAll(PDO::FETCH_COLUMN);
+
+$curHosts = $db->prepare("SELECT member_id FROM cell_hosts WHERE cell_id = ?");
+$curHosts->execute([$id]);
+$curHostIds = $curHosts->fetchAll(PDO::FETCH_COLUMN);
+
 $days = ['monday'=>'Segunda-feira','tuesday'=>'Terça-feira','wednesday'=>'Quarta-feira',
          'thursday'=>'Quinta-feira','friday'=>'Sexta-feira','saturday'=>'Sábado','sunday'=>'Domingo'];
 
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     $name         = trim($_POST['name']         ?? '');
     $leaderIds    = $_POST['leader_ids']         ?? [];
+    $hostIds      = $_POST['host_ids']           ?? [];
     $day          = trim($_POST['day_of_week']   ?? '') ?: null;
     $time         = trim($_POST['time_start']    ?? '') ?: null;
     $zip          = trim($_POST['zip_code']      ?? '');
@@ -43,18 +52,16 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             UPDATE cells SET
               name=:name, day_of_week=:day, time_start=:time,
               zip_code=:zip, street=:street, number=:number, neighborhood=:neighborhood, city=:city,
-              active=:active, leader_id=:leader_id" . ($canSetSupervisor ? ', supervisor_id=:supervisor_id' : '') . "
+              active=:active, leader_id=:leader_id
             WHERE id=:id AND church_id=:church_id
         ");
-        $params = [
+        $stmt->execute([
             ':name'=>$name, ':day'=>$day, ':time'=>$time,
             ':zip'=>$zip?:null, ':street'=>$street?:null, ':number'=>$number?:null,
             ':neighborhood'=>$neighborhood?:null, ':city'=>$city?:null,
             ':active'=>$active, ':leader_id'=>$leaderIds ? (int)$leaderIds[0] : null,
             ':id'=>$id, ':church_id'=>$churchId,
-        ];
-        if ($canSetSupervisor) $params[':supervisor_id'] = trim($_POST['supervisor_id'] ?? '') ?: null;
-        $stmt->execute($params);
+        ]);
 
         // Ressincroniza a liderança (cell_leaders é a fonte usada no resto do sistema)
         $db->prepare("DELETE FROM cell_leaders WHERE cell_id = ?")->execute([$id]);
@@ -63,11 +70,30 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             foreach ($leaderIds as $i => $mid) $sl->execute([$id, (int)$mid, $i === 0 ? 'leader' : 'co-leader']);
         }
 
+        // Anfitriões: quem edita a célula pode escolher
+        $db->prepare("DELETE FROM cell_hosts WHERE cell_id = ?")->execute([$id]);
+        if (!empty($hostIds)) {
+            $hi = $db->prepare("INSERT IGNORE INTO cell_hosts (cell_id, member_id) VALUES (?, ?)");
+            foreach ($hostIds as $mid) $hi->execute([$id, (int)$mid]);
+        }
+
+        // Supervisores: só quem gerencia células (admin/supermaster) altera
+        if ($canSetSupervisor) {
+            $supervisorIds = $_POST['supervisor_ids'] ?? [];
+            $db->prepare("DELETE FROM cell_supervisors WHERE cell_id = ?")->execute([$id]);
+            if (!empty($supervisorIds)) {
+                $si = $db->prepare("INSERT IGNORE INTO cell_supervisors (cell_id, member_id) VALUES (?, ?)");
+                foreach ($supervisorIds as $mid) $si->execute([$id, (int)$mid]);
+            }
+        }
+
         header('Location: /pages/cells/view.php?id='.$id.'&saved=1');
         exit;
     }
     $cell = array_merge($cell, $_POST);
-    $curLeaderIds = $leaderIds;
+    $curLeaderIds     = $leaderIds;
+    $curHostIds       = $hostIds;
+    if ($canSetSupervisor) $curSupervisorIds = $_POST['supervisor_ids'] ?? [];
 }
 
 $activePage = 'cells';
@@ -159,25 +185,43 @@ require_once __DIR__ . '/../../includes/layout.php';
     </div>
 
     <div class="form-group" style="margin-bottom:0">
-      <label class="form-label">Supervisor <span style="font-weight:400;color:var(--text-muted)">(quem acompanha essa célula)</span></label>
+      <label class="form-label">Supervisores <span style="font-weight:400;color:var(--text-muted)">(quem acompanha essa célula — pode ser mais de um, ex: casal)</span></label>
       <?php if ($canSetSupervisor): ?>
-        <select name="supervisor_id" class="form-control">
-          <option value="">Sem supervisor definido</option>
+        <div style="border:1px solid var(--border);border-radius:7px;overflow:hidden;max-height:200px;overflow-y:auto">
           <?php foreach ($members_list as $m): ?>
-            <option value="<?= $m['id'] ?>" <?= $cell['supervisor_id'] == $m['id'] ? 'selected' : '' ?>><?= htmlspecialchars($m['name']) ?></option>
+            <label style="display:flex;align-items:center;gap:10px;padding:9px 12px;cursor:pointer;border-bottom:1px solid var(--border);font-size:13px">
+              <input type="checkbox" name="supervisor_ids[]" value="<?= $m['id'] ?>" <?= in_array($m['id'], $curSupervisorIds) ? 'checked' : '' ?>>
+              <div class="avatar" style="width:26px;height:26px;font-size:10px;flex-shrink:0"><?= strtoupper(substr($m['name'],0,2)) ?></div>
+              <?= htmlspecialchars($m['name']) ?>
+            </label>
           <?php endforeach; ?>
-        </select>
+        </div>
       <?php else: ?>
         <?php
-          $supName = null;
-          if ($cell['supervisor_id']) {
-              $sq = $db->prepare("SELECT name FROM members WHERE id = ?");
-              $sq->execute([$cell['supervisor_id']]);
-              $supName = $sq->fetchColumn();
+          $supNames = [];
+          if ($curSupervisorIds) {
+              foreach ($members_list as $m) if (in_array($m['id'], $curSupervisorIds)) $supNames[] = $m['name'];
           }
         ?>
-        <div style="font-size:13px;color:var(--text-muted)"><?= $supName ? htmlspecialchars($supName) : 'Sem supervisor definido' ?> <span style="font-size:11px">(somente admin/supermaster altera)</span></div>
+        <div style="font-size:13px;color:var(--text-muted)"><?= $supNames ? htmlspecialchars(implode(', ', $supNames)) : 'Sem supervisor definido' ?> <span style="font-size:11px">(somente admin/supermaster altera)</span></div>
       <?php endif; ?>
+    </div>
+  </div>
+
+  <!-- Anfitriões -->
+  <div class="card" style="margin-bottom:16px">
+    <p class="card-title">Anfitriões</p>
+    <div class="form-group" style="margin-bottom:0">
+      <label class="form-label">Quem recebe a célula <span style="font-weight:400;color:var(--text-muted)">(dono(a) da casa — pode ser mais de um, ex: casal)</span></label>
+      <div style="border:1px solid var(--border);border-radius:7px;overflow:hidden;max-height:200px;overflow-y:auto">
+        <?php foreach ($members_list as $m): ?>
+          <label style="display:flex;align-items:center;gap:10px;padding:9px 12px;cursor:pointer;border-bottom:1px solid var(--border);font-size:13px">
+            <input type="checkbox" name="host_ids[]" value="<?= $m['id'] ?>" <?= in_array($m['id'], $curHostIds) ? 'checked' : '' ?>>
+            <div class="avatar" style="width:26px;height:26px;font-size:10px;flex-shrink:0"><?= strtoupper(substr($m['name'],0,2)) ?></div>
+            <?= htmlspecialchars($m['name']) ?>
+          </label>
+        <?php endforeach; ?>
+      </div>
     </div>
   </div>
 
