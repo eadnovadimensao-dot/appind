@@ -362,7 +362,9 @@ tbody tr:hover td { background: #fafafa; }
 
   /* ── Grids de 2 colunas → 1 coluna ── */
   [style*="grid-template-columns:1fr 1fr"],
-  [style*="grid-template-columns: 1fr 1fr"] {
+  [style*="grid-template-columns: 1fr 1fr"],
+  [style*="grid-template-columns:1fr 1fr 1fr"],
+  [style*="grid-template-columns: 1fr 1fr 1fr"] {
     grid-template-columns: 1fr !important;
   }
   [style*="grid-template-columns:320px"],

@@ -167,8 +167,8 @@ require_once __DIR__ . '/../../includes/layout.php';
     </div>
   </div>
 
-  <!-- Liderança + Supervisão -->
-  <div style="display:grid;grid-template-columns:1fr 1fr;gap:16px;margin-bottom:16px">
+  <!-- Liderança + Supervisão + Anfitriões -->
+  <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:16px;margin-bottom:16px">
     <div class="card">
       <p class="card-title">Liderança</p>
       <div class="form-group" style="margin-bottom:0">
@@ -189,7 +189,7 @@ require_once __DIR__ . '/../../includes/layout.php';
     <div class="card">
       <p class="card-title">Supervisão</p>
       <div class="form-group" style="margin-bottom:0">
-        <label class="form-label">Supervisores <span style="font-weight:400;color:var(--text-muted)">(quem acompanha essa célula — um ou mais, ex: casal)</span></label>
+        <label class="form-label">Supervisores <span style="font-weight:400;color:var(--text-muted)">(um ou mais — ex: casal)</span></label>
         <?php if ($canSetSupervisor): ?>
           <div style="border:1px solid var(--border);border-radius:7px;overflow:hidden;max-height:200px;overflow-y:auto">
             <?php foreach ($members_list as $m): ?>
@@ -211,21 +211,20 @@ require_once __DIR__ . '/../../includes/layout.php';
         <?php endif; ?>
       </div>
     </div>
-  </div>
 
-  <!-- Anfitriões -->
-  <div class="card" style="margin-bottom:16px">
-    <p class="card-title">Anfitriões</p>
-    <div class="form-group" style="margin-bottom:0">
-      <label class="form-label">Quem recebe a célula <span style="font-weight:400;color:var(--text-muted)">(dono(a) da casa — pode ser mais de um, ex: casal)</span></label>
-      <div style="border:1px solid var(--border);border-radius:7px;overflow:hidden;max-height:200px;overflow-y:auto">
-        <?php foreach ($members_list as $m): ?>
-          <label style="display:flex;align-items:center;gap:10px;padding:9px 12px;cursor:pointer;border-bottom:1px solid var(--border);font-size:13px">
-            <input type="checkbox" name="host_ids[]" value="<?= $m['id'] ?>" <?= in_array($m['id'], $curHostIds) ? 'checked' : '' ?>>
-            <div class="avatar" style="width:26px;height:26px;font-size:10px;flex-shrink:0"><?= strtoupper(substr($m['name'],0,2)) ?></div>
-            <?= htmlspecialchars($m['name']) ?>
-          </label>
-        <?php endforeach; ?>
+    <div class="card">
+      <p class="card-title">Anfitriões</p>
+      <div class="form-group" style="margin-bottom:0">
+        <label class="form-label">Quem recebe <span style="font-weight:400;color:var(--text-muted)">(dono(a) da casa — um ou mais, ex: casal)</span></label>
+        <div style="border:1px solid var(--border);border-radius:7px;overflow:hidden;max-height:200px;overflow-y:auto">
+          <?php foreach ($members_list as $m): ?>
+            <label style="display:flex;align-items:center;gap:10px;padding:9px 12px;cursor:pointer;border-bottom:1px solid var(--border);font-size:13px">
+              <input type="checkbox" name="host_ids[]" value="<?= $m['id'] ?>" <?= in_array($m['id'], $curHostIds) ? 'checked' : '' ?>>
+              <div class="avatar" style="width:26px;height:26px;font-size:10px;flex-shrink:0"><?= strtoupper(substr($m['name'],0,2)) ?></div>
+              <?= htmlspecialchars($m['name']) ?>
+            </label>
+          <?php endforeach; ?>
+        </div>
       </div>
     </div>
   </div>
