@@ -167,44 +167,49 @@ require_once __DIR__ . '/../../includes/layout.php';
     </div>
   </div>
 
-  <!-- Líderes -->
-  <div class="card" style="margin-bottom:16px">
-    <p class="card-title">Liderança</p>
-    <div class="form-group" style="margin-bottom:4px">
-      <label class="form-label">Líderes <span style="font-weight:400;color:var(--text-muted)">(selecione um ou mais — ex: casal)</span></label>
-      <div style="border:1px solid var(--border);border-radius:7px;overflow:hidden;max-height:200px;overflow-y:auto">
-        <?php foreach ($members_list as $m): ?>
-          <label style="display:flex;align-items:center;gap:10px;padding:9px 12px;cursor:pointer;border-bottom:1px solid var(--border);font-size:13px">
-            <input type="checkbox" name="leader_ids[]" value="<?= $m['id'] ?>" <?= in_array($m['id'], $curLeaderIds) ? 'checked' : '' ?>>
-            <div class="avatar" style="width:26px;height:26px;font-size:10px;flex-shrink:0"><?= strtoupper(substr($m['name'],0,2)) ?></div>
-            <?= htmlspecialchars($m['name']) ?>
-          </label>
-        <?php endforeach; ?>
-      </div>
-      <span style="font-size:11px;color:var(--text-muted)">O primeiro selecionado será o líder principal</span>
-    </div>
-
-    <div class="form-group" style="margin-bottom:0">
-      <label class="form-label">Supervisores <span style="font-weight:400;color:var(--text-muted)">(quem acompanha essa célula — pode ser mais de um, ex: casal)</span></label>
-      <?php if ($canSetSupervisor): ?>
+  <!-- Liderança + Supervisão -->
+  <div style="display:grid;grid-template-columns:1fr 1fr;gap:16px;margin-bottom:16px">
+    <div class="card">
+      <p class="card-title">Liderança</p>
+      <div class="form-group" style="margin-bottom:0">
+        <label class="form-label">Líderes <span style="font-weight:400;color:var(--text-muted)">(um ou mais — ex: casal)</span></label>
         <div style="border:1px solid var(--border);border-radius:7px;overflow:hidden;max-height:200px;overflow-y:auto">
           <?php foreach ($members_list as $m): ?>
             <label style="display:flex;align-items:center;gap:10px;padding:9px 12px;cursor:pointer;border-bottom:1px solid var(--border);font-size:13px">
-              <input type="checkbox" name="supervisor_ids[]" value="<?= $m['id'] ?>" <?= in_array($m['id'], $curSupervisorIds) ? 'checked' : '' ?>>
+              <input type="checkbox" name="leader_ids[]" value="<?= $m['id'] ?>" <?= in_array($m['id'], $curLeaderIds) ? 'checked' : '' ?>>
               <div class="avatar" style="width:26px;height:26px;font-size:10px;flex-shrink:0"><?= strtoupper(substr($m['name'],0,2)) ?></div>
               <?= htmlspecialchars($m['name']) ?>
             </label>
           <?php endforeach; ?>
         </div>
-      <?php else: ?>
-        <?php
-          $supNames = [];
-          if ($curSupervisorIds) {
-              foreach ($members_list as $m) if (in_array($m['id'], $curSupervisorIds)) $supNames[] = $m['name'];
-          }
-        ?>
-        <div style="font-size:13px;color:var(--text-muted)"><?= $supNames ? htmlspecialchars(implode(', ', $supNames)) : 'Sem supervisor definido' ?> <span style="font-size:11px">(somente admin/supermaster altera)</span></div>
-      <?php endif; ?>
+        <span style="font-size:11px;color:var(--text-muted)">O primeiro selecionado será o líder principal</span>
+      </div>
+    </div>
+
+    <div class="card">
+      <p class="card-title">Supervisão</p>
+      <div class="form-group" style="margin-bottom:0">
+        <label class="form-label">Supervisores <span style="font-weight:400;color:var(--text-muted)">(quem acompanha essa célula — um ou mais, ex: casal)</span></label>
+        <?php if ($canSetSupervisor): ?>
+          <div style="border:1px solid var(--border);border-radius:7px;overflow:hidden;max-height:200px;overflow-y:auto">
+            <?php foreach ($members_list as $m): ?>
+              <label style="display:flex;align-items:center;gap:10px;padding:9px 12px;cursor:pointer;border-bottom:1px solid var(--border);font-size:13px">
+                <input type="checkbox" name="supervisor_ids[]" value="<?= $m['id'] ?>" <?= in_array($m['id'], $curSupervisorIds) ? 'checked' : '' ?>>
+                <div class="avatar" style="width:26px;height:26px;font-size:10px;flex-shrink:0"><?= strtoupper(substr($m['name'],0,2)) ?></div>
+                <?= htmlspecialchars($m['name']) ?>
+              </label>
+            <?php endforeach; ?>
+          </div>
+        <?php else: ?>
+          <?php
+            $supNames = [];
+            if ($curSupervisorIds) {
+                foreach ($members_list as $m) if (in_array($m['id'], $curSupervisorIds)) $supNames[] = $m['name'];
+            }
+          ?>
+          <div style="font-size:13px;color:var(--text-muted)"><?= $supNames ? htmlspecialchars(implode(', ', $supNames)) : 'Sem supervisor definido' ?> <span style="font-size:11px">(somente admin/supermaster altera)</span></div>
+        <?php endif; ?>
+      </div>
     </div>
   </div>
 
