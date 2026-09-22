@@ -4,6 +4,7 @@
 
 require_once __DIR__ . '/../config/database.php';
 require_once __DIR__ . '/auth.php';
+require_once __DIR__ . '/discipleship.php';
 auth_check();
 auth_member_redirect(); // bloqueia membro de acessar páginas restritas
 
@@ -14,6 +15,7 @@ $navItems = [
   ['href' => '/pages/members/index.php',        'icon' => 'ti-users',            'label' => 'Membros',      'key' => 'members'],
   ['href' => '/pages/families/index.php',       'icon' => 'ti-home',             'label' => 'Famílias',     'key' => 'families'],
   ['href' => '/pages/cells/index.php',          'icon' => 'ti-circles',          'label' => 'Células',      'key' => 'cells'],
+  ['href' => '/pages/discipleship/index.php',   'icon' => 'ti-heart-handshake',  'label' => 'Discipulado',  'key' => 'discipleship'],
   ['href' => '/pages/finance/index.php',        'icon' => 'ti-cash',             'label' => 'Financeiro',   'key' => 'finance'],
   ['href' => '/pages/events/index.php',         'icon' => 'ti-calendar',         'label' => 'Agenda',       'key' => 'events'],
   ['href' => '/pages/services/index.php',       'icon' => 'ti-building-church',  'label' => 'Cultos',       'key' => 'services'],
@@ -81,11 +83,13 @@ if (window.innerWidth <= 900) {
       $role       = auth_role();
       $memberId   = auth_member_id();
       $inMinistry = false;
-      $relatedCells = [];
+      $relatedCells   = [];
+      $hasDiscipleship = false;
 
       if ($memberId && $role === 'member') {
-          $relatedCells = member_related_cells($memberId);
-          $inMinistry   = (bool)db()->query("SELECT COUNT(*) FROM member_ministries WHERE member_id=$memberId")->fetchColumn();
+          $relatedCells   = member_related_cells($memberId);
+          $inMinistry     = (bool)db()->query("SELECT COUNT(*) FROM member_ministries WHERE member_id=$memberId")->fetchColumn();
+          $hasDiscipleship = member_current_discipleship_as_disciple(db(), $memberId) || member_current_disciples(db(), $memberId) || auth_is_discipleship_coordinator();
       }
 
       foreach ($navItems as $item):
@@ -94,6 +98,7 @@ if (window.innerWidth <= 900) {
           $memberAllowed = ['dashboard','events','communication','offering','devotional'];
           if ($relatedCells) $memberAllowed[] = 'cells';
           if ($inMinistry) $memberAllowed[] = 'ministries';
+          if ($relatedCells || $hasDiscipleship) $memberAllowed[] = 'discipleship';
           if (!in_array($item['key'], $memberAllowed)) continue;
           // Célula: com uma só, vai direto; com mais de uma (ex: supervisor de várias), lista
           if ($item['key'] === 'cells') {
@@ -107,11 +112,11 @@ if (window.innerWidth <= 900) {
           }
         }
         if ($role === 'leader') {
-          $leaderAllowed = ['dashboard','events','communication','ministries','cells','offering','devotional'];
+          $leaderAllowed = ['dashboard','events','communication','ministries','cells','discipleship','offering','devotional'];
           if (!in_array($item['key'], $leaderAllowed)) continue;
         }
         if ($role === 'cell_leader') {
-          $cellLeaderAllowed = ['dashboard','events','communication','cells','ministries','offering','devotional'];
+          $cellLeaderAllowed = ['dashboard','events','communication','cells','ministries','discipleship','offering','devotional'];
           if (!in_array($item['key'], $cellLeaderAllowed)) continue;
         }
       ?>

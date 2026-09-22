@@ -1,6 +1,7 @@
 <?php
 require_once __DIR__ . '/../../config/database.php';
 require_once __DIR__ . '/../../includes/auth.php';
+require_once __DIR__ . '/../../includes/discipleship.php';
 auth_check();
 
 $db = db();
@@ -203,6 +204,43 @@ $doneCount = count(array_filter($steps, fn($s) => $s['completed_at'] !== null));
   </div>
 </div>
 <?php endif; ?>
+
+<?php
+// Discipulado: etapa do currículo (1º/2º Passo) e o discipulado em andamento (se houver)
+$canSetDiscStep = auth_is_discipleship_coordinator();
+$discActive     = member_current_discipleship_as_disciple($db, (int)$m['id']);
+$discDiscipling = member_current_disciples($db, (int)$m['id']);
+?>
+<div class="card" style="margin-top:16px;padding:0">
+  <div style="padding:14px 18px;border-bottom:1px solid var(--border)">
+    <p style="font-weight:500;font-size:14px">🤝 Discipulado</p>
+  </div>
+  <div style="padding:16px 18px">
+    <?php if ($canSetDiscStep): ?>
+      <form method="POST" action="/pages/members/discipleship_step_set.php" style="display:flex;align-items:center;gap:10px;margin-bottom:12px">
+        <input type="hidden" name="member_id" value="<?= $m['id'] ?>">
+        <label class="form-label" style="margin-bottom:0">Etapa do currículo</label>
+        <select name="step" class="form-control" style="width:auto" onchange="this.form.submit()">
+          <?php foreach (DISCIPLESHIP_STEP_LABELS as $val => $label): ?>
+            <option value="<?= $val ?>" <?= (int)$m['discipleship_step'] === $val ? 'selected' : '' ?>><?= $label ?></option>
+          <?php endforeach; ?>
+        </select>
+      </form>
+    <?php else: ?>
+      <p style="font-size:13px;margin-bottom:12px">Etapa do currículo: <strong><?= DISCIPLESHIP_STEP_LABELS[(int)$m['discipleship_step']] ?? 'Nenhum' ?></strong></p>
+    <?php endif; ?>
+
+    <?php if ($discActive): ?>
+      <p style="font-size:13px">Sendo discipulado(a) por <strong><?= htmlspecialchars($discActive['discipler_name']) ?></strong></p>
+    <?php endif; ?>
+    <?php if ($discDiscipling): ?>
+      <p style="font-size:13px;<?= $discActive ? 'margin-top:6px' : '' ?>">Discipulando: <strong><?= htmlspecialchars(implode(', ', array_column($discDiscipling, 'disciple_name'))) ?></strong></p>
+    <?php endif; ?>
+    <?php if (!$discActive && !$discDiscipling): ?>
+      <p style="font-size:12px;color:var(--text-muted)">Sem discipulado em andamento.</p>
+    <?php endif; ?>
+  </div>
+</div>
 
 <?php
 // Histórico de transferências entre filiais
