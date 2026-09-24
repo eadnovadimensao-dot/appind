@@ -15,6 +15,15 @@ function get_ministry_roles(PDO $db, int $ministryId): array {
     return $stmt->fetchAll();
 }
 
+/**
+ * Nomes das funções desse ministério marcadas como "sempre inclui" (ex: Pastor
+ * da Base) — quem está nelas recebe pedido de oração em vez do convite normal
+ * de confirmar/recusar presença, porque não é um rodízio.
+ */
+function ministry_always_include_role_names(PDO $db, int $ministryId): array {
+    return array_column(array_filter(get_ministry_roles($db, $ministryId), fn($r) => $r['always_include']), 'name');
+}
+
 // Monta o "pool" de candidatos agrupado por função, a partir dos membros do
 // ministério. Usado tanto pelo sorteio avulso (auto_scale.php) quanto pelo
 // sorteio em lote (activity_batch_create.php).

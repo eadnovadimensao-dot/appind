@@ -20,7 +20,7 @@ $act = $stmt->fetch();
 if (!$act) { header('Location: /pages/ministries/index.php'); exit; }
 auth_require_ministry((int)$act['ministry_id']);
 
-$mn = ['name' => $act['ministry_name']];
+$mn = ['id' => (int)$act['ministry_id'], 'name' => $act['ministry_name']];
 
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     $title        = trim($_POST['title']         ?? '');

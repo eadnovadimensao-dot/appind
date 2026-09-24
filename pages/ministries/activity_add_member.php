@@ -31,7 +31,7 @@ if ($act && $memberId && auth_can_manage_ministry((int)$act['ministry_id'])) {
     $inserted->execute([$activityId, $memberId, $role ?: null, $token, $expires]);
 
     if ($inserted->rowCount() > 0) {
-        $mn = ['name' => $act['ministry_name']];
+        $mn = ['id' => (int)$act['ministry_id'], 'name' => $act['ministry_name']];
         notify_scale_invitation(
             $db, $mn, $activityId, $act['title'], $act['activity_date'], $act['time_start'],
             $memberId, $role, $churchId, auth_member_id()

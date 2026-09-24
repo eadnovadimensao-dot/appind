@@ -136,7 +136,7 @@ function notify_scale_invitation(
     $refuseUrl  = APP_URL . '/respond.php?token=' . $token . '&action=refuse';
     $prazo      = date('d/m/Y H:i', strtotime($tokenData['token_expires_at'] ?? response_deadline($date, $timeStart)));
 
-    $isPrayerRole = in_array(trim($role), MUSIC_ALWAYS_INCLUDE_ROLES, true);
+    $isPrayerRole = in_array(trim($role), ministry_always_include_role_names($db, (int)($mn['id'] ?? 0)), true);
 
     $whatsappButtons = null;
 
@@ -469,7 +469,7 @@ function notify_activity_rescheduled(
 
     foreach ($rows as $row) {
         $mid          = (int)$row['member_id'];
-        $isPrayerRole = in_array(trim($row['role'] ?? ''), MUSIC_ALWAYS_INCLUDE_ROLES, true);
+        $isPrayerRole = in_array(trim($row['role'] ?? ''), ministry_always_include_role_names($db, (int)($mn['id'] ?? 0)), true);
         $memberRow    = $db->query("SELECT name, phone FROM members WHERE id=" . $mid)->fetch();
         $memberName   = $memberRow['name']  ?? '';
         $memberPhone  = $memberRow['phone'] ?? '';
