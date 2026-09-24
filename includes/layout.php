@@ -149,10 +149,6 @@ if (window.innerWidth <= 900) {
         </a>
         <a href="/logout.php" class="sb-logout" title="Sair" aria-label="Sair"><i class="ti ti-logout"></i></a>
       </div>
-      <div class="sb-church-info">
-        <span class="sb-church-name"><?= htmlspecialchars(setting('church_name', 'Igreja')) ?></span>
-        <div class="sb-avatar"><?= htmlspecialchars(setting('church_initials', 'IG')) ?></div>
-      </div>
       <button class="sb-toggle" id="sb-toggle" aria-label="Retrair menu">
         <i class="ti ti-chevron-left" style="font-size:16px"></i>
       </button>
