@@ -278,6 +278,7 @@ $at = $actTypeLabels[$act['activity_type']] ?? null;
             <th>Telefone</th>
             <th>Resposta do membro</th>
             <th>Chegada</th>
+            <th></th>
           </tr>
         </thead>
         <tbody>
@@ -329,6 +330,14 @@ $at = $actTypeLabels[$act['activity_type']] ?? null;
                   <span class="badge badge-red">⚠ não chegou</span>
                 <?php else: ?>
                   <span style="color:var(--text-muted);font-size:12px">—</span>
+                <?php endif; ?>
+              </td>
+              <td style="text-align:right">
+                <?php if ($canManage && $act['status'] === 'scheduled'): ?>
+                  <a href="/pages/ministries/activity_remove_member.php?activity_id=<?= $id ?>&member_id=<?= $s['id'] ?>"
+                     style="font-size:18px;color:var(--text-muted);text-decoration:none;line-height:1"
+                     title="Tirar da escala"
+                     data-confirm="Tirar <?= htmlspecialchars($s['name']) ?> da escala? Pra substituir, use '+ Adicionar / Substituir' logo depois.">×</a>
                 <?php endif; ?>
               </td>
             </tr>
