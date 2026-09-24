@@ -10,3 +10,7 @@
 
 # Backups de banco de dados - contêm senhas, chaves e dados de membros
 /_db_backups/
+
+# Planilhas com dados pessoais (endereços, contatos): nunca commitar
+/*.xls
+/*.xlsx
