@@ -229,6 +229,8 @@ function resource_size(?int $bytes): string {
                  class="btn btn-secondary" style="font-size:12px;padding:5px 12px">⬇ Baixar</a>
             <?php endif; ?>
             <?php if ($canManage): ?>
+              <a href="/pages/ministries/resource_edit.php?id=<?= $r['id'] ?>"
+                 title="Editar" style="font-size:14px;color:var(--text-muted);text-decoration:none">✎</a>
               <a href="/pages/ministries/resource_delete.php?id=<?= $r['id'] ?>"
                  style="font-size:16px;color:var(--text-muted);text-decoration:none"
                  data-confirm="Remover <?= htmlspecialchars($r['title']) ?>?">×</a>

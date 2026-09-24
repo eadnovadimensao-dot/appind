@@ -93,6 +93,7 @@ function auth_member_redirect(): void {
         if ($inMinistry) {
             $allowed[] = '/pages/ministries/activity_view.php';
             $allowed[] = '/pages/ministries/resources.php';
+            $allowed[] = '/pages/ministries/resource_edit.php';
             $allowed[] = '/pages/ministries/items.php';
         }
 
