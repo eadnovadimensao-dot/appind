@@ -50,6 +50,13 @@ try {
 } catch (\Throwable $e) {
     error_log('cron checkin: ' . $e->getMessage());
 }
+// 4) Lembra o líder do ministério se o repertório ainda estiver vazio perto da data
+try {
+    require_once __DIR__ . '/includes/ministry_activity.php';
+    queue_repertoire_reminders_due($db);
+} catch (\Throwable $e) {
+    error_log('cron repertório: ' . $e->getMessage());
+}
 
 // Proteção do número (o WhatsApp bloqueou por 24h depois de 135 envios num dia):
 // 1) convite de check-in que não saiu em 3h perdeu o sentido: vence, não vai depois

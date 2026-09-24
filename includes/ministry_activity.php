@@ -604,3 +604,117 @@ function previous_weekday_before(string $baseDate, string $weekday): string {
     $base->modify("-{$diff} days");
     return $base->format('Y-m-d');
 }
+
+// ── Repertório: enviar pra quem já está escalado, e lembrar o líder se ainda está vazio ──
+
+/** Dias de antecedência pra lembrar o líder, se o repertório ainda estiver vazio. */
+const REPERTOIRE_REMINDER_DAYS_BEFORE = 3;
+
+/**
+ * Repertório atual de uma atividade, no mesmo formato usado em activity_view.php
+ * (título/tom/link priorizando o catálogo sobre os campos avulsos legados).
+ */
+function activity_songs(PDO $db, int $activityId): array {
+    $q = $db->prepare("
+        SELECT COALESCE(r.title, mas.title) AS title,
+               COALESCE(r.key_tone, mas.key_tone) AS key_tone,
+               COALESCE(r.external_url, mas.reference_link) AS reference_link
+        FROM ministry_activity_songs mas
+        LEFT JOIN ministry_resources r ON r.id = mas.resource_id
+        WHERE mas.activity_id = ?
+        ORDER BY mas.position, mas.id
+    ");
+    $q->execute([$activityId]);
+    return $q->fetchAll();
+}
+
+/**
+ * Manda o repertório definido pra quem está escalado na atividade (WhatsApp).
+ * Chamada pelo botão "Enviar repertório" — pode ser chamada de novo depois de
+ * mudar alguma música, manda pra todo mundo escalado de novo. Não faz nada se
+ * o repertório estiver vazio ou não houver ninguém escalado com telefone.
+ */
+function ministry_send_repertoire(PDO $db, int $activityId): int {
+    $act = $db->prepare("
+        SELECT ma.*, mn.name AS ministry_name
+        FROM ministry_activities ma JOIN ministries mn ON mn.id = ma.ministry_id
+        WHERE ma.id = ?
+    ");
+    $act->execute([$activityId]);
+    $act = $act->fetch();
+    if (!$act) return 0;
+
+    $songs = activity_songs($db, $activityId);
+    if (!$songs) return 0;
+
+    $scaled = $db->prepare("
+        SELECT m.phone, m.name FROM ministry_activity_members mam
+        JOIN members m ON m.id = mam.member_id
+        WHERE mam.activity_id = ? AND m.phone IS NOT NULL AND m.phone != ''
+    ");
+    $scaled->execute([$activityId]);
+    $scaled = $scaled->fetchAll();
+    if (!$scaled) return 0;
+
+    $list = '';
+    foreach ($songs as $i => $s) {
+        $list .= "\n" . ($i + 1) . ". {$s['title']}";
+        if ($s['key_tone']) $list .= " ({$s['key_tone']})";
+        if ($s['reference_link']) $list .= "\n   ▶ {$s['reference_link']}";
+    }
+    $timeLabel = $act['time_start'] ? ' às ' . substr($act['time_start'], 0, 5) : '';
+    $header = "🎵 *Repertório — {$act['title']}*\n" . date_pt($act['activity_date']) . $timeLabel . "\n";
+
+    $sent = 0;
+    foreach ($scaled as $m) {
+        $first = explode(' ', trim($m['name']))[0];
+        $msg = "Olá, {$first}! " . $header . $list;
+        queue_whatsapp($m['phone'], $msg, (int)$act['church_id'], null, 0, $activityId, 'ministry_songs');
+        $sent++;
+    }
+
+    $db->prepare("UPDATE ministry_activities SET songs_sent_at = NOW() WHERE id = ?")->execute([$activityId]);
+    return $sent;
+}
+
+/**
+ * Chamada pelo cron de todo minuto: pra atividades de ministérios com escala
+ * automática (Louvor e afins) que estão a poucos dias de acontecer e ainda
+ * não têm repertório definido, avisa quem lidera o ministério — uma vez só
+ * por atividade, não fica repetindo o aviso a cada execução.
+ */
+function queue_repertoire_reminders_due(PDO $db): void {
+    $limit = date('Y-m-d', strtotime('+' . REPERTOIRE_REMINDER_DAYS_BEFORE . ' days'));
+    $due = $db->query("
+        SELECT ma.id, ma.title, ma.activity_date, ma.ministry_id, ma.church_id, mn.name AS ministry_name
+        FROM ministry_activities ma
+        JOIN ministries mn ON mn.id = ma.ministry_id
+        WHERE mn.auto_scale_enabled = 1
+          AND ma.status = 'scheduled'
+          AND ma.activity_date BETWEEN CURDATE() AND '$limit'
+          AND ma.repertoire_reminder_sent_at IS NULL
+          AND NOT EXISTS (SELECT 1 FROM ministry_activity_songs WHERE activity_id = ma.id)
+    ")->fetchAll();
+
+    foreach ($due as $act) {
+        // Reserva antes de enfileirar: duas execuções seguidas não duplicam o aviso
+        $claim = $db->prepare("UPDATE ministry_activities SET repertoire_reminder_sent_at = NOW() WHERE id = ? AND repertoire_reminder_sent_at IS NULL");
+        $claim->execute([$act['id']]);
+        if ($claim->rowCount() !== 1) continue;
+
+        $leaders = $db->prepare("
+            SELECT phone FROM members WHERE id IN (SELECT member_id FROM ministry_leaders WHERE ministry_id = ?)
+              AND phone IS NOT NULL AND phone != ''
+        ");
+        $leaders->execute([$act['ministry_id']]);
+
+        $daysLeft = (int)ceil((strtotime($act['activity_date']) - strtotime(date('Y-m-d'))) / 86400);
+        $when = $daysLeft <= 0 ? 'é hoje' : ($daysLeft === 1 ? 'é amanhã' : "é em $daysLeft dias");
+        $msg = "🎵 *Repertório pendente*\n\n{$act['title']} ({$act['ministry_name']}) $when e o repertório ainda não foi definido.\n\nAcesse o sistema pra montar:\n"
+             . APP_URL . '/pages/ministries/activity_view.php?id=' . $act['id'];
+
+        foreach ($leaders->fetchAll() as $l) {
+            queue_whatsapp($l['phone'], $msg, (int)$act['church_id'], null, 0, (int)$act['id'], 'ministry_reminder');
+        }
+    }
+}

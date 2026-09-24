@@ -2,6 +2,7 @@
 require_once __DIR__ . "/../../config/database.php";
 require_once __DIR__ . "/../../includes/auth.php";
 require_once __DIR__ . "/../../includes/music_roles.php";
+require_once __DIR__ . "/../../includes/ministry_activity.php";
 auth_check();
 $db       = db();
 $churchId = current_church_id();
@@ -144,11 +145,30 @@ $at = $actTypeLabels[$act['activity_type']] ?? null;
   </div>
 </div>
 
+<?php if (isset($_GET['songs_sent'])): ?>
+  <div style="background:#E1F5EE;border:1px solid var(--accent);border-radius:8px;padding:12px 16px;margin-bottom:16px;font-size:13px;color:#0F6E56">
+    <?= (int)$_GET['songs_sent'] > 0
+      ? '📤 Repertório enviado por WhatsApp pra ' . (int)$_GET['songs_sent'] . ' pessoa(s) escalada(s).'
+      : '⚠️ Não enviei: ninguém escalado com telefone, ou repertório vazio.' ?>
+  </div>
+<?php endif; ?>
+
 <!-- Repertório -->
 <div class="card" style="padding:0;margin-bottom:16px">
-  <div style="padding:14px 18px;border-bottom:1px solid var(--border)">
+  <div style="padding:14px 18px;border-bottom:1px solid var(--border);display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:8px">
     <p style="font-weight:500;font-size:14px">Repertório <span style="color:var(--text-muted);font-weight:400">(<?= count($songs) ?>)</span></p>
+    <?php if ($canManage && !empty($songs) && !empty($scaled)): ?>
+      <a href="/pages/ministries/activity_send_songs.php?id=<?= $id ?>" class="btn btn-secondary" style="font-size:12px;padding:5px 12px"
+         data-confirm="Enviar o repertório por WhatsApp pra todos escalados nessa atividade?">
+        📤 <?= $act['songs_sent_at'] ? 'Reenviar repertório' : 'Enviar repertório' ?>
+      </a>
+    <?php endif; ?>
   </div>
+  <?php if ($act['songs_sent_at']): ?>
+    <div style="padding:8px 18px;font-size:11px;color:var(--text-muted);border-bottom:1px solid var(--border)">
+      📤 enviado em <?= date('d/m H:i', strtotime($act['songs_sent_at'])) ?>
+    </div>
+  <?php endif; ?>
   <?php if (empty($songs)): ?>
     <div class="empty-state" style="padding:24px">Nenhuma música adicionada.</div>
   <?php else: ?>
