@@ -36,8 +36,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && $reset) {
     } elseif ($password !== $confirm) {
         $error = 'As senhas não conferem.';
     } else {
-        $hash = password_hash($password, PASSWORD_BCRYPT);
-        $db->prepare("UPDATE users SET password=?, login_attempts=0, locked_until=NULL WHERE id=?")
+        $hash = password_hash($password, PASSWORD_BCRYPT, ['cost' => 12]);
+        $db->prepare("UPDATE users SET password_hash=?, login_attempts=0, locked_until=NULL WHERE id=?")
            ->execute([$hash, $reset['user_id']]);
         $db->prepare("UPDATE password_resets SET used=1 WHERE token=?")
            ->execute([$token]);
