@@ -5,6 +5,8 @@ require_once __DIR__ . '/../../includes/music_roles.php';
 auth_check();
 
 header('Content-Type: application/json; charset=utf-8');
+header('Cache-Control: no-store, no-cache, must-revalidate');
+header('Pragma: no-cache');
 
 $db           = db();
 $ministryId   = (int)($_GET['ministry_id'] ?? 0);
