@@ -19,7 +19,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     $time        = trim($_POST['meeting_time']?? '') ?: null;
     $active      = isset($_POST['active']) ? 1 : 0;
     $autoScale   = isset($_POST['auto_scale_enabled']) ? 1 : 0;
-    $checkinLead = max(0, (int)($_POST['checkin_lead_minutes'] ?? 30)) ?: 30;
+    $checkinLead   = max(0, (int)($_POST['checkin_lead_minutes'] ?? 30)) ?: 30;
+    $rehearsalLead = max(0, (int)($_POST['rehearsal_reminder_minutes'] ?? 30)) ?: 30;
     $memberIds   = array_map('intval', $_POST['member_ids'] ?? []);
 
     if ($name === '') $errors[] = 'Nome do ministério é obrigatório.';
@@ -30,12 +31,12 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         $mainLeader = $leaderId ?: ($leaderIds[0] ?? null);
 
         $db->prepare("
-            INSERT INTO ministries (church_id, name, description, leader_id, meeting_day, meeting_time, active, auto_scale_enabled, checkin_lead_minutes)
-            VALUES (:church_id,:name,:desc,:leader_id,:day,:time,:active,:auto_scale,:checkin_lead)
+            INSERT INTO ministries (church_id, name, description, leader_id, meeting_day, meeting_time, active, auto_scale_enabled, checkin_lead_minutes, rehearsal_reminder_minutes)
+            VALUES (:church_id,:name,:desc,:leader_id,:day,:time,:active,:auto_scale,:checkin_lead,:rehearsal_lead)
         ")->execute([
             ':church_id' => $churchId, ':name' => $name, ':desc' => $description ?: null,
             ':leader_id' => $mainLeader, ':day' => $day, ':time' => $time, ':active' => $active,
-            ':auto_scale' => $autoScale, ':checkin_lead' => $checkinLead,
+            ':auto_scale' => $autoScale, ':checkin_lead' => $checkinLead, ':rehearsal_lead' => $rehearsalLead,
         ]);
         $ministryId = $db->lastInsertId();
 
@@ -115,16 +116,29 @@ require_once __DIR__ . '/../../includes/layout.php';
         Libera o sorteio automático de escala com funções fixas (ex: 1 Ministro de Louvor, 2 Recepcionistas…) — depois de salvar, configure as funções em "🎲 Funções da escala" na página do ministério.
       </p>
     </div>
-    <div class="form-group" style="margin-top:14px;margin-bottom:0;max-width:220px">
-      <label class="form-label">Antecedência do lembrete de chegada</label>
-      <select name="checkin_lead_minutes" class="form-control">
-        <?php foreach ([15=>'15 minutos',30=>'30 minutos',60=>'1 hora',90=>'1h30',120=>'2 horas',180=>'3 horas'] as $min=>$label): ?>
-          <option value="<?= $min ?>" <?= (int)($_POST['checkin_lead_minutes'] ?? 30)===$min?'selected':'' ?>><?= $label ?></option>
-        <?php endforeach; ?>
-      </select>
-      <p style="font-size:11px;color:var(--text-muted);margin-top:4px">
-        Quando manda o "✅ Cheguei" por WhatsApp pra quem confirmou escala aqui.
-      </p>
+    <div class="form-row" style="margin-top:14px">
+      <div class="form-group" style="margin-bottom:0;max-width:220px">
+        <label class="form-label">Antecedência do lembrete — culto</label>
+        <select name="checkin_lead_minutes" class="form-control">
+          <?php foreach ([15=>'15 minutos',30=>'30 minutos',60=>'1 hora',90=>'1h30',120=>'2 horas',180=>'3 horas'] as $min=>$label): ?>
+            <option value="<?= $min ?>" <?= (int)($_POST['checkin_lead_minutes'] ?? 30)===$min?'selected':'' ?>><?= $label ?></option>
+          <?php endforeach; ?>
+        </select>
+        <p style="font-size:11px;color:var(--text-muted);margin-top:4px">
+          Manda "chegue com antecedência" + "✅ Cheguei" pra quem confirmou escala de culto.
+        </p>
+      </div>
+      <div class="form-group" style="margin-bottom:0;max-width:220px">
+        <label class="form-label">Antecedência do lembrete — ensaio</label>
+        <select name="rehearsal_reminder_minutes" class="form-control">
+          <?php foreach ([15=>'15 minutos',30=>'30 minutos',60=>'1 hora',90=>'1h30',120=>'2 horas'] as $min=>$label): ?>
+            <option value="<?= $min ?>" <?= (int)($_POST['rehearsal_reminder_minutes'] ?? 30)===$min?'selected':'' ?>><?= $label ?></option>
+          <?php endforeach; ?>
+        </select>
+        <p style="font-size:11px;color:var(--text-muted);margin-top:4px">
+          Manda "não esqueça do ensaio" + "✅ Cheguei" pra quem confirmou escala de ensaio.
+        </p>
+      </div>
     </div>
   </div>
 
