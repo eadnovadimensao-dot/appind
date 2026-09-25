@@ -62,6 +62,25 @@ function backup_rotate(): void {
     foreach (array_slice($files, 0, max(0, count($files) - BACKUP_KEEP_FILES)) as $old) @unlink($old);
 }
 
+/** PHPMailer já configurado com o SMTP da sede (exige vendor/autoload.php carregado). */
+function smtp_mailer(string $fromName): \PHPMailer\PHPMailer\PHPMailer {
+    $smtpUser = setting('smtp_user', '', SEDE_ID);
+    $smtpPort = (int)setting('smtp_port', '587', SEDE_ID);
+    $mail = new \PHPMailer\PHPMailer\PHPMailer(true);
+    $mail->isSMTP();
+    $mail->Host       = setting('smtp_host', 'localhost', SEDE_ID);
+    $mail->Port       = $smtpPort;
+    $mail->SMTPAuth   = $smtpUser !== '';
+    $mail->Username   = $smtpUser;
+    $mail->Password   = setting('smtp_pass', '', SEDE_ID);
+    $mail->SMTPSecure = $smtpPort == 465
+        ? \PHPMailer\PHPMailer\PHPMailer::ENCRYPTION_SMTPS
+        : \PHPMailer\PHPMailer\PHPMailer::ENCRYPTION_STARTTLS;
+    $mail->CharSet = 'UTF-8';
+    $mail->setFrom(setting('church_email', '', SEDE_ID) ?: $smtpUser, $fromName);
+    return $mail;
+}
+
 /** Manda uma cópia zipada e criptografada (AES-256) pro e-mail de backup. */
 function backup_email(PDO $db, string $gzFile): bool {
     $to       = setting('backup_email', '', SEDE_ID);
@@ -78,20 +97,7 @@ function backup_email(PDO $db, string $gzFile): bool {
     $zip->close();
 
     try {
-        $smtpUser = setting('smtp_user', '', SEDE_ID);
-        $smtpPort = (int)setting('smtp_port', '587', SEDE_ID);
-        $mail = new \PHPMailer\PHPMailer\PHPMailer(true);
-        $mail->isSMTP();
-        $mail->Host       = setting('smtp_host', 'localhost', SEDE_ID);
-        $mail->Port       = $smtpPort;
-        $mail->SMTPAuth   = $smtpUser !== '';
-        $mail->Username   = $smtpUser;
-        $mail->Password   = setting('smtp_pass', '', SEDE_ID);
-        $mail->SMTPSecure = $smtpPort == 465
-            ? \PHPMailer\PHPMailer\PHPMailer::ENCRYPTION_SMTPS
-            : \PHPMailer\PHPMailer\PHPMailer::ENCRYPTION_STARTTLS;
-        $mail->CharSet = 'UTF-8';
-        $mail->setFrom(setting('church_email', '', SEDE_ID) ?: $smtpUser, 'Backup Igreja Manager');
+        $mail = smtp_mailer('Backup Igreja Manager');
         $mail->addAddress($to);
         $mail->Subject = 'Backup do banco ' . date('d/m/Y');
         $mail->Body    = "Backup automático do banco em anexo (zip com senha AES-256).\nGuarde a senha em local seguro: sem ela o arquivo não abre.";
