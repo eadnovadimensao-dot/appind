@@ -21,6 +21,7 @@ $navItems = [
   ['href' => '/pages/services/index.php',       'icon' => 'ti-building-church',  'label' => 'Cultos',       'key' => 'services'],
   ['href' => '/pages/communication/index.php',  'icon' => 'ti-bell',             'label' => 'Comunicação',  'key' => 'communication'],
   ['href' => '/pages/ministries/index.php',     'icon' => 'ti-star',             'label' => 'Ministérios',  'key' => 'ministries'],
+  ['href' => '/pages/availability/index.php',   'icon' => 'ti-calendar-off',     'label' => 'Disponibilidade', 'key' => 'availability'],
   ['href' => '/pages/users/index.php',          'icon' => 'ti-lock',             'label' => 'Usuários',     'key' => 'users'],
   ['href' => '/pages/branches.php',             'icon' => 'ti-building',         'label' => 'Filiais',      'key' => 'branches'],
   ['href' => '/pages/whatsapp.php',             'icon' => 'ti-brand-whatsapp',  'label' => 'WhatsApp',     'key' => 'whatsapp'],
@@ -94,24 +95,33 @@ if (window.innerWidth <= 900) {
                               || member_pending_discipler_invites(db(), $memberId) || auth_is_discipleship_coordinator();
       }
 
+      // Disponibilidade só faz sentido pra quem participa de algum ministério
+      $inAnyMinistry = false;
+      if ($memberId) {
+          $im = db()->prepare("SELECT 1 FROM member_ministries WHERE member_id = ? LIMIT 1");
+          $im->execute([$memberId]);
+          $inAnyMinistry = (bool)$im->fetchColumn();
+      }
+
       foreach ($navItems as $item):
         if (in_array($item['key'], ['branches','whatsapp']) && $role !== 'supermaster') continue; // Filiais e WhatsApp: só supermaster
+        if ($item['key'] === 'availability' && !$inAnyMinistry) continue;
         if ($role === 'member') {
           // Ministérios agora é um diretório aberto (qualquer um vê quais existem);
           // o que fica restrito é o conteúdo de dentro, filtrado na própria tela.
-          $memberAllowed = ['dashboard','events','communication','offering','devotional','ministries'];
+          $memberAllowed = ['dashboard','events','communication','offering','devotional','ministries','availability'];
           if ($relatedCells) $memberAllowed[] = 'cells';
           if ($relatedCells || $hasDiscipleship) $memberAllowed[] = 'discipleship';
           if (!in_array($item['key'], $memberAllowed)) continue;
         }
         if ($role === 'leader') {
-          $leaderAllowed = ['dashboard','events','communication','ministries','offering','devotional'];
+          $leaderAllowed = ['dashboard','events','communication','ministries','offering','devotional','availability'];
           if ($relatedCells) $leaderAllowed[] = 'cells';
           if ($relatedCells || $hasDiscipleship) $leaderAllowed[] = 'discipleship';
           if (!in_array($item['key'], $leaderAllowed)) continue;
         }
         if ($role === 'cell_leader') {
-          $cellLeaderAllowed = ['dashboard','events','communication','ministries','offering','devotional'];
+          $cellLeaderAllowed = ['dashboard','events','communication','ministries','offering','devotional','availability'];
           if ($relatedCells) $cellLeaderAllowed[] = 'cells';
           if ($relatedCells || $hasDiscipleship) $cellLeaderAllowed[] = 'discipleship';
           if (!in_array($item['key'], $cellLeaderAllowed)) continue;

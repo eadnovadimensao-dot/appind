@@ -78,7 +78,11 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && empty($errors)) {
                 continue;
             }
 
-            $draw        = draw_scale($db, $ministryId, $pool, $prevMemberIds);
+            $blockDates = [$date];
+            if ($activityType === 'culto' && $autoRehearsal && !empty($mn['meeting_day'])) {
+                $blockDates[] = previous_weekday_before($date, $mn['meeting_day']);
+            }
+            $draw        = draw_scale($db, $ministryId, $pool, $prevMemberIds, unavailable_members($db, $blockDates));
             $assignments = $draw['assignments'];
             $title       = $titlePrefix . ' — ' . date('d/m/Y', strtotime($date));
 

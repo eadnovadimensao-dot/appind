@@ -295,7 +295,9 @@ document.getElementById('auto-scale-btn')?.addEventListener('click', function() 
   btn.disabled = true;
   btn.textContent = 'Gerando…';
 
-  fetch('/pages/ministries/auto_scale.php?ministry_id=' + ministryId + '&activity_type=' + activityType)
+  const actDate = document.querySelector('input[name="activity_date"]').value;
+
+  fetch('/pages/ministries/auto_scale.php?ministry_id=' + ministryId + '&activity_type=' + activityType + '&date=' + encodeURIComponent(actDate) + '&_=' + Date.now())
     .then(r => r.json())
     .then(data => {
       btn.disabled = false;
@@ -325,8 +327,11 @@ document.getElementById('auto-scale-btn')?.addEventListener('click', function() 
         }
       });
 
-      if (data.warnings && data.warnings.length) {
-        warnBox.innerHTML = '⚠️ ' + data.warnings.join('<br>⚠️ ');
+      const warnings = (data.warnings || []).slice();
+      if (!actDate) warnings.push('Data ainda não preenchida: as indisponibilidades marcadas pelos membros não foram consideradas. Preencha a data e gere de novo.');
+      if (warnings.length) {
+        const esc = s => String(s).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
+        warnBox.innerHTML = '⚠️ ' + warnings.map(esc).join('<br>⚠️ ');
         warnBox.style.display = 'block';
       }
     })

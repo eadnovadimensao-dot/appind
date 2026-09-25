@@ -96,6 +96,7 @@ function auth_member_redirect(): void {
             $allowed[] = '/pages/ministries/resource_edit.php';
             $allowed[] = '/pages/ministries/items.php';
             $allowed[] = '/pages/ministries/activity_dress.php';
+            $allowed[] = '/pages/availability/index.php';
         }
 
         // Pode solicitar evento se for de ministério

@@ -40,6 +40,11 @@ $scaled = $db->prepare("
 $scaled->execute([$id]);
 $scaled = $scaled->fetchAll();
 
+// Escalados que marcaram indisponibilidade nessa data (vale pra quem gerencia ver)
+$unavailable = auth_can_manage_ministry((int)$act['ministry_id'])
+    ? unavailable_members($db, [$act['activity_date']])
+    : [];
+
 // Membros do ministério que ainda não estão nessa escala (pra substituição/adição)
 $available = $db->prepare("
     SELECT m.id, m.name, mm.role AS default_role
@@ -371,6 +376,10 @@ if ($canDress || $dressColors || $dressNote):
                   <a href="/pages/members/view.php?id=<?= $s['id'] ?>" style="color:var(--text);text-decoration:none;font-weight:500">
                     <?= htmlspecialchars($s['name']) ?>
                   </a>
+                  <?php if (isset($unavailable[(int)$s['id']])): ?>
+                    <span class="badge badge-amber" style="font-size:10px"
+                          title="<?= htmlspecialchars($unavailable[(int)$s['id']]) ?>">⚠️ marcou indisponível nessa data</span>
+                  <?php endif; ?>
                 </div>
               </td>
               <td style="color:var(--text-muted)"><?= htmlspecialchars($s['role'] ?? '—') ?></td>

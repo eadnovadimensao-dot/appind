@@ -61,4 +61,16 @@ if ($prevActivityId) {
     $prevMemberIds = array_map('intval', $pm->fetchAll(PDO::FETCH_COLUMN));
 }
 
-echo json_encode(draw_scale($db, $ministryId, $pool, $prevMemberIds));
+// Indisponibilidade: considera a data do culto e, sendo culto, também a do ensaio-espelho
+$blocked = [];
+$date = $_GET['date'] ?? '';
+if (preg_match('/^\d{4}-\d{2}-\d{2}$/', $date)) {
+    $dates = [$date];
+    if ($activityType === 'culto' && !empty($mn['meeting_day'])) {
+        require_once __DIR__ . '/../../includes/ministry_activity.php';
+        $dates[] = previous_weekday_before($date, $mn['meeting_day']);
+    }
+    $blocked = unavailable_members($db, $dates);
+}
+
+echo json_encode(draw_scale($db, $ministryId, $pool, $prevMemberIds, $blocked));

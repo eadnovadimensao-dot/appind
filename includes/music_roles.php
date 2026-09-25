@@ -43,6 +43,23 @@ function build_scale_pool(PDO $db, int $ministryId, int $churchId): array {
     return $pool;
 }
 
+/**
+ * Membros que marcaram indisponibilidade cobrindo pelo menos uma das datas.
+ * Retorna [member_id => "motivo/observação" ou ''].
+ */
+function unavailable_members(PDO $db, array $dates): array {
+    $dates = array_values(array_filter($dates));
+    if (!$dates) return [];
+    $where  = implode(' OR ', array_fill(0, count($dates), '(date_from <= ? AND date_to >= ?)'));
+    $params = [];
+    foreach ($dates as $d) { $params[] = $d; $params[] = $d; }
+    $q = $db->prepare("SELECT member_id, note FROM member_unavailability WHERE $where");
+    $q->execute($params);
+    $out = [];
+    foreach ($q->fetchAll() as $r) $out[(int)$r['member_id']] = (string)$r['note'];
+    return $out;
+}
+
 // Escolhe candidatos tentando mesclar naipes diferentes (Soprano/Contralto/
 // Tenor) em vez de sortear solto — evita cair várias pessoas do mesmo naipe
 // na escala. Prioridade: 1) uma pessoa de cada naipe real (rodízio, maximiza
@@ -118,7 +135,7 @@ function draw_naipe_mix(string $roleName, array $candidates, int $needed, array 
 // funções configurada pro ministério, evitando repetir quem serviu na
 // escala anterior (passada em $prevMemberIds) quando dá pra evitar.
 // Retorna ['assignments' => [member_id => role], 'warnings' => [string, ...]].
-function draw_scale(PDO $db, int $ministryId, array $pool, array $prevMemberIds): array {
+function draw_scale(PDO $db, int $ministryId, array $pool, array $prevMemberIds, array $blocked = []): array {
     $roles       = get_ministry_roles($db, $ministryId);
     $assignments = []; // member_id => role
     $warnings    = [];
@@ -151,6 +168,17 @@ function draw_scale(PDO $db, int $ministryId, array $pool, array $prevMemberIds)
             $candidates = array_merge($candidates, array_values($extraMinistros));
         }
 
+        // Quem marcou indisponibilidade pra essa data não entra no rodízio
+        if ($blocked) {
+            foreach ($candidates as $c) {
+                if (isset($blocked[$c['id']])) {
+                    $why = $blocked[$c['id']] !== '' ? " ({$blocked[$c['id']]})" : '';
+                    $warnings[] = "{$c['name']} marcou indisponibilidade nessa data$why e não foi sorteado(a).";
+                }
+            }
+            $candidates = array_values(array_filter($candidates, fn($c) => !isset($blocked[$c['id']])));
+        }
+
         if ($r['use_naipe']) {
             [$chosen, $naipeWarning] = draw_naipe_mix($role, $candidates, $needed, $prevMemberIds);
             if ($naipeWarning) $warnings[] = $naipeWarning;
@@ -176,5 +204,5 @@ function draw_scale(PDO $db, int $ministryId, array $pool, array $prevMemberIds)
         }
     }
 
-    return ['assignments' => $assignments, 'warnings' => $warnings];
+    return ['assignments' => $assignments, 'warnings' => array_values(array_unique($warnings))];
 }
