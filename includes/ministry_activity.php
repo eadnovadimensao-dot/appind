@@ -153,6 +153,7 @@ function notify_scale_invitation(
             'ministerio' => $mn['name'],
             'data'       => date_pt($date),
             'prazo'      => $prazo,
+            'funcao'     => trim($role) ?: 'não definida',
         ], $churchId);
         $fullContent = $tpl['content']
             . "\n\n✅ Confirmar presença: $confirmUrl"
