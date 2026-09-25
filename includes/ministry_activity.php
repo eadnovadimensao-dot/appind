@@ -688,6 +688,82 @@ function ministry_send_repertoire(PDO $db, int $activityId): int {
     return $sent;
 }
 
+// ── Vestimenta / paleta de cores da atividade ──
+
+/** Paleta selecionável: chave => [nome, hex, emoji usado na mensagem de WhatsApp]. */
+function dress_palette(): array {
+    return [
+        'branco'   => ['Branco',   '#FFFFFF', '⚪'],
+        'offwhite' => ['Off-white', '#F3EBDD', '⚪'],
+        'bege'     => ['Bege',     '#D9C3A0', '🟤'],
+        'preto'    => ['Preto',    '#1F1F1F', '⚫'],
+        'cinza'    => ['Cinza',    '#8A8F98', '⚫'],
+        'azul'     => ['Azul',     '#2F6FDE', '🔵'],
+        'marinho'  => ['Azul-marinho', '#14285A', '🔵'],
+        'verde'    => ['Verde',    '#2E9E5B', '🟢'],
+        'amarelo'  => ['Amarelo',  '#F2C230', '🟡'],
+        'laranja'  => ['Laranja',  '#F08A24', '🟠'],
+        'terracota'=> ['Terracota', '#C0603F', '🟠'],
+        'vermelho' => ['Vermelho', '#D63A3A', '🔴'],
+        'vinho'    => ['Vinho',    '#7A1F33', '🔴'],
+        'rosa'     => ['Rosa',     '#EC8FB0', '🟣'],
+        'roxo'     => ['Roxo',     '#7A4FBF', '🟣'],
+    ];
+}
+
+/** Lista de chaves válidas a partir de "azul,branco" (descarta o que não existe na paleta). */
+function dress_colors_parse(?string $csv): array {
+    $palette = dress_palette();
+    $out = [];
+    foreach (explode(',', (string)$csv) as $k) {
+        $k = trim($k);
+        if ($k !== '' && isset($palette[$k]) && !in_array($k, $out, true)) $out[] = $k;
+    }
+    return $out;
+}
+
+/** Manda a vestimenta/cores pra quem está escalado (WhatsApp). Retorna quantas mensagens entraram na fila. */
+function ministry_send_dress(PDO $db, int $activityId): int {
+    $act = $db->prepare("SELECT * FROM ministry_activities WHERE id = ?");
+    $act->execute([$activityId]);
+    $act = $act->fetch();
+    if (!$act) return 0;
+
+    $colors = dress_colors_parse($act['dress_colors']);
+    $note   = trim((string)$act['dress_note']);
+    if (!$colors && $note === '') return 0;
+
+    $scaled = $db->prepare("
+        SELECT m.phone, m.name FROM ministry_activity_members mam
+        JOIN members m ON m.id = mam.member_id
+        WHERE mam.activity_id = ? AND m.phone IS NOT NULL AND m.phone != ''
+    ");
+    $scaled->execute([$activityId]);
+    $scaled = $scaled->fetchAll();
+    if (!$scaled) return 0;
+
+    $palette = dress_palette();
+    $body = '';
+    if ($colors) {
+        $parts = array_map(fn($k) => $palette[$k][2] . ' ' . $palette[$k][0], $colors);
+        $body .= "Cores: " . implode('  ', $parts) . "\n";
+    }
+    if ($note !== '') $body .= $note . "\n";
+
+    $timeLabel = $act['time_start'] ? ' às ' . substr($act['time_start'], 0, 5) : '';
+    $header = "👗 *Vestimenta: {$act['title']}*\n" . date_pt($act['activity_date']) . $timeLabel . "\n\n";
+
+    $sent = 0;
+    foreach ($scaled as $m) {
+        $first = explode(' ', trim($m['name']))[0];
+        queue_whatsapp($m['phone'], "Olá, {$first}! " . $header . rtrim($body), (int)$act['church_id'], null, 0, $activityId, 'ministry_dress');
+        $sent++;
+    }
+
+    $db->prepare("UPDATE ministry_activities SET dress_sent_at = NOW() WHERE id = ?")->execute([$activityId]);
+    return $sent;
+}
+
 /**
  * Chamada pelo cron de todo minuto: pra atividades de ministérios com escala
  * automática (Louvor e afins) que estão a poucos dias de acontecer e ainda

@@ -153,6 +153,76 @@ $at = $actTypeLabels[$act['activity_type']] ?? null;
   </div>
 <?php endif; ?>
 
+<?php if (isset($_GET['dress_saved'])): ?>
+  <div style="background:#E1F5EE;border:1px solid var(--accent);border-radius:8px;padding:12px 16px;margin-bottom:16px;font-size:13px;color:#0F6E56">Vestimenta salva.</div>
+<?php elseif (isset($_GET['dress_sent'])): ?>
+  <div style="background:#E1F5EE;border:1px solid var(--accent);border-radius:8px;padding:12px 16px;margin-bottom:16px;font-size:13px;color:#0F6E56">
+    <?= (int)$_GET['dress_sent'] > 0
+      ? '👗 Vestimenta salva e enviada por WhatsApp pra ' . (int)$_GET['dress_sent'] . ' pessoa(s) escalada(s).'
+      : '⚠️ Salvei, mas não enviei: ninguém escalado com telefone, ou nada preenchido.' ?>
+  </div>
+<?php endif; ?>
+
+<?php
+$dressPalette = dress_palette();
+$dressColors  = dress_colors_parse($act['dress_colors'] ?? '');
+$dressNote    = trim((string)($act['dress_note'] ?? ''));
+if ($canManage || $dressColors || $dressNote):
+?>
+<!-- Vestimenta -->
+<div class="card" style="padding:0;margin-bottom:16px">
+  <div style="padding:14px 18px;border-bottom:1px solid var(--border);display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:8px">
+    <p style="font-weight:500;font-size:14px">👗 Vestimenta</p>
+    <?php if (!empty($act['dress_sent_at'])): ?>
+      <span style="font-size:11px;color:var(--text-muted)">📤 enviado em <?= date('d/m H:i', strtotime($act['dress_sent_at'])) ?></span>
+    <?php endif; ?>
+  </div>
+  <?php if ($canManage): ?>
+    <form method="POST" action="/pages/ministries/activity_dress.php" style="padding:14px 18px">
+      <input type="hidden" name="id" value="<?= $id ?>">
+      <p style="font-size:12px;color:var(--text-muted);margin-bottom:8px">Cores da paleta:</p>
+      <div style="display:flex;flex-wrap:wrap;gap:6px;margin-bottom:12px">
+        <?php foreach ($dressPalette as $key => [$cname, $hex]): ?>
+          <label style="display:flex;align-items:center;gap:6px;border:1px solid var(--border);border-radius:20px;padding:5px 12px;font-size:12px;cursor:pointer;background:white">
+            <input type="checkbox" name="colors[]" value="<?= $key ?>" <?= in_array($key, $dressColors, true) ? 'checked' : '' ?>>
+            <span style="width:14px;height:14px;border-radius:50%;background:<?= $hex ?>;border:1px solid rgba(0,0,0,.2);display:inline-block"></span>
+            <?= htmlspecialchars($cname) ?>
+          </label>
+        <?php endforeach; ?>
+      </div>
+      <div class="form-group" style="margin-bottom:12px">
+        <label class="form-label">Observação (opcional)</label>
+        <input type="text" name="note" class="form-control" maxlength="255" value="<?= htmlspecialchars($dressNote) ?>"
+               placeholder="Ex: sem estampa, calça jeans escura, sapato fechado">
+      </div>
+      <div style="display:flex;gap:8px;flex-wrap:wrap">
+        <button type="submit" name="action" value="save" class="btn btn-secondary">Salvar</button>
+        <?php if (!empty($scaled)): ?>
+          <button type="submit" name="action" value="send" class="btn btn-primary"
+                  onclick="return confirm('Salvar e enviar a vestimenta por WhatsApp pra todos escalados nessa atividade?')">
+            📤 <?= !empty($act['dress_sent_at']) ? 'Salvar e reenviar' : 'Salvar e enviar' ?>
+          </button>
+        <?php endif; ?>
+      </div>
+    </form>
+  <?php else: ?>
+    <div style="padding:14px 18px;font-size:13px">
+      <?php if ($dressColors): ?>
+        <div style="display:flex;flex-wrap:wrap;gap:8px;margin-bottom:<?= $dressNote ? '8px' : '0' ?>">
+          <?php foreach ($dressColors as $k): ?>
+            <span style="display:flex;align-items:center;gap:6px;border:1px solid var(--border);border-radius:20px;padding:4px 12px;font-size:12px">
+              <span style="width:14px;height:14px;border-radius:50%;background:<?= $dressPalette[$k][1] ?>;border:1px solid rgba(0,0,0,.2);display:inline-block"></span>
+              <?= htmlspecialchars($dressPalette[$k][0]) ?>
+            </span>
+          <?php endforeach; ?>
+        </div>
+      <?php endif; ?>
+      <?php if ($dressNote): ?><div><?= htmlspecialchars($dressNote) ?></div><?php endif; ?>
+    </div>
+  <?php endif; ?>
+</div>
+<?php endif; ?>
+
 <!-- Repertório -->
 <div class="card" style="padding:0;margin-bottom:16px">
   <div style="padding:14px 18px;border-bottom:1px solid var(--border);display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:8px">
