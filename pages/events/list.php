@@ -28,7 +28,7 @@ $events = $db->prepare("
     ORDER BY ae.event_date DESC, ae.time_start DESC
 ");
 $events->execute($params);
-$events = $events->fetchAll();
+$events = array_map('agenda_decorate', $events->fetchAll());
 
 $statusLabels = [
     'approved'  => ['label'=>'Aprovado',  'badge'=>'badge-green'],

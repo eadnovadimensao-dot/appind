@@ -27,9 +27,10 @@ $startDow   = (int)date('N', $firstDay); // 1=Mon ... 7=Sun
 
 // Eventos do mês (aprovados + pendentes)
 $events = $db->prepare("
-    SELECT ae.*, l.name AS location_name, l.id AS loc_id
+    SELECT ae.*, l.name AS location_name, l.id AS loc_id, mn.name AS ministry_name
     FROM agenda_events ae
     LEFT JOIN locations l ON l.id = ae.location_id
+    LEFT JOIN ministries mn ON mn.id = ae.ministry_id
     WHERE ae.church_id = ?
       AND ae.status IN ('approved','pending')
       AND MONTH(ae.event_date) = ?
@@ -37,7 +38,7 @@ $events = $db->prepare("
     ORDER BY ae.event_date, ae.time_start
 ");
 $events->execute([$churchId, $month, $year]);
-$events = $events->fetchAll();
+$events = array_map('agenda_decorate', $events->fetchAll());
 
 // Agrupar por dia
 $byDay = [];
@@ -57,7 +58,7 @@ $upcoming = $db->prepare("
     LIMIT 8
 ");
 $upcoming->execute([$churchId]);
-$upcoming = $upcoming->fetchAll();
+$upcoming = array_map('agenda_decorate', $upcoming->fetchAll());
 
 // Pendentes de aprovação
 $pending = $db->prepare("
@@ -165,7 +166,9 @@ $typeIcons = [
               <?= $day ?>
             </div>
             <?php foreach (array_slice($dayEvents, 0, 3) as $ev):
-              $color = $statusColors[$ev['status']] ?? '#1D9E75';
+              $color = ($ev['type'] === 'ministry_activity' && $ev['status'] === 'approved')
+                  ? $ev['color']
+                  : ($statusColors[$ev['status']] ?? '#1D9E75');
               $opacity = $ev['status'] === 'pending' ? '0.7' : '1';
             ?>
               <a href="/pages/events/view.php?id=<?= $ev['id'] ?>"
@@ -186,6 +189,9 @@ $typeIcons = [
     <div style="padding:12px 20px;border-top:1px solid var(--border);display:flex;gap:16px;flex-wrap:wrap">
       <span style="font-size:11px;display:flex;align-items:center;gap:5px;color:var(--text-muted)">
         <span style="width:10px;height:10px;border-radius:2px;background:#1D9E75;display:inline-block"></span>Aprovado
+      </span>
+      <span style="font-size:11px;display:flex;align-items:center;gap:5px;color:var(--text-muted)">
+        <span style="width:10px;height:10px;border-radius:2px;background:linear-gradient(90deg,#185FA5,#7A4FBF,#C0603F);display:inline-block"></span>Atividade de ministério (cor por ministério)
       </span>
       <span style="font-size:11px;display:flex;align-items:center;gap:5px;color:var(--text-muted)">
         <span style="width:10px;height:10px;border-radius:2px;background:#BA7517;display:inline-block"></span>Pendente

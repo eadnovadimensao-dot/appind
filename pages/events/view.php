@@ -19,6 +19,7 @@ $stmt = $db->prepare("
 $stmt->execute([$id, $churchId]);
 $ev = $stmt->fetch();
 if (!$ev) { header('Location: /pages/events/index.php'); exit; }
+$ev = agenda_decorate($ev);
 
 $activePage = 'events';
 require_once __DIR__ . '/../../includes/layout.php';

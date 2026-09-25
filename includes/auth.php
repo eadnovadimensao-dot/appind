@@ -169,6 +169,21 @@ function auth_can_manage_cell(int $cellId): bool {
     return $cache[$key];
 }
 
+// Agenda: atividade de ministério mostra "Ministério · título" e uma cor fixa por
+// ministério, pra não parecer duplicata do evento do culto com o mesmo nome.
+function ministry_agenda_color(int $ministryId): string {
+    $palette = ['#185FA5', '#7A4FBF', '#C0603F', '#2E9E5B', '#D63A3A', '#0F8B8D', '#B8860B', '#EC6FA0'];
+    return $palette[$ministryId % count($palette)];
+}
+function agenda_decorate(array $ev): array {
+    if (($ev['type'] ?? '') === 'ministry_activity' && !empty($ev['ministry_name'])) {
+        $prefix = $ev['ministry_name'] . ' · ';
+        if (strpos($ev['title'], $prefix) !== 0) $ev['title'] = $prefix . $ev['title'];
+        $ev['color'] = ministry_agenda_color((int)$ev['ministry_id']);
+    }
+    return $ev;
+}
+
 // Quem gerencia o ministério, ou foi escolhido pelo líder como responsável pela
 // vestimenta (ministry_dress_managers), pode editar/enviar a vestimenta das atividades.
 function auth_can_manage_dress(int $ministryId): bool {
