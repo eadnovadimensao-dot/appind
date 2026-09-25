@@ -65,10 +65,17 @@ $upcoming = $db->prepare("
     WHERE ma.ministry_id = ? AND ma.activity_date >= CURDATE() AND ma.status = 'scheduled'
     GROUP BY ma.id
     ORDER BY ma.activity_date ASC
-    LIMIT 5
+    LIMIT 20
 ");
 $upcoming->execute([$id]);
 $upcoming = $upcoming->fetchAll();
+
+$upcomingCount = $db->prepare("
+    SELECT COUNT(*) FROM ministry_activities
+    WHERE ministry_id = ? AND activity_date >= CURDATE() AND status = 'scheduled'
+");
+$upcomingCount->execute([$id]);
+$upcomingCount = (int)$upcomingCount->fetchColumn();
 
 // Atividades passadas
 $past = $db->prepare("
@@ -82,6 +89,13 @@ $past = $db->prepare("
 ");
 $past->execute([$id]);
 $past = $past->fetchAll();
+
+$pastCount = $db->prepare("
+    SELECT COUNT(*) FROM ministry_activities
+    WHERE ministry_id = ? AND (activity_date < CURDATE() OR status != 'scheduled')
+");
+$pastCount->execute([$id]);
+$pastCount = (int)$pastCount->fetchColumn();
 
 $days = ['monday'=>'Segunda-feira','tuesday'=>'Terça-feira','wednesday'=>'Quarta-feira',
          'thursday'=>'Quinta-feira','friday'=>'Sexta-feira','saturday'=>'Sábado','sunday'=>'Domingo'];
@@ -178,12 +192,12 @@ $actTypeLabels = [
   <div class="kpi">
     <div class="kpi-icon">📅</div>
     <div class="kpi-label">Próximas atividades</div>
-    <div class="kpi-value"><?= count($upcoming) ?></div>
+    <div class="kpi-value"><?= $upcomingCount ?></div>
   </div>
   <div class="kpi">
     <div class="kpi-icon">✅</div>
     <div class="kpi-label">Atividades realizadas</div>
-    <div class="kpi-value"><?= count($past) ?></div>
+    <div class="kpi-value"><?= $pastCount ?></div>
   </div>
 </div>
 
