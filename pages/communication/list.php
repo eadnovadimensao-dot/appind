@@ -18,7 +18,7 @@ $announcements = $db->prepare("
            (SELECT COUNT(*) FROM announcement_sends as2 WHERE as2.announcement_id = a.id AND as2.channel='email') AS email_count
     FROM announcements a
     LEFT JOIN members m ON m.id = a.created_by
-    WHERE a.church_id = ?
+    WHERE a.church_id = ? AND a.target_type <> 'member'
     ORDER BY a.created_at DESC
 ");
 $announcements->execute([$churchId]);

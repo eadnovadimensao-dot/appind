@@ -27,10 +27,11 @@ $announcements = $db->prepare("
     LEFT JOIN ministries mn ON mn.id = a.target_id AND a.target_type = 'ministry'
     LEFT JOIN churches ch  ON ch.id = a.target_id AND a.target_type = 'branch'
     WHERE a.church_id = ? AND a.status = 'sent'
+      AND (a.target_type <> 'member' OR a.target_id = ?)
     ORDER BY a.sent_at DESC
     LIMIT 30
 ");
-$announcements->execute([$memberId, $churchId]);
+$announcements->execute([$memberId, $churchId, $memberId]);
 $announcements = $announcements->fetchAll();
 
 // Marcar como lido ao visualizar
