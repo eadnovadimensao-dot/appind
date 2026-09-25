@@ -13,9 +13,17 @@ $errors   = [];
 $cells      = $db->query("SELECT id, name FROM cells WHERE church_id=$churchId AND active=1 ORDER BY name")->fetchAll();
 $ministries = $db->query("SELECT id, name FROM ministries WHERE church_id=$churchId AND active=1 ORDER BY name")->fetchAll();
 
-// Líderes só podem enviar para sua célula/ministério
-$isLeader  = $role === 'leader';
+// Líderes só podem enviar para as células/ministérios que lideram; "todos" é só admin
 $isAdmin   = in_array($role, ['supermaster','admin']);
+if (!$isAdmin) {
+    $cells      = array_values(array_filter($cells,      fn($c) => auth_can_manage_cell((int)$c['id'])));
+    $ministries = array_values(array_filter($ministries, fn($m) => auth_can_manage_ministry((int)$m['id'])));
+    if (!$cells && !$ministries) {
+        http_response_code(403);
+        include __DIR__ . '/../../includes/403.php';
+        exit;
+    }
+}
 
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     $title      = trim($_POST['title']       ?? '');
@@ -29,6 +37,17 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     if ($title === '')   $errors[] = 'Título é obrigatório.';
     if ($content === '') $errors[] = 'Conteúdo é obrigatório.';
     if (empty($channels)) $errors[] = 'Selecione pelo menos um canal.';
+
+    if ($targetType === 'all') {
+        if (!$isAdmin) $errors[] = 'Você não pode enviar para todos os membros.';
+        $targetId = null;
+    } elseif ($targetType === 'cell') {
+        if (!in_array($targetId, array_column($cells, 'id'))) $errors[] = 'Selecione uma célula que você lidera.';
+    } elseif ($targetType === 'ministry') {
+        if (!in_array($targetId, array_column($ministries, 'id'))) $errors[] = 'Selecione um ministério que você lidera.';
+    } else {
+        $errors[] = 'Destinatário inválido.';
+    }
 
     if (empty($errors)) {
         $channelsStr = implode(',', $channels);

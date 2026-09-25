@@ -9,7 +9,13 @@ $memberId = auth_member_id();
 
 $pageTitle    = 'Comunicação';
 $activePage   = 'communication';
-$topbarAction = ['href' => '/pages/communication/create.php', 'label' => 'Novo aviso'];
+$canSend = in_array(auth_role(), ['supermaster','admin']);
+if (!$canSend && $memberId && in_array(auth_role(), ['leader','cell_leader'])) {
+    $q = $db->prepare("SELECT (SELECT COUNT(*) FROM ministry_leaders WHERE member_id = ?) + (SELECT COUNT(*) FROM cell_leaders WHERE member_id = ?)");
+    $q->execute([$memberId, $memberId]);
+    $canSend = (int)$q->fetchColumn() > 0;
+}
+$topbarAction = $canSend ? ['href' => '/pages/communication/create.php', 'label' => 'Novo aviso'] : null;
 require_once __DIR__ . '/../../includes/layout.php';
 
 // Buscar avisos visíveis para o usuário
