@@ -95,6 +95,7 @@ function auth_member_redirect(): void {
             $allowed[] = '/pages/ministries/resources.php';
             $allowed[] = '/pages/ministries/resource_edit.php';
             $allowed[] = '/pages/ministries/items.php';
+            $allowed[] = '/pages/ministries/activity_dress.php';
         }
 
         // Pode solicitar evento se for de ministério
@@ -166,6 +167,17 @@ function auth_can_manage_cell(int $cellId): bool {
         $cache[$key] = (bool)$stmt->fetchColumn();
     }
     return $cache[$key];
+}
+
+// Quem gerencia o ministério, ou foi escolhido pelo líder como responsável pela
+// vestimenta (ministry_dress_managers), pode editar/enviar a vestimenta das atividades.
+function auth_can_manage_dress(int $ministryId): bool {
+    if (auth_can_manage_ministry($ministryId)) return true;
+    $memberId = auth_member_id();
+    if (!$memberId) return false;
+    $stmt = db()->prepare("SELECT 1 FROM ministry_dress_managers WHERE ministry_id=? AND member_id=?");
+    $stmt->execute([$ministryId, $memberId]);
+    return (bool)$stmt->fetchColumn();
 }
 
 // 403 se o usuário não puder gerenciar esse ministério específico

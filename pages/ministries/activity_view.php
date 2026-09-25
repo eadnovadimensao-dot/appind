@@ -167,7 +167,8 @@ $at = $actTypeLabels[$act['activity_type']] ?? null;
 $dressPalette = dress_palette();
 $dressColors  = dress_colors_parse($act['dress_colors'] ?? '');
 $dressNote    = trim((string)($act['dress_note'] ?? ''));
-if ($canManage || $dressColors || $dressNote):
+$canDress = auth_can_manage_dress((int)$act['ministry_id']);
+if ($canDress || $dressColors || $dressNote):
 ?>
 <!-- Vestimenta -->
 <div class="card" style="padding:0;margin-bottom:16px">
@@ -177,7 +178,7 @@ if ($canManage || $dressColors || $dressNote):
       <span style="font-size:11px;color:var(--text-muted)">📤 enviado em <?= date('d/m H:i', strtotime($act['dress_sent_at'])) ?></span>
     <?php endif; ?>
   </div>
-  <?php if ($canManage): ?>
+  <?php if ($canDress): ?>
     <form method="POST" action="/pages/ministries/activity_dress.php" style="padding:14px 18px">
       <input type="hidden" name="id" value="<?= $id ?>">
       <p style="font-size:12px;color:var(--text-muted);margin-bottom:8px">Cores da paleta:</p>

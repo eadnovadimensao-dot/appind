@@ -12,7 +12,11 @@ $stmt->execute([$id, current_church_id()]);
 $ministryId = $stmt->fetchColumn();
 if (!$ministryId || $_SERVER['REQUEST_METHOD'] !== 'POST') { header('Location: /pages/ministries/index.php'); exit; }
 
-auth_require_ministry((int)$ministryId);
+if (!auth_can_manage_dress((int)$ministryId)) {
+    http_response_code(403);
+    include __DIR__ . '/../../includes/403.php';
+    exit;
+}
 
 $colors = dress_colors_parse(implode(',', (array)($_POST['colors'] ?? [])));
 $note   = trim($_POST['note'] ?? '');

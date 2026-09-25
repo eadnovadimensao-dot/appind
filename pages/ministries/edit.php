@@ -19,6 +19,14 @@ $currentLeaders = $db->prepare("SELECT member_id FROM ministry_leaders WHERE min
 $currentLeaders->execute([$id]);
 $currentLeaderIds = array_column($currentLeaders->fetchAll(), 'member_id');
 
+$ministryMembers = $db->prepare("SELECT m.id, m.name FROM member_ministries mm JOIN members m ON m.id = mm.member_id WHERE mm.ministry_id = ? AND m.status = 'active' ORDER BY m.name");
+$ministryMembers->execute([$id]);
+$ministryMembers = $ministryMembers->fetchAll();
+$dressManagers = $db->prepare("SELECT member_id FROM ministry_dress_managers WHERE ministry_id = ?");
+$dressManagers->execute([$id]);
+$dressManagerIds = array_map('intval', array_column($dressManagers->fetchAll(), 'member_id'));
+if ($_SERVER['REQUEST_METHOD'] === 'POST') $dressManagerIds = array_map('intval', $_POST['dress_ids'] ?? []);
+
 $days = ['monday'=>'Segunda-feira','tuesday'=>'Terça-feira','wednesday'=>'Quarta-feira',
          'thursday'=>'Quinta-feira','friday'=>'Sexta-feira','saturday'=>'Sábado','sunday'=>'Domingo'];
 
@@ -53,6 +61,12 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         $db->prepare("DELETE FROM ministry_leaders WHERE ministry_id=?")->execute([$id]);
         $sl = $db->prepare("INSERT IGNORE INTO ministry_leaders (ministry_id, member_id) VALUES (?,?)");
         foreach ($leaderIds as $lid) $sl->execute([$id, $lid]);
+
+        // Responsáveis pela vestimenta: só quem é membro do ministério
+        $db->prepare("DELETE FROM ministry_dress_managers WHERE ministry_id=?")->execute([$id]);
+        $dm = $db->prepare("INSERT IGNORE INTO ministry_dress_managers (ministry_id, member_id)
+                            SELECT ?, member_id FROM member_ministries WHERE ministry_id = ? AND member_id = ?");
+        foreach (array_map('intval', $_POST['dress_ids'] ?? []) as $did) $dm->execute([$id, $id, $did]);
 
         header('Location: /pages/ministries/view.php?id='.$id.'&saved=1');
         exit;
@@ -138,6 +152,26 @@ require_once __DIR__ . '/../../includes/layout.php';
         </p>
       </div>
     </div>
+  </div>
+
+  <!-- Responsáveis pela vestimenta -->
+  <div class="card" style="margin-bottom:16px">
+    <p class="card-title">👗 Responsáveis pela vestimenta</p>
+    <p style="font-size:12px;color:var(--text-muted);margin-bottom:12px">
+      Quem for marcado pode definir as cores e enviar a vestimenta nas atividades deste ministério, mesmo sem ser líder. Não ganha nenhum outro acesso.
+    </p>
+    <?php if (empty($ministryMembers)): ?>
+      <p style="font-size:12px;color:var(--text-muted)">Este ministério ainda não tem membros vinculados.</p>
+    <?php else: ?>
+      <div style="border:1px solid var(--border);border-radius:7px;overflow:hidden;max-height:220px;overflow-y:auto">
+        <?php foreach ($ministryMembers as $m): ?>
+          <label style="display:flex;align-items:center;gap:10px;padding:9px 12px;cursor:pointer;border-bottom:1px solid var(--border);font-size:13px">
+            <input type="checkbox" name="dress_ids[]" value="<?= $m['id'] ?>" <?= in_array((int)$m['id'], $dressManagerIds, true) ? 'checked' : '' ?>>
+            <?= htmlspecialchars($m['name']) ?>
+          </label>
+        <?php endforeach; ?>
+      </div>
+    <?php endif; ?>
   </div>
 
   <!-- Líderes -->
