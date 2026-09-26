@@ -805,3 +805,127 @@ function queue_repertoire_reminders_due(PDO $db): void {
         }
     }
 }
+
+// ── Cobrança de escalados que não responderam ──
+
+const SCALE_REMINDER_MAX          = 2;   // lembretes por pessoa e atividade
+const SCALE_REMINDER_EVERY_HOURS  = 24;  // intervalo entre o convite e cada lembrete
+const SCALE_REMINDER_FROM_HOUR    = 8;   // só manda entre 8h e 20h59
+const SCALE_REMINDER_UNTIL_HOUR   = 21;
+
+/** Nomes das funções "sempre entra" por ministério (não respondem convite, então não são cobradas). */
+function scale_alwaysin_roles(PDO $db, int $ministryId): array {
+    static $cache = [];
+    return $cache[$ministryId] ??= ministry_always_include_role_names($db, $ministryId);
+}
+
+/**
+ * Chamada pelo cron a cada minuto. 1) Lembra por WhatsApp quem ainda não respondeu o
+ * convite de escala (até 2 vezes, 1 por dia, só enquanto o link ainda vale). 2) Depois que
+ * o prazo das respostas vence, avisa o líder do ministério, uma vez, quem ficou sem responder.
+ */
+function queue_scale_pending_followups(PDO $db): void {
+    $hour = (int)date('G');
+    if ($hour < SCALE_REMINDER_FROM_HOUR || $hour >= SCALE_REMINDER_UNTIL_HOUR) return;
+
+    // 1) Lembretes pra quem não respondeu
+    $rows = $db->query("
+        SELECT mam.activity_id, mam.member_id, mam.confirm_token, mam.token_expires_at, mam.reminder_count, mam.role,
+               ma.title, ma.activity_date, ma.ministry_id, ma.church_id, m.name, m.phone
+        FROM ministry_activity_members mam
+        JOIN ministry_activities ma ON ma.id = mam.activity_id
+        JOIN members m ON m.id = mam.member_id
+        WHERE mam.status = 'pending'
+          AND ma.status = 'scheduled' AND ma.activity_date >= CURDATE()
+          AND mam.confirm_token IS NOT NULL
+          AND mam.token_expires_at > DATE_ADD(NOW(), INTERVAL 2 HOUR)
+          AND mam.reminder_count < " . SCALE_REMINDER_MAX . "
+          AND COALESCE(mam.last_reminder_at, mam.notified_at) < DATE_SUB(NOW(), INTERVAL " . SCALE_REMINDER_EVERY_HOURS . " HOUR)
+          AND m.phone IS NOT NULL AND m.phone != ''
+        ORDER BY mam.member_id, ma.activity_date
+    ")->fetchAll();
+
+    $groups = [];
+    foreach ($rows as $r) {
+        if (in_array(trim((string)$r['role']), scale_alwaysin_roles($db, (int)$r['ministry_id']), true)) continue;
+
+        // Reserva antes de enfileirar: duas execuções seguidas não duplicam o lembrete
+        $claim = $db->prepare("UPDATE ministry_activity_members SET reminder_count = reminder_count + 1, last_reminder_at = NOW()
+                               WHERE activity_id = ? AND member_id = ? AND reminder_count = ? AND status = 'pending'");
+        $claim->execute([$r['activity_id'], $r['member_id'], $r['reminder_count']]);
+        if ($claim->rowCount() !== 1) continue;
+
+        $g = &$groups[$r['member_id']];
+        $g['first']  = explode(' ', trim($r['name']))[0];
+        $g['phone']  = $r['phone'];
+        $g['church'] = (int)$r['church_id'];
+        $g['items'][] = $r;
+        unset($g);
+    }
+
+    // Uma mensagem por pessoa, listando tudo que está pendente (evita várias mensagens seguidas)
+    foreach ($groups as $g) {
+        $items = $g['items'];
+        if (count($items) === 1) {
+            $r = $items[0];
+            $role = trim((string)$r['role']);
+            $msg = "⏰ *Lembrete de escala*\n\nOlá, {$g['first']}! Você ainda não respondeu sobre *{$r['title']}* em " . date_pt($r['activity_date'])
+                 . ($role !== '' ? " (função: {$role})" : '') . ".\n\nResponda até " . date('d/m/Y H:i', strtotime($r['token_expires_at'])) . ':';
+            queue_whatsapp($g['phone'], $msg, $g['church'], [
+                ['label' => '✅ Confirmar presença', 'url' => APP_URL . '/respond.php?token=' . $r['confirm_token'] . '&action=confirm'],
+                ['label' => '❌ Não posso ir',       'url' => APP_URL . '/respond.php?token=' . $r['confirm_token'] . '&action=refuse'],
+            ], 0, (int)$r['activity_id'], 'scale_reminder');
+            continue;
+        }
+
+        $msg = "⏰ *Lembrete de escala*\n\nOlá, {$g['first']}! Você ainda não respondeu sobre estas escalas:\n";
+        foreach ($items as $r) {
+            $role = trim((string)$r['role']);
+            $msg .= "\n*{$r['title']}*\n" . date_pt($r['activity_date']) . ($role !== '' ? " · {$role}" : '')
+                  . "\n✅ Confirmar: " . APP_URL . '/respond.php?token=' . $r['confirm_token'] . '&action=confirm'
+                  . "\n❌ Não posso: " . APP_URL . '/respond.php?token=' . $r['confirm_token'] . "&action=refuse\n";
+        }
+        queue_whatsapp($g['phone'], rtrim($msg), $g['church'], null, 0, null, 'scale_reminder');
+    }
+
+    // 2) Prazo venceu e ainda há gente sem resposta: avisa os líderes, uma vez por atividade
+    $acts = $db->query("
+        SELECT ma.id, ma.title, ma.activity_date, ma.ministry_id, ma.church_id
+        FROM ministry_activities ma
+        WHERE ma.status = 'scheduled' AND ma.activity_date >= CURDATE() AND ma.pending_digest_sent_at IS NULL
+          AND EXISTS (SELECT 1 FROM ministry_activity_members x WHERE x.activity_id = ma.id AND x.status = 'pending'
+                      AND x.confirm_token IS NOT NULL AND x.token_expires_at < NOW())
+    ")->fetchAll();
+
+    foreach ($acts as $act) {
+        $pending = $db->prepare("
+            SELECT m.name, mam.role FROM ministry_activity_members mam JOIN members m ON m.id = mam.member_id
+            WHERE mam.activity_id = ? AND mam.status = 'pending' ORDER BY m.name
+        ");
+        $pending->execute([$act['id']]);
+        $names = [];
+        foreach ($pending->fetchAll() as $p) {
+            if (in_array(trim((string)$p['role']), scale_alwaysin_roles($db, (int)$act['ministry_id']), true)) continue;
+            $names[] = '• ' . $p['name'] . (trim((string)$p['role']) !== '' ? ' (' . trim($p['role']) . ')' : '');
+        }
+        if (!$names) continue;
+
+        $claim = $db->prepare("UPDATE ministry_activities SET pending_digest_sent_at = NOW() WHERE id = ? AND pending_digest_sent_at IS NULL");
+        $claim->execute([$act['id']]);
+        if ($claim->rowCount() !== 1) continue;
+
+        $leaders = $db->prepare("
+            SELECT phone FROM members WHERE id IN (SELECT member_id FROM ministry_leaders WHERE ministry_id = ?)
+              AND phone IS NOT NULL AND phone != ''
+        ");
+        $leaders->execute([$act['ministry_id']]);
+
+        $msg = "📋 *Escala sem resposta*\n\n{$act['title']} (" . date_pt($act['activity_date']) . ") tem " . count($names)
+             . " pessoa(s) que ainda não responderam:\n" . implode("\n", $names)
+             . "\n\nO prazo do link de confirmação já venceu. Veja e ajuste a escala:\n"
+             . APP_URL . '/pages/ministries/activity_view.php?id=' . $act['id'];
+        foreach ($leaders->fetchAll() as $l) {
+            queue_whatsapp($l['phone'], $msg, (int)$act['church_id'], null, 0, (int)$act['id'], 'scale_digest');
+        }
+    }
+}

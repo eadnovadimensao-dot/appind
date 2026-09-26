@@ -57,6 +57,13 @@ try {
 } catch (\Throwable $e) {
     error_log('cron repertório: ' . $e->getMessage());
 }
+// 4b) Cobra quem não respondeu a escala e avisa o líder depois que o prazo vence
+try {
+    require_once __DIR__ . '/includes/ministry_activity.php';
+    queue_scale_pending_followups($db);
+} catch (\Throwable $e) {
+    error_log('cron cobrança escala: ' . $e->getMessage());
+}
 // 5) Backup diário do banco (a partir das 3h, uma vez por dia)
 try {
     require_once __DIR__ . '/includes/backup.php';
