@@ -4,9 +4,10 @@
 // usado pra quem está escalado num ministério. Aqui é pra congregação
 // inteira, não só quem serve.
 
-// Quantos minutos DEPOIS do início do culto manda o convite de check-in
-// (dá tempo da maioria já ter chegado e sentado).
-const SERVICE_CHECKIN_MINUTES_AFTER_START = 15;
+// Quantos minutos ANTES do início do culto começa a mandar o convite de
+// check-in — começar mais cedo estica a janela de envio (menos rajada por
+// hora), já que o envio em si segue no ritmo controlado do cron.
+const SERVICE_CHECKIN_MINUTES_BEFORE_START = 90;
 
 /**
  * Garante um registro + token de check-in pra cada membro ativo da filial
@@ -19,7 +20,7 @@ const SERVICE_CHECKIN_MINUTES_AFTER_START = 15;
  */
 function queue_service_checkins(PDO $db, int $serviceId, string $serviceTitle, string $serviceDate, ?string $timeStart, int $churchId): void {
     $startAt = strtotime($serviceDate . ' ' . ($timeStart ?: '09:00:00'));
-    $sendAt  = $startAt + SERVICE_CHECKIN_MINUTES_AFTER_START * 60;
+    $sendAt  = $startAt - SERVICE_CHECKIN_MINUTES_BEFORE_START * 60;
     $delayMinutes = max(0, (int)round(($sendAt - time()) / 60));
 
     // Fora do convite geral: quem está em service_scale OU já confirmou escala
@@ -53,8 +54,9 @@ function queue_service_checkins(PDO $db, int $serviceId, string $serviceTitle, s
         $insert->execute([$serviceId, $m['id'], $token]);
 
         $firstName  = explode(' ', trim($m['name']))[0];
-        $message    = "Olá, {$firstName}! 👋\n\n🙏 *{$serviceTitle}*" . ($timeLabel ? " ($timeLabel)" : '') . "\n\nVocê está no culto hoje?";
-        queue_whatsapp($m['phone'], $message, $churchId, [['type' => 'reply', 'id' => 'presente', 'label' => '✅ Presente']], $delayMinutes, $serviceId, 'checkin');
+        $message    = "Olá, {$firstName}! 👋\n\n🙏 *{$serviceTitle}*" . ($timeLabel ? " ($timeLabel)" : '') . "\n\nConfirme sua presença!";
+        $checkinUrl = APP_URL . '/checkin.php?token=' . $token;
+        queue_whatsapp($m['phone'], $message, $churchId, [['label' => '✅ Presente', 'url' => $checkinUrl]], $delayMinutes, $serviceId, 'checkin');
     }
 }
 

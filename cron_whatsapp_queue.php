@@ -100,10 +100,10 @@ if ($room <= 0) {
     exit("Paused: teto diário de " . WA_DAILY_CAP . " mensagens atingido\n");
 }
 
-// Até 4 mensagens por execução — o cron rodando a cada minuto já dá uma
+// Até 2 mensagens por execução — o cron rodando a cada minuto já dá uma
 // cadência humana; a pausa abaixo evita rajada mesmo dentro dessa leva.
 // Prioridade: avisos de culto primeiro, devocional (volume alto, não urgente) por último.
-$limit = min(4, $room);
+$limit = min(2, $room);
 $batch = $db->query("
     SELECT * FROM whatsapp_queue
     WHERE status = 'pending' AND attempts < 3
