@@ -25,7 +25,9 @@ if (!is_array($data) || ($data['type'] ?? '') !== 'ReceivedCallback'
 }
 
 $phone = preg_replace('/\D/', '', (string)($data['phone'] ?? ''));
-$text  = trim((string)($data['text']['message'] ?? ''));
+// Resposta a botão de resposta rápida (buttonsResponseMessage) tem prioridade;
+// senão, texto digitado normal (text.message).
+$text  = trim((string)($data['buttonsResponseMessage']['message'] ?? $data['text']['message'] ?? ''));
 
 if ($phone === '' || $text === '') {
     echo json_encode(['ok' => true, 'skipped' => true]);

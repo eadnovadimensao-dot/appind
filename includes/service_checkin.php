@@ -53,33 +53,38 @@ function queue_service_checkins(PDO $db, int $serviceId, string $serviceTitle, s
         $insert->execute([$serviceId, $m['id'], $token]);
 
         $firstName  = explode(' ', trim($m['name']))[0];
-        $message    = "Olá, {$firstName}! 👋\n\n🙏 *{$serviceTitle}*" . ($timeLabel ? " ($timeLabel)" : '') . "\n\nVocê está no culto hoje? Responda *PRESENTE* ou toque no botão abaixo.";
-        $checkinUrl = APP_URL . '/checkin.php?token=' . $token;
-        queue_whatsapp($m['phone'], $message, $churchId, [['label' => '✅ Presente', 'url' => $checkinUrl]], $delayMinutes, $serviceId, 'checkin');
+        $message    = "Olá, {$firstName}! 👋\n\n🙏 *{$serviceTitle}*" . ($timeLabel ? " ($timeLabel)" : '') . "\n\nVocê está no culto hoje?";
+        queue_whatsapp($m['phone'], $message, $churchId, [['type' => 'reply', 'id' => 'presente', 'label' => '✅ Presente']], $delayMinutes, $serviceId, 'checkin');
     }
 }
 
-/** Tira acento/caixa pra comparar texto de resposta livre ("Presente!", "presença" etc). */
+/**
+ * Tira acento/caixa/emoji/pontuação pra comparar texto de resposta livre ou de botão
+ * ("✅ Presente" do toque no botão, "Presente!!" digitado, "presença" etc viram "presente").
+ */
 function normalize_reply_text(string $s): string {
     $s = mb_strtolower(trim($s), 'UTF-8');
     $map = ['á'=>'a','à'=>'a','â'=>'a','ã'=>'a','é'=>'e','ê'=>'e','í'=>'i','ó'=>'o','ô'=>'o','õ'=>'o','ú'=>'u','ç'=>'c'];
-    return strtr($s, $map);
+    $s = strtr($s, $map);
+    $s = preg_replace('/[^a-z0-9\s]/u', ' ', $s); // tira emoji e pontuação, mantém letra/número/espaço
+    return trim(preg_replace('/\s+/', ' ', $s));
 }
 
 const CHECKIN_REPLY_WORDS = ['presente', 'presenca', 'aqui', 'cheguei', 'to aqui', 'estou aqui', 'sim'];
 
 /**
- * Alguém respondeu uma mensagem do WhatsApp com um número de telefone que bate com
- * check-in pendente (culto ou escala de ministério, hoje). Confirma a presença se o
- * texto for um dos termos aceitos. Retorna a mensagem de confirmação pra responder,
- * ou null se não achou check-in pendente pra esse telefone ou o texto não bateu.
- * Chamada pelo webhook_zapi.php quando chega mensagem de texto nova (não fromMe).
+ * Alguém respondeu uma mensagem do WhatsApp (texto digitado ou toque no botão de
+ * resposta rápida) com um número de telefone que bate com check-in pendente (culto
+ * ou escala de ministério, hoje). Confirma a presença se o texto for um dos termos
+ * aceitos. Retorna a mensagem de confirmação pra responder, ou null se não achou
+ * check-in pendente pra esse telefone ou o texto não bateu.
+ * Chamada pelo webhook_zapi.php quando chega mensagem nova (não fromMe).
  */
 function try_checkin_by_reply(PDO $db, string $rawPhone, string $text): ?string {
     $norm = normalize_reply_text($text);
     $matched = false;
     foreach (CHECKIN_REPLY_WORDS as $w) {
-        if ($norm === $w || str_starts_with($norm, $w . ' ') || str_starts_with($norm, $w . '!')) { $matched = true; break; }
+        if ($norm === $w || str_starts_with($norm, $w . ' ')) { $matched = true; break; }
     }
     if (!$matched) return null;
 
