@@ -53,10 +53,68 @@ function queue_service_checkins(PDO $db, int $serviceId, string $serviceTitle, s
         $insert->execute([$serviceId, $m['id'], $token]);
 
         $firstName  = explode(' ', trim($m['name']))[0];
-        $message    = "Olá, {$firstName}! 👋\n\n🙏 *{$serviceTitle}*" . ($timeLabel ? " ($timeLabel)" : '') . "\n\nVocê está no culto hoje? Confirme sua presença!";
+        $message    = "Olá, {$firstName}! 👋\n\n🙏 *{$serviceTitle}*" . ($timeLabel ? " ($timeLabel)" : '') . "\n\nVocê está no culto hoje? Responda *PRESENTE* ou toque no botão abaixo.";
         $checkinUrl = APP_URL . '/checkin.php?token=' . $token;
         queue_whatsapp($m['phone'], $message, $churchId, [['label' => '✅ Presente', 'url' => $checkinUrl]], $delayMinutes, $serviceId, 'checkin');
     }
+}
+
+/** Tira acento/caixa pra comparar texto de resposta livre ("Presente!", "presença" etc). */
+function normalize_reply_text(string $s): string {
+    $s = mb_strtolower(trim($s), 'UTF-8');
+    $map = ['á'=>'a','à'=>'a','â'=>'a','ã'=>'a','é'=>'e','ê'=>'e','í'=>'i','ó'=>'o','ô'=>'o','õ'=>'o','ú'=>'u','ç'=>'c'];
+    return strtr($s, $map);
+}
+
+const CHECKIN_REPLY_WORDS = ['presente', 'presenca', 'aqui', 'cheguei', 'to aqui', 'estou aqui', 'sim'];
+
+/**
+ * Alguém respondeu uma mensagem do WhatsApp com um número de telefone que bate com
+ * check-in pendente (culto ou escala de ministério, hoje). Confirma a presença se o
+ * texto for um dos termos aceitos. Retorna a mensagem de confirmação pra responder,
+ * ou null se não achou check-in pendente pra esse telefone ou o texto não bateu.
+ * Chamada pelo webhook_zapi.php quando chega mensagem de texto nova (não fromMe).
+ */
+function try_checkin_by_reply(PDO $db, string $rawPhone, string $text): ?string {
+    $norm = normalize_reply_text($text);
+    $matched = false;
+    foreach (CHECKIN_REPLY_WORDS as $w) {
+        if ($norm === $w || str_starts_with($norm, $w . ' ') || str_starts_with($norm, $w . '!')) { $matched = true; break; }
+    }
+    if (!$matched) return null;
+
+    // Check-in de culto (congregação): pendente de hoje, telefone bate depois de normalizar
+    $rows = $db->query("
+        SELECT sc.id, sc.checkin_token, m.name, m.phone
+        FROM service_checkins sc
+        JOIN services s ON s.id = sc.service_id
+        JOIN members m ON m.id = sc.member_id
+        WHERE sc.checked_in_at IS NULL AND s.service_date = CURDATE()
+    ")->fetchAll();
+    foreach ($rows as $r) {
+        if (normalize_whatsapp_phone((string)$r['phone']) !== $rawPhone) continue;
+        $db->prepare("UPDATE service_checkins SET checked_in_at = NOW() WHERE id = ?")->execute([$r['id']]);
+        $first = explode(' ', trim($r['name']))[0];
+        return "✅ Presença registrada, {$first}! Bom culto 🙏";
+    }
+
+    // Check-in de escala de ministério (quem está servindo hoje)
+    $rows = $db->query("
+        SELECT mam.activity_id, mam.member_id, m.name, m.phone
+        FROM ministry_activity_members mam
+        JOIN ministry_activities ma ON ma.id = mam.activity_id
+        JOIN members m ON m.id = mam.member_id
+        WHERE mam.checked_in_at IS NULL AND mam.checkin_token IS NOT NULL AND ma.activity_date = CURDATE()
+    ")->fetchAll();
+    foreach ($rows as $r) {
+        if (normalize_whatsapp_phone((string)$r['phone']) !== $rawPhone) continue;
+        $db->prepare("UPDATE ministry_activity_members SET checked_in_at = NOW() WHERE activity_id = ? AND member_id = ?")
+           ->execute([$r['activity_id'], $r['member_id']]);
+        $first = explode(' ', trim($r['name']))[0];
+        return "✅ Presença registrada, {$first}! Bom culto/ensaio 🙏";
+    }
+
+    return null;
 }
 
 /**
