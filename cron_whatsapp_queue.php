@@ -43,6 +43,13 @@ try {
 } catch (Throwable $e) {
     error_log('cron devocional: ' . $e->getMessage());
 }
+// 2b) Aniversariantes do dia recebem mensagem de parabéns
+try {
+    require_once __DIR__ . '/includes/birthdays.php';
+    queue_birthday_greetings($db);
+} catch (\Throwable $e) {
+    error_log('cron aniversario: ' . $e->getMessage());
+}
 // 3) Convida pro check-in quem ainda não foi convidado nos cultos de hoje
 try {
     require_once __DIR__ . '/includes/service_checkin.php';
