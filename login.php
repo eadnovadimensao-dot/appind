@@ -115,6 +115,12 @@ $accentColor  = setting('accent_color',   '#1D9E75', SEDE_ID);
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Login · <?= htmlspecialchars($churchName) ?></title>
+  <link rel="manifest" href="/manifest.json">
+  <meta name="theme-color" content="<?= htmlspecialchars($primaryColor) ?>">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+  <meta name="apple-mobile-web-app-title" content="Nova Dimensão">
+  <link rel="apple-touch-icon" href="/public/img/icon-192.png">
   <link rel="stylesheet" href="/public/css/app.css">
   <style>
     body { display:flex; align-items:center; justify-content:center; min-height:100vh; background:var(--content-bg); }
@@ -186,5 +192,10 @@ $accentColor  = setting('accent_color',   '#1D9E75', SEDE_ID);
     &copy; <?= date('Y') ?> <?= htmlspecialchars($churchName) ?>
   </div>
 </div>
+<script>
+if ('serviceWorker' in navigator) {
+  navigator.serviceWorker.register('/sw.js').catch(() => {});
+}
+</script>
 </body>
 </html>

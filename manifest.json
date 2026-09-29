@@ -1,10 +1,10 @@
 {
-  "name": "Igreja Manager",
-  "short_name": "Igreja",
+  "name": "Igreja Nova Dimensão · Sistema de Gestão",
+  "short_name": "Nova Dimensão",
   "description": "Sistema de gestão para igrejas",
   "start_url": "/dashboard.php",
   "display": "standalone",
-  "background_color": "#012a36",
+  "background_color": "#FFFFFF",
   "theme_color": "#012a36",
   "icons": [
     { "src": "/public/img/icon-192.png", "sizes": "192x192", "type": "image/png" },
