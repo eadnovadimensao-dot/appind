@@ -789,19 +789,16 @@ function queue_repertoire_reminders_due(PDO $db): void {
         $claim->execute([$act['id']]);
         if ($claim->rowCount() !== 1) continue;
 
-        $leaders = $db->prepare("
-            SELECT phone FROM members WHERE id IN (SELECT member_id FROM ministry_leaders WHERE ministry_id = ?)
-              AND phone IS NOT NULL AND phone != ''
-        ");
-        $leaders->execute([$act['ministry_id']]);
+        // A pedido: esse aviso vai só pro Klayton (id=26), não pra todos os líderes do ministério
+        $recipient = $db->query("SELECT phone FROM members WHERE id = 26 AND phone IS NOT NULL AND phone != ''")->fetch();
 
         $daysLeft = (int)ceil((strtotime($act['activity_date']) - strtotime(date('Y-m-d'))) / 86400);
         $when = $daysLeft <= 0 ? 'é hoje' : ($daysLeft === 1 ? 'é amanhã' : "é em $daysLeft dias");
         $msg = "🎵 *Repertório pendente*\n\n{$act['title']} ({$act['ministry_name']}) $when e o repertório ainda não foi definido.\n\nAcesse o sistema pra montar:\n"
              . APP_URL . '/pages/ministries/activity_view.php?id=' . $act['id'];
 
-        foreach ($leaders->fetchAll() as $l) {
-            queue_whatsapp($l['phone'], $msg, (int)$act['church_id'], null, 0, (int)$act['id'], 'ministry_reminder');
+        if ($recipient) {
+            queue_whatsapp($recipient['phone'], $msg, (int)$act['church_id'], null, 0, (int)$act['id'], 'ministry_reminder');
         }
     }
 }
