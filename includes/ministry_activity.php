@@ -147,6 +147,7 @@ function notify_scale_invitation(
     $prazo      = date('d/m/Y H:i', strtotime($tokenData['token_expires_at'] ?? response_deadline($date, $timeStart)));
 
     $isPrayerRole = in_array(trim($role), ministry_always_include_role_names($db, (int)($mn['id'] ?? 0)), true);
+    $horaLabel = $timeStart ? ' às ' . substr($timeStart, 0, 5) : '';
 
     $whatsappButtons = null;
 
@@ -155,6 +156,7 @@ function notify_scale_invitation(
             'nome'       => $memberName,
             'ministerio' => $mn['name'],
             'data'       => date_pt($date),
+            'hora'       => $horaLabel,
         ], $churchId);
         $fullContent = $tpl['content'];
     } else {
@@ -162,6 +164,7 @@ function notify_scale_invitation(
             'nome'       => $memberName,
             'ministerio' => $mn['name'],
             'data'       => date_pt($date),
+            'hora'       => $horaLabel,
             'prazo'      => $prazo,
             'funcao'     => trim($role) ?: 'não definida',
         ], $churchId);
@@ -486,12 +489,14 @@ function notify_activity_rescheduled(
         $memberPhone  = $memberRow['phone'] ?? '';
 
         $whatsappButtons = null;
+        $horaLabel = $timeStart ? ' às ' . substr($timeStart, 0, 5) : '';
 
         if ($isPrayerRole) {
             $tpl = notification_template('scale_prayer_request', [
                 'nome'       => $memberName,
                 'ministerio' => $mn['name'],
                 'data'       => date_pt($newDate),
+                'hora'       => $horaLabel,
             ], $churchId);
             $fullContent = $tpl['content'];
             $ctaUrl      = $viewUrl;
@@ -513,6 +518,7 @@ function notify_activity_rescheduled(
                 'nome'       => $memberName,
                 'ministerio' => $mn['name'],
                 'data'       => date_pt($newDate),
+                'hora'       => $horaLabel,
                 'prazo'      => date('d/m/Y H:i', strtotime($newExpires)),
             ], $churchId);
             $fullContent = $tpl['content']
