@@ -248,9 +248,22 @@ if ($canDress || $dressColors || $dressNote):
   <?php if (empty($songs)): ?>
     <div class="empty-state" style="padding:24px">Nenhuma música adicionada.</div>
   <?php else: ?>
-    <?php foreach ($songs as $sg): ?>
+    <?php $songCount = count($songs); foreach ($songs as $songIndex => $sg): ?>
       <div style="display:flex;align-items:center;gap:10px;padding:10px 18px;border-bottom:1px solid var(--border)">
+        <?php if ($canManage): ?>
+          <div style="display:flex;flex-direction:column;flex-shrink:0">
+            <?php if ($songIndex > 0): ?>
+              <a href="/pages/ministries/song_reorder.php?song_id=<?= $sg['id'] ?>&activity_id=<?= $id ?>&dir=up"
+                 style="font-size:11px;color:var(--text-muted);text-decoration:none;line-height:1.3" title="Mover pra cima">▲</a>
+            <?php endif; ?>
+            <?php if ($songIndex < $songCount - 1): ?>
+              <a href="/pages/ministries/song_reorder.php?song_id=<?= $sg['id'] ?>&activity_id=<?= $id ?>&dir=down"
+                 style="font-size:11px;color:var(--text-muted);text-decoration:none;line-height:1.3" title="Mover pra baixo">▼</a>
+            <?php endif; ?>
+          </div>
+        <?php endif; ?>
         <div style="flex:1;min-width:0">
+          <span style="font-size:11px;color:var(--text-muted);margin-right:4px"><?= $songIndex + 1 ?>.</span>
           <span style="font-size:13px;font-weight:500"><?= htmlspecialchars($sg['title']) ?></span>
           <?php if ($sg['key_tone']): ?>
             <span class="badge badge-gray" style="font-size:10px;margin-left:6px">Tom: <?= htmlspecialchars($sg['key_tone']) ?></span>
