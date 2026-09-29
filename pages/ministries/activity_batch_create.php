@@ -101,12 +101,15 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && empty($errors)) {
                     if (!$rExists->fetchColumn()) {
                         $rTimeStart = $mn['meeting_time'] ?: null;
                         $rTimeEnd   = $rTimeStart ? date('H:i:s', strtotime($rTimeStart . ' +2 hours')) : null;
-                        create_ministry_activity(
+                        $rehearsalId = create_ministry_activity(
                             $db, $mn, $ministryId, $churchId, 'ensaio',
                             'Ensaio · ' . $title, null,
                             $rehearsalDate, $rTimeStart, $rTimeEnd, $location ?: null,
                             array_keys($assignments), $assignments, [], auth_member_id(), 3
                         );
+                        // Vincula ensaio ↔ culto: repertório adicionado num se reflete no outro
+                        $db->prepare("UPDATE ministry_activities SET linked_activity_id = ? WHERE id = ?")
+                           ->execute([$activityId, $rehearsalId]);
                         $rehearsalCreated = true;
                     }
                 }

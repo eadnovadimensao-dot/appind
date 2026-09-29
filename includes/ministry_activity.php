@@ -625,6 +625,24 @@ const REPERTOIRE_REMINDER_DAYS_BEFORE = 3;
  * Repertório atual de uma atividade, no mesmo formato usado em activity_view.php
  * (título/tom/link priorizando o catálogo sobre os campos avulsos legados).
  */
+/**
+ * Culto e o ensaio-espelho gerado automaticamente compartilham repertório. Essa
+ * função acha o "parceiro" de uma atividade nos dois sentidos: se ela é o ensaio
+ * (tem linked_activity_id), retorna o culto; se é o culto (outra atividade aponta
+ * pra ela), retorna o ensaio. Retorna null se não tem par.
+ */
+function activity_song_link_partner(PDO $db, int $activityId): ?int {
+    $stmt = $db->prepare("
+        SELECT COALESCE(
+            (SELECT linked_activity_id FROM ministry_activities WHERE id = ?),
+            (SELECT id FROM ministry_activities WHERE linked_activity_id = ? LIMIT 1)
+        )
+    ");
+    $stmt->execute([$activityId, $activityId]);
+    $partner = $stmt->fetchColumn();
+    return $partner ? (int)$partner : null;
+}
+
 function activity_songs(PDO $db, int $activityId): array {
     $q = $db->prepare("
         SELECT COALESCE(r.title, mas.title) AS title,

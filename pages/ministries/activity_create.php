@@ -88,12 +88,15 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 
                     // Atraso de 3 min na notificação do ensaio — evita a mensagem do
                     // ensaio chegar junto (quase idêntica) com a do culto que o gerou
-                    create_ministry_activity(
+                    $rehearsalId = create_ministry_activity(
                         $db, $mn, $ministryId, $churchId, 'ensaio',
                         'Ensaio · ' . $title, $description,
                         $rehearsalDate, $rTimeStart, $rTimeEnd, $location,
                         $scaledIds, $roles, $songs, auth_member_id(), 3
                     );
+                    // Vincula ensaio ↔ culto: repertório adicionado num se reflete no outro
+                    $db->prepare("UPDATE ministry_activities SET linked_activity_id = ? WHERE id = ?")
+                       ->execute([$activityId, $rehearsalId]);
                 }
                 // Se já existe um ensaio nesse dia, não duplica — a equipe pode ser
                 // ajustada manualmente na tela do ensaio existente.

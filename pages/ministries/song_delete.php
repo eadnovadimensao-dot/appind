@@ -1,6 +1,7 @@
 <?php
 require_once __DIR__ . '/../../config/database.php';
 require_once __DIR__ . '/../../includes/auth.php';
+require_once __DIR__ . '/../../includes/ministry_activity.php';
 auth_check();
 
 $db         = db();
@@ -26,6 +27,14 @@ if ($songId && $activityId) {
 
         $db->prepare("DELETE FROM ministry_activity_songs WHERE id = ? AND activity_id = ?")
            ->execute([$songId, $activityId]);
+
+        // Culto e ensaio-espelho compartilham repertório: remove lá também (só dá pra
+        // saber a mesma música do lado de lá pelo resource_id, músicas avulsas ficam só na atividade)
+        $partnerId = activity_song_link_partner($db, $activityId);
+        if ($partnerId && $song && $song['resource_id']) {
+            $db->prepare("DELETE FROM ministry_activity_songs WHERE activity_id = ? AND resource_id = ?")
+               ->execute([$partnerId, $song['resource_id']]);
+        }
     }
 }
 

@@ -1,6 +1,7 @@
 <?php
 require_once __DIR__ . '/../../config/database.php';
 require_once __DIR__ . '/../../includes/auth.php';
+require_once __DIR__ . '/../../includes/ministry_activity.php';
 auth_check();
 
 $db         = db();
@@ -26,9 +27,24 @@ if ($activityId && !empty($resourceIds)) {
 
         $pos = (int)$db->query("SELECT COALESCE(MAX(position),-1)+1 FROM ministry_activity_songs WHERE activity_id = $activityId")->fetchColumn();
         $sg  = $db->prepare("INSERT INTO ministry_activity_songs (activity_id, resource_id, position) VALUES (?,?,?)");
+        $toAdd = [];
         foreach ($validIds as $rid) {
             if (in_array($rid, $alreadyIds, true)) continue;
             $sg->execute([$activityId, $rid, $pos++]);
+            $toAdd[] = $rid;
+        }
+
+        // Culto e ensaio-espelho compartilham repertório: replica lá também
+        $partnerId = activity_song_link_partner($db, $activityId);
+        if ($partnerId && $toAdd) {
+            $already2 = $db->prepare("SELECT resource_id FROM ministry_activity_songs WHERE activity_id = ? AND resource_id IS NOT NULL");
+            $already2->execute([$partnerId]);
+            $already2Ids = array_map('intval', $already2->fetchAll(PDO::FETCH_COLUMN));
+            $pos2 = (int)$db->query("SELECT COALESCE(MAX(position),-1)+1 FROM ministry_activity_songs WHERE activity_id = $partnerId")->fetchColumn();
+            foreach ($toAdd as $rid) {
+                if (in_array($rid, $already2Ids, true)) continue;
+                $sg->execute([$partnerId, $rid, $pos2++]);
+            }
         }
     }
 }
