@@ -83,6 +83,31 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         header('Location: /pages/members/profile.php');
         exit;
     }
+
+    // Trocar a própria senha
+    if ($action === 'change_password') {
+        $current = $_POST['current_password'] ?? '';
+        $new     = $_POST['new_password']     ?? '';
+        $confirm = $_POST['confirm_password'] ?? '';
+        $userId  = $_SESSION['user_id'] ?? 0;
+
+        $user = $db->prepare("SELECT password_hash FROM users WHERE id = ?");
+        $user->execute([$userId]);
+        $user = $user->fetch();
+
+        if (!$user || !password_verify($current, $user['password_hash'])) {
+            $errors[] = 'Senha atual incorreta.';
+        } elseif (strlen($new) < 6) {
+            $errors[] = 'A nova senha deve ter pelo menos 6 caracteres.';
+        } elseif ($new !== $confirm) {
+            $errors[] = 'As senhas não conferem.';
+        } else {
+            $hash = password_hash($new, PASSWORD_BCRYPT, ['cost' => 12]);
+            $db->prepare("UPDATE users SET password_hash = ? WHERE id = ?")->execute([$hash, $userId]);
+            header('Location: /pages/members/profile.php?password_changed=1');
+            exit;
+        }
+    }
 }
 
 $pageTitle  = 'Meu Perfil';
@@ -95,6 +120,12 @@ $initials = strtoupper(implode('', array_map(fn($p) => $p[0], array_slice(explod
 <?php if (isset($_GET['saved'])): ?>
   <div style="background:#E1F5EE;border:1px solid var(--accent-border);border-radius:8px;padding:12px 16px;margin-bottom:16px;font-size:13px;color:#0F6E56">
     ✓ Perfil atualizado com sucesso!
+  </div>
+<?php endif; ?>
+
+<?php if (isset($_GET['password_changed'])): ?>
+  <div style="background:#E1F5EE;border:1px solid var(--accent-border);border-radius:8px;padding:12px 16px;margin-bottom:16px;font-size:13px;color:#0F6E56">
+    ✓ Senha alterada com sucesso!
   </div>
 <?php endif; ?>
 
@@ -219,6 +250,29 @@ $initials = strtoupper(implode('', array_map(fn($p) => $p[0], array_slice(explod
     <a href="/dashboard.php" class="btn btn-secondary">Cancelar</a>
   </div>
 </form>
+
+<!-- Trocar senha -->
+<div class="card" style="max-width:720px;margin-top:24px">
+  <p class="card-title">Trocar senha</p>
+  <form method="POST">
+    <input type="hidden" name="action" value="change_password">
+    <div class="form-group">
+      <label class="form-label">Senha atual</label>
+      <input type="password" name="current_password" class="form-control" required>
+    </div>
+    <div class="form-row">
+      <div class="form-group">
+        <label class="form-label">Nova senha</label>
+        <input type="password" name="new_password" class="form-control" placeholder="Mínimo 6 caracteres" required>
+      </div>
+      <div class="form-group">
+        <label class="form-label">Confirmar nova senha</label>
+        <input type="password" name="confirm_password" class="form-control" required>
+      </div>
+    </div>
+    <button type="submit" class="btn btn-primary">Salvar nova senha</button>
+  </form>
+</div>
 
 <?php
 $extraJs = <<<JS

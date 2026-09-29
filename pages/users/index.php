@@ -77,6 +77,31 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action'])) {
         exit;
     }
 
+    if ($_POST['action'] === 'set_password') {
+        $uid = (int)($_POST['user_id'] ?? 0);
+        // Admin comum não define senha de supermaster; supermaster define de qualquer um
+        $roleGuard = auth_role() === 'supermaster' ? "" : " AND role != 'supermaster'";
+        $target = $db->prepare("SELECT id, name FROM users WHERE id = ? AND church_id = ?$roleGuard");
+        $target->execute([$uid, $churchId]);
+        $target = $target->fetch();
+
+        if ($target) {
+            // Senha temporária legível: 8 caracteres, sem 0/O/1/l pra evitar confusão
+            $alphabet = 'ABCDEFGHJKMNPQRSTUVWXYZabcdefghijkmnpqrstuvwxyz23456789';
+            $newPassword = '';
+            for ($i = 0; $i < 8; $i++) $newPassword .= $alphabet[random_int(0, strlen($alphabet) - 1)];
+
+            $hash = password_hash($newPassword, PASSWORD_BCRYPT, ['cost' => 12]);
+            $db->prepare("UPDATE users SET password_hash = ?, login_attempts = 0, locked_until = NULL WHERE id = ?")
+               ->execute([$hash, $uid]);
+
+            $_SESSION['new_password_for'] = $target['name'];
+            $_SESSION['new_password']     = $newPassword;
+        }
+        header('Location: /pages/users/index.php?password_set=1');
+        exit;
+    }
+
     if ($_POST['action'] === 'delete') {
         $uid = (int)($_POST['user_id'] ?? 0);
         $me  = $_SESSION['user_id'] ?? 0;
@@ -123,6 +148,21 @@ require_once __DIR__ . '/../../includes/layout.php';
     <p style="font-size:12px;color:#0F6E56;margin-top:8px">Link válido por 3 dias. Envie pelo WhatsApp para o membro.</p>
   </div>
   <?php unset($_SESSION['invite_link'], $_SESSION['invite_name']); ?>
+<?php endif; ?>
+
+<?php if (isset($_GET['password_set']) && isset($_SESSION['new_password'])): ?>
+  <div style="background:#E1F5EE;border:1px solid var(--accent-border);border-radius:10px;padding:16px 20px;margin-bottom:20px">
+    <p style="font-weight:500;color:#0F6E56;margin-bottom:8px">✓ Nova senha definida para <?= htmlspecialchars($_SESSION['new_password_for']) ?>:</p>
+    <div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap">
+      <code style="background:white;border:1px solid var(--accent-border);border-radius:6px;padding:8px 12px;font-size:14px;font-weight:600;letter-spacing:.05em">
+        <?= htmlspecialchars($_SESSION['new_password']) ?>
+      </code>
+      <button onclick="navigator.clipboard.writeText('<?= htmlspecialchars($_SESSION['new_password']) ?>');this.textContent='Copiado!'"
+              class="btn btn-primary" style="font-size:12px;padding:8px 14px">Copiar</button>
+    </div>
+    <p style="font-size:12px;color:#0F6E56;margin-top:8px">Essa senha não fica salva em nenhum lugar visível depois que você sair dessa página. Repasse pra pessoa agora, pelo WhatsApp ou pessoalmente.</p>
+  </div>
+  <?php unset($_SESSION['new_password'], $_SESSION['new_password_for']); ?>
 <?php endif; ?>
 
 <?php if (!empty($errors)): ?>
@@ -229,6 +269,16 @@ require_once __DIR__ . '/../../includes/layout.php';
               </span>
             </td>
             <td style="text-align:right">
+              <?php if (!$isMe && ($u['role'] !== 'supermaster' || auth_role() === 'supermaster')): ?>
+                <form method="POST" style="display:inline">
+                  <input type="hidden" name="action" value="set_password">
+                  <input type="hidden" name="user_id" value="<?= $u['id'] ?>">
+                  <button type="submit" class="btn btn-secondary" style="font-size:12px;padding:5px 12px"
+                          onclick="return confirm('Definir uma nova senha temporária para <?= htmlspecialchars($u['name']) ?>? A senha atual dela deixa de funcionar.')">
+                    🔑 Nova senha
+                  </button>
+                </form>
+              <?php endif; ?>
               <?php if (!$isMe && $u['role'] !== 'supermaster'): ?>
                 <form method="POST" style="display:inline">
                   <input type="hidden" name="action" value="toggle">
