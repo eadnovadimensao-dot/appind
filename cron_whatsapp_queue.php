@@ -71,6 +71,13 @@ try {
 } catch (\Throwable $e) {
     error_log('cron cobrança escala: ' . $e->getMessage());
 }
+// 4c) Cuidado pastoral: avisa líder de célula de quem sumiu por várias semanas
+try {
+    require_once __DIR__ . '/includes/member_care.php';
+    queue_absence_alerts($db);
+} catch (\Throwable $e) {
+    error_log('cron cuidado pastoral: ' . $e->getMessage());
+}
 // 5) Backup diário do banco (a partir das 3h, uma vez por dia)
 try {
     require_once __DIR__ . '/includes/backup.php';
