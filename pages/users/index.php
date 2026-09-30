@@ -1,6 +1,7 @@
 <?php
 require_once __DIR__ . '/../../config/database.php';
 require_once __DIR__ . '/../../includes/auth.php';
+require_once __DIR__ . '/../../includes/audit.php';
 auth_require('manage_users');
 
 $db       = db();
@@ -52,6 +53,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action'])) {
             $_SESSION['invite_link'] = $inviteLink;
             $_SESSION['invite_name'] = $name;
 
+            audit_log('user_create', "Convidou {$name} ({$email}) como {$role}");
+
             header('Location: /pages/users/index.php?created=1');
             exit;
         }
@@ -60,8 +63,10 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action'])) {
     if ($_POST['action'] === 'toggle') {
         $uid    = (int)($_POST['user_id'] ?? 0);
         $active = (int)($_POST['active']  ?? 0);
+        $target = $db->query("SELECT name FROM users WHERE id=$uid")->fetchColumn();
         $db->prepare("UPDATE users SET active = ? WHERE id = ? AND church_id = ? AND role != 'supermaster'")
            ->execute([$active ? 0 : 1, $uid, $churchId]);
+        audit_log($active ? 'user_deactivate' : 'user_activate', "Usuário: {$target}");
         header('Location: /pages/users/index.php');
         exit;
     }
@@ -70,8 +75,10 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action'])) {
         $uid  = (int)($_POST['user_id'] ?? 0);
         $role = trim($_POST['role'] ?? '');
         if (in_array($role, ['supermaster','admin','leader','member'])) {
+            $target = $db->query("SELECT name, role FROM users WHERE id=$uid")->fetch();
             $db->prepare("UPDATE users SET role = ? WHERE id = ? AND church_id = ?")
                ->execute([$role, $uid, $churchId]);
+            audit_log('user_change_role', "{$target['name']}: {$target['role']} → {$role}");
         }
         header('Location: /pages/users/index.php');
         exit;
@@ -97,6 +104,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action'])) {
 
             $_SESSION['new_password_for'] = $target['name'];
             $_SESSION['new_password']     = $newPassword;
+            audit_log('user_set_password', "Definiu nova senha para {$target['name']}");
         }
         header('Location: /pages/users/index.php?password_set=1');
         exit;
@@ -107,8 +115,10 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action'])) {
         $me  = $_SESSION['user_id'] ?? 0;
         // Nunca deixa excluir a si mesmo
         if ($uid && $uid != $me) {
+            $target = $db->query("SELECT name, email FROM users WHERE id=$uid")->fetch();
             $db->prepare("DELETE FROM users WHERE id = ? AND church_id = ? AND role != 'supermaster'")
                ->execute([$uid, $churchId]);
+            if ($target) audit_log('user_delete', "{$target['name']} ({$target['email']})");
         }
         header('Location: /pages/users/index.php');
         exit;

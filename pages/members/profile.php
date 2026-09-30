@@ -1,6 +1,7 @@
 <?php
 require_once __DIR__ . '/../../config/database.php';
 require_once __DIR__ . '/../../includes/auth.php';
+require_once __DIR__ . '/../../includes/audit.php';
 auth_check();
 
 $db       = db();
@@ -104,6 +105,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         } else {
             $hash = password_hash($new, PASSWORD_BCRYPT, ['cost' => 12]);
             $db->prepare("UPDATE users SET password_hash = ? WHERE id = ?")->execute([$hash, $userId]);
+            audit_log('user_self_password', 'Trocou a própria senha');
             header('Location: /pages/members/profile.php?password_changed=1');
             exit;
         }

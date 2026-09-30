@@ -25,6 +25,7 @@ $navItems = [
   ['href' => '/pages/users/index.php',          'icon' => 'ti-lock',             'label' => 'Usuários',     'key' => 'users'],
   ['href' => '/pages/branches.php',             'icon' => 'ti-building',         'label' => 'Filiais',      'key' => 'branches'],
   ['href' => '/pages/whatsapp.php',             'icon' => 'ti-brand-whatsapp',  'label' => 'WhatsApp',     'key' => 'whatsapp'],
+  ['href' => '/pages/audit_log.php',            'icon' => 'ti-history',          'label' => 'Log de auditoria', 'key' => 'audit_log'],
   ['href' => '/pages/settings.php',             'icon' => 'ti-settings',         'label' => 'Configurações','key' => 'settings'],
 ];
 ?>
@@ -104,7 +105,7 @@ if (window.innerWidth <= 900) {
       }
 
       foreach ($navItems as $item):
-        if (in_array($item['key'], ['branches','whatsapp']) && $role !== 'supermaster') continue; // Filiais e WhatsApp: só supermaster
+        if (in_array($item['key'], ['branches','whatsapp','audit_log']) && $role !== 'supermaster') continue; // Filiais, WhatsApp e auditoria: só supermaster
         if ($item['key'] === 'availability' && !$inAnyMinistry) continue;
         if ($role === 'member') {
           // Ministérios agora é um diretório aberto (qualquer um vê quais existem);

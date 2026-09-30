@@ -2,6 +2,7 @@
 // Processar ANTES de incluir o layout (evita headers already sent)
 require_once __DIR__ . '/../config/database.php';
 require_once __DIR__ . '/../includes/auth.php';
+require_once __DIR__ . '/../includes/audit.php';
 auth_require('manage_users');
 
 $db       = db();
@@ -69,6 +70,10 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         }
         $db->prepare("UPDATE churches SET name=? WHERE id=?")
            ->execute([trim($_POST['church_name']), $churchId]);
+
+        $sensitive = array_intersect($fields, ['smtp_host','smtp_port','smtp_user','smtp_pass','zapi_instance_id','zapi_token','zapi_client_token','pix_key']);
+        $changedSensitive = array_filter($sensitive, fn($f) => trim($_POST[$f] ?? '') !== '');
+        audit_log('settings_update', $changedSensitive ? 'Campos sensíveis preenchidos: ' . implode(', ', $changedSensitive) : 'Dados de identidade/branding');
 
         header('Location: /pages/settings.php?saved=1');
         exit;
