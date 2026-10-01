@@ -1,34 +1,32 @@
 <?php
-// Check-in geral de culto: manda uma mensagem com botão de WhatsApp pra
-// todos os membros ativos da filial, no mesmo estilo do "✅ Cheguei" já
-// usado pra quem está escalado num ministério. Aqui é pra congregação
-// inteira, não só quem serve.
+// Check-in geral de culto: desde que o QR Code fixo (checkin_qr.php) existe,
+// o WhatsApp deixou de ser o convite principal — virou reforço pra quem não
+// escaneou o QR sozinho. Manda só pra quem ainda não confirmou presença de
+// nenhuma forma, e só depois de dar tempo da pessoa chegar e escanear.
 
-// Quantos minutos ANTES do início do culto começa a mandar o convite de
-// check-in — começar mais cedo estica a janela de envio (menos rajada por
-// hora), já que o envio em si segue no ritmo controlado do cron.
-const SERVICE_CHECKIN_MINUTES_BEFORE_START = 90;
+// Quantos minutos DEPOIS do início do culto manda o reforço por WhatsApp —
+// dá tempo de todo mundo chegar e escanear o QR Code antes de incomodar.
+const SERVICE_CHECKIN_FALLBACK_MINUTES_AFTER_START = 30;
 
 /**
- * Garante um registro + token de check-in pra cada membro ativo da filial
- * que ainda não tem um pra esse culto, e enfileira o convite por WhatsApp.
- * Aditivo e seguro de chamar de novo a cada criação/edição do culto: nunca
- * mexe em quem já tem registro (preserva quem já confirmou presença e não
- * duplica quem já foi convidado). Quem já está escalado nesse culto
- * (service_scale) fica de fora — essas pessoas já recebem o "✅ Cheguei"
- * da escala do próprio ministério, com a antecedência configurada nele.
+ * Convida por WhatsApp só quem ainda não confirmou presença de nenhuma forma
+ * (QR Code, escala de ministério etc.) até SERVICE_CHECKIN_FALLBACK_MINUTES_AFTER_START
+ * minutos depois do início do culto. Aditivo e seguro de chamar de novo a cada
+ * minuto: nunca reconvida quem já foi convidado, e quem escaneia o QR Code
+ * depois do primeiro envio simplesmente para de aparecer na lista.
  */
 function queue_service_checkins(PDO $db, int $serviceId, string $serviceTitle, string $serviceDate, ?string $timeStart, int $churchId): void {
-    $startAt = strtotime($serviceDate . ' ' . ($timeStart ?: '09:00:00'));
-    $sendAt  = $startAt - SERVICE_CHECKIN_MINUTES_BEFORE_START * 60;
-    $delayMinutes = max(0, (int)round(($sendAt - time()) / 60));
+    $startAt   = strtotime($serviceDate . ' ' . ($timeStart ?: '09:00:00'));
+    $triggerAt = $startAt + SERVICE_CHECKIN_FALLBACK_MINUTES_AFTER_START * 60;
+    if (time() < $triggerAt) return; // ainda cedo, dá tempo de escanear o QR Code sozinho
 
-    // Fora do convite geral: quem está em service_scale OU já confirmou escala
-    // num ministério nessa data (culto gerado automaticamente não preenche
-    // service_scale, mas essas pessoas recebem o "Cheguei" do ministério).
+    // Fora do convite: quem já confirmou de qualquer forma (QR Code, check-in
+    // antigo etc.), quem está em service_scale, ou já confirmou escala num
+    // ministério nessa data (essas pessoas recebem o "Cheguei" do ministério).
     $members = $db->prepare("
         SELECT m.id, m.name, m.phone FROM members m
         WHERE m.church_id = ? AND m.status = 'active' AND m.phone IS NOT NULL AND m.phone != ''
+          AND m.id NOT IN (SELECT member_id FROM service_checkins WHERE service_id = ? AND checked_in_at IS NOT NULL)
           AND m.id NOT IN (SELECT member_id FROM service_scale WHERE service_id = ?)
           AND m.id NOT IN (
               SELECT mam.member_id FROM ministry_activity_members mam
@@ -37,7 +35,7 @@ function queue_service_checkins(PDO $db, int $serviceId, string $serviceTitle, s
                 AND mam.status = 'confirmed'
           )
     ");
-    $members->execute([$churchId, $serviceId, $serviceDate, $churchId]);
+    $members->execute([$churchId, $serviceId, $serviceId, $serviceDate, $churchId]);
     $members = $members->fetchAll();
 
     $existing = $db->prepare("SELECT member_id FROM service_checkins WHERE service_id = ?");
@@ -48,15 +46,15 @@ function queue_service_checkins(PDO $db, int $serviceId, string $serviceTitle, s
     $timeLabel = $timeStart ? substr($timeStart, 0, 5) : '';
 
     foreach ($members as $m) {
-        if (isset($existing[$m['id']])) continue; // já convidado (ou já confirmou) antes
+        if (isset($existing[$m['id']])) continue; // já tem registro (convidado antes ou confirmado por outra via)
 
         $token = bin2hex(random_bytes(32));
         $insert->execute([$serviceId, $m['id'], $token]);
 
         $firstName  = explode(' ', trim($m['name']))[0];
-        $message    = "Olá, {$firstName}! 👋\n\n🙏 *{$serviceTitle}*" . ($timeLabel ? " ($timeLabel)" : '') . "\n\nConfirme sua presença!";
+        $message    = "Olá, {$firstName}! 👋\n\n🙏 *{$serviceTitle}*" . ($timeLabel ? " ($timeLabel)" : '') . "\n\nVocê está no culto? Confirme sua presença!";
         $checkinUrl = APP_URL . '/checkin.php?token=' . $token;
-        queue_whatsapp($m['phone'], $message, $churchId, [['label' => '✅ Presente', 'url' => $checkinUrl]], $delayMinutes, $serviceId, 'checkin');
+        queue_whatsapp($m['phone'], $message, $churchId, [['label' => '✅ Presente', 'url' => $checkinUrl]], 0, $serviceId, 'checkin');
     }
 }
 
