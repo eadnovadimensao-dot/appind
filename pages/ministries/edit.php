@@ -38,6 +38,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     $time      = trim($_POST['meeting_time']?? '') ?: null;
     $active    = isset($_POST['active']) ? 1 : 0;
     $autoScale = isset($_POST['auto_scale_enabled']) ? 1 : 0;
+    $isMusic   = isset($_POST['is_music_ministry']) ? 1 : 0;
     $checkinLead   = max(0, (int)($_POST['checkin_lead_minutes'] ?? 30)) ?: 30;
     $rehearsalLead = max(0, (int)($_POST['rehearsal_reminder_minutes'] ?? 30)) ?: 30;
 
@@ -50,11 +51,11 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         $db->prepare("
             UPDATE ministries SET name=:name, description=:desc, leader_id=:leader,
               meeting_day=:day, meeting_time=:time, active=:active, auto_scale_enabled=:auto_scale,
-              checkin_lead_minutes=:checkin_lead, rehearsal_reminder_minutes=:rehearsal_lead
+              is_music_ministry=:is_music, checkin_lead_minutes=:checkin_lead, rehearsal_reminder_minutes=:rehearsal_lead
             WHERE id=:id AND church_id=:church_id
         ")->execute([':name'=>$name,':desc'=>$desc?:null,':leader'=>$mainLeader,
                      ':day'=>$day,':time'=>$time,':active'=>$active,':auto_scale'=>$autoScale,
-                     ':checkin_lead'=>$checkinLead,':rehearsal_lead'=>$rehearsalLead,
+                     ':is_music'=>$isMusic,':checkin_lead'=>$checkinLead,':rehearsal_lead'=>$rehearsalLead,
                      ':id'=>$id,':church_id'=>$churchId]);
 
         // Atualizar tabela ministry_leaders
@@ -126,6 +127,15 @@ require_once __DIR__ . '/../../includes/layout.php';
       </label>
       <p style="font-size:11px;color:var(--text-muted);margin-top:4px;margin-left:24px">
         Libera o sorteio automático de escala com funções fixas (ex: 1 Ministro de Louvor, 2 Recepcionistas…) — configure as funções em "🎲 Funções da escala" na página do ministério.
+      </p>
+    </div>
+    <div class="form-group" style="margin-bottom:0;margin-top:10px">
+      <label style="display:flex;align-items:center;gap:8px;cursor:pointer;font-size:13px">
+        <input type="checkbox" name="is_music_ministry" value="1" <?= !empty($mn['is_music_ministry'])?'checked':''?>>
+        🎵 Este ministério trabalha com repertório musical
+      </label>
+      <p style="font-size:11px;color:var(--text-muted);margin-top:4px;margin-left:24px">
+        Libera cadastrar músicas em Materiais e o card de Repertório nas atividades. Independente da escala automática acima.
       </p>
     </div>
     <div class="form-row" style="margin-top:14px">

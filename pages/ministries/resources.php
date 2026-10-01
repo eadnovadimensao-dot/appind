@@ -19,6 +19,7 @@ if (!auth_member_in_ministry($id)) { header('Location: /dashboard.php?no_access=
 
 $memberId  = auth_member_id();
 $canManage = auth_can_manage_ministry($id);
+$isMusic   = (bool)($mn['is_music_ministry'] ?? false);
 
 // Só pode ver quem gerencia o ministério ou é membro dele
 $isMember = false;
@@ -115,7 +116,9 @@ function resource_size(?int $bytes): string {
         <label class="form-label">Tipo</label>
         <select name="type" class="form-control" id="resource-type">
           <option value="material">📄 Material</option>
+          <?php if ($isMusic): ?>
           <option value="song">🎵 Música (entra na lista pra escalar em cultos/ensaios)</option>
+          <?php endif; ?>
         </select>
       </div>
       <div class="form-group" id="key-tone-group" style="display:none">

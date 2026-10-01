@@ -14,7 +14,8 @@ $mn = $stmt->fetch();
 if (!$mn) { header('Location: /pages/ministries/index.php'); exit; }
 
 $title        = trim($_POST['title'] ?? '');
-$type         = ($_POST['type'] ?? 'material') === 'song' ? 'song' : 'material';
+$isMusic      = (bool)($mn['is_music_ministry'] ?? false);
+$type         = ($isMusic && ($_POST['type'] ?? '') === 'song') ? 'song' : 'material';
 $keyTone      = trim($_POST['key_tone'] ?? '') ?: null;
 $category     = trim($_POST['category'] ?? '') ?: 'Geral';
 $description  = trim($_POST['description'] ?? '');
