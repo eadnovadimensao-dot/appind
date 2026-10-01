@@ -229,6 +229,7 @@ if ($canDress || $dressColors || $dressNote):
 </div>
 <?php endif; ?>
 
+<?php if (!empty($songs) || !empty($songCatalog)): ?>
 <!-- Repertório -->
 <div class="card" style="padding:0;margin-bottom:16px">
   <div style="padding:14px 18px;border-bottom:1px solid var(--border);display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:8px">
@@ -314,6 +315,7 @@ if ($canDress || $dressColors || $dressNote):
   </div>
   <?php endif; ?>
 </div>
+<?php endif; ?>
 
 <!-- Escala -->
 <div class="card" style="padding:0">
