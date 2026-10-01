@@ -44,6 +44,7 @@ $statusLabels = [
 <div style="display:flex;justify-content:flex-end;gap:8px;margin-bottom:16px">
   <a href="/pages/services/template.php" class="btn btn-secondary">⚙ Configurações do culto</a>
   <a href="/pages/services/supervisors.php" class="btn btn-secondary">👥 Supervisores e rotação</a>
+  <a href="/pages/services/checkin_qr_admin.php" class="btn btn-secondary">📱 QR Code de check-in</a>
 </div>
 <?php endif; ?>
 
