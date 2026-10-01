@@ -5,8 +5,8 @@
 // nenhuma forma, e só depois de dar tempo da pessoa chegar e escanear.
 
 // Quantos minutos DEPOIS do início do culto manda o reforço por WhatsApp —
-// dá tempo de todo mundo chegar e escanear o QR Code antes de incomodar.
-const SERVICE_CHECKIN_FALLBACK_MINUTES_AFTER_START = 30;
+// dá tempo do ND News divulgar o QR Code e de todo mundo escanear antes de incomodar.
+const SERVICE_CHECKIN_FALLBACK_MINUTES_AFTER_START = 60;
 
 /**
  * Convida por WhatsApp só quem ainda não confirmou presença de nenhuma forma
