@@ -176,46 +176,41 @@ require_once __DIR__ . '/../../includes/layout.php';
     </div>
   </div>
 
+  <?php if (!empty($songCatalog)): ?>
   <!-- Repertório -->
   <div class="card" style="margin-bottom:16px">
     <div style="display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:8px;margin-bottom:8px">
       <p class="card-title" style="margin:0">Repertório</p>
       <a href="/pages/ministries/resources.php?ministry_id=<?= $ministryId ?>" target="_blank" style="font-size:12px;color:var(--accent);text-decoration:none">+ Adicionar música ao catálogo ↗</a>
     </div>
-    <?php if (empty($songCatalog)): ?>
-      <p style="font-size:13px;color:var(--text-muted)">
-        Nenhuma música cadastrada ainda no catálogo do ministério.
-        <a href="/pages/ministries/resources.php?ministry_id=<?= $ministryId ?>" target="_blank">Cadastrar em Materiais</a>
-      </p>
-    <?php else: ?>
-      <p style="font-size:12px;color:var(--text-muted);margin-bottom:10px">Selecione as músicas dessa atividade (cadastradas em Materiais):</p>
-      <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(220px,1fr));gap:8px">
-        <?php foreach ($songCatalog as $sg): ?>
-          <label style="border:1px solid var(--border);border-radius:7px;padding:10px 12px;display:flex;align-items:flex-start;gap:8px;cursor:pointer">
-            <input type="checkbox" name="song_ids[]" value="<?= $sg['id'] ?>" style="margin-top:2px"
-                   <?= in_array($sg['id'], array_map('intval', $_POST['song_ids'] ?? [])) ? 'checked' : '' ?>>
-            <div style="flex:1;min-width:0">
-              <div style="font-size:13px;font-weight:500">
-                <?= htmlspecialchars($sg['title']) ?>
-                <?php if ($sg['key_tone']): ?>
-                  <span class="badge badge-gray" style="font-size:10px;margin-left:4px">Tom: <?= htmlspecialchars($sg['key_tone']) ?></span>
-                <?php endif; ?>
-              </div>
-              <div style="font-size:11px;color:var(--text-muted);margin-top:2px">
-                <?php
-                  $tags = [];
-                  if ($sg['external_url'])  $tags[] = '▶ referência';
-                  if (!empty($sg['materials_url'])) $tags[] = '📁 materiais';
-                  if ($sg['file_path'])     $tags[] = '📄 arquivo';
-                  echo implode(' · ', $tags);
-                ?>
-              </div>
+    <p style="font-size:12px;color:var(--text-muted);margin-bottom:10px">Selecione as músicas dessa atividade (cadastradas em Materiais):</p>
+    <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(220px,1fr));gap:8px">
+      <?php foreach ($songCatalog as $sg): ?>
+        <label style="border:1px solid var(--border);border-radius:7px;padding:10px 12px;display:flex;align-items:flex-start;gap:8px;cursor:pointer">
+          <input type="checkbox" name="song_ids[]" value="<?= $sg['id'] ?>" style="margin-top:2px"
+                 <?= in_array($sg['id'], array_map('intval', $_POST['song_ids'] ?? [])) ? 'checked' : '' ?>>
+          <div style="flex:1;min-width:0">
+            <div style="font-size:13px;font-weight:500">
+              <?= htmlspecialchars($sg['title']) ?>
+              <?php if ($sg['key_tone']): ?>
+                <span class="badge badge-gray" style="font-size:10px;margin-left:4px">Tom: <?= htmlspecialchars($sg['key_tone']) ?></span>
+              <?php endif; ?>
             </div>
-          </label>
-        <?php endforeach; ?>
-      </div>
-    <?php endif; ?>
+            <div style="font-size:11px;color:var(--text-muted);margin-top:2px">
+              <?php
+                $tags = [];
+                if ($sg['external_url'])  $tags[] = '▶ referência';
+                if (!empty($sg['materials_url'])) $tags[] = '📁 materiais';
+                if ($sg['file_path'])     $tags[] = '📄 arquivo';
+                echo implode(' · ', $tags);
+              ?>
+            </div>
+          </div>
+        </label>
+      <?php endforeach; ?>
+    </div>
   </div>
+  <?php endif; ?>
 
   <!-- Escala -->
   <div class="card" style="margin-bottom:24px">
