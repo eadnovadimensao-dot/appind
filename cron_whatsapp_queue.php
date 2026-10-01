@@ -78,6 +78,13 @@ try {
 } catch (\Throwable $e) {
     error_log('cron cuidado pastoral: ' . $e->getMessage());
 }
+// 4d) Acompanhamento de visitante (sequência de 3 mensagens nas semanas seguintes)
+try {
+    require_once __DIR__ . '/includes/visitor_followup.php';
+    queue_visitor_followups($db);
+} catch (\Throwable $e) {
+    error_log('cron acompanhamento visitante: ' . $e->getMessage());
+}
 // 5) Backup diário do banco (a partir das 3h, uma vez por dia)
 try {
     require_once __DIR__ . '/includes/backup.php';

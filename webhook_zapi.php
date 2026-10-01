@@ -1,9 +1,10 @@
 <?php
 // Recebe as mensagens que chegam no WhatsApp conectado (webhook "ao receber" do
-// Z-API). Hoje só trata resposta de check-in por texto ("presente" etc);
-// qualquer outra mensagem é ignorada sem erro.
+// Z-API). Trata resposta de check-in por texto ("presente" etc) e, se não bater
+// com nada, confere se é visitante respondendo (sinal de interesse pra liderança).
 require_once __DIR__ . '/config/database.php';
 require_once __DIR__ . '/includes/service_checkin.php';
+require_once __DIR__ . '/includes/visitor_followup.php';
 
 header('Cache-Control: no-store, no-cache, must-revalidate');
 header('Pragma: no-cache');
@@ -40,8 +41,11 @@ try {
     $reply = try_checkin_by_reply($db, $phone, $text);
     if ($reply !== null) {
         send_whatsapp($phone, $reply, SEDE_ID);
+        echo json_encode(['ok' => true, 'matched' => 'checkin']);
+        exit;
     }
-    echo json_encode(['ok' => true, 'matched' => $reply !== null]);
+    $isVisitor = notify_visitor_interest($db, $phone, $text);
+    echo json_encode(['ok' => true, 'matched' => $isVisitor ? 'visitor_interest' : false]);
 } catch (\Throwable $e) {
     error_log('webhook_zapi: ' . $e->getMessage());
     http_response_code(500);
