@@ -23,6 +23,7 @@ $navItems = [
   ['href' => '/pages/ministries/index.php',     'icon' => 'ti-star',             'label' => 'Ministérios',  'key' => 'ministries'],
   ['href' => '/pages/availability/index.php',   'icon' => 'ti-calendar-off',     'label' => 'Disponibilidade', 'key' => 'availability'],
   ['href' => '/pages/users/index.php',          'icon' => 'ti-lock',             'label' => 'Usuários',     'key' => 'users'],
+  ['href' => '/pages/relatorio_mensal.php',     'icon' => 'ti-chart-bar',        'label' => 'Relatório mensal', 'key' => 'relatorio_mensal'],
   ['href' => '/pages/branches.php',             'icon' => 'ti-building',         'label' => 'Filiais',      'key' => 'branches'],
   ['href' => '/pages/whatsapp.php',             'icon' => 'ti-brand-whatsapp',  'label' => 'WhatsApp',     'key' => 'whatsapp'],
   ['href' => '/pages/audit_log.php',            'icon' => 'ti-history',          'label' => 'Log de auditoria', 'key' => 'audit_log'],

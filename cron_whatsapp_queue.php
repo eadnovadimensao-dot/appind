@@ -85,6 +85,13 @@ try {
 } catch (\Throwable $e) {
     error_log('cron cuidado pastoral: ' . $e->getMessage());
 }
+// 4c-2) Relatório mensal pra liderança, dia 1 de cada mês
+try {
+    require_once __DIR__ . '/includes/monthly_report.php';
+    queue_monthly_reports($db);
+} catch (\Throwable $e) {
+    error_log('cron relatorio mensal: ' . $e->getMessage());
+}
 // 4d) Acompanhamento de visitante (sequência de 3 mensagens nas semanas seguintes)
 try {
     require_once __DIR__ . '/includes/visitor_followup.php';
