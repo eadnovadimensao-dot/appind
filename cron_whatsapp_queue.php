@@ -50,6 +50,13 @@ try {
 } catch (\Throwable $e) {
     error_log('cron aniversario: ' . $e->getMessage());
 }
+// 2c) Aniversário de casamento do dia recebe mensagem de parabéns
+try {
+    require_once __DIR__ . '/includes/anniversaries.php';
+    queue_wedding_anniversary_greetings($db);
+} catch (\Throwable $e) {
+    error_log('cron aniversario de casamento: ' . $e->getMessage());
+}
 // 3) Convida pro check-in quem ainda não foi convidado nos cultos de hoje
 try {
     require_once __DIR__ . '/includes/service_checkin.php';

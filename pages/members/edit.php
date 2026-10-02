@@ -33,6 +33,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     $birthDate      = trim($_POST['birth_date']      ?? '');
     $gender         = trim($_POST['gender']          ?? '');
     $marital        = trim($_POST['marital_status']  ?? '');
+    $weddingDate    = trim($_POST['wedding_date']    ?? '') ?: null;
     $status         = trim($_POST['status']          ?? 'active');
     $cellId         = trim($_POST['cell_id']         ?? '') ?: null;
     $newChurchId    = (int)($_POST['church_id']      ?? $churchId);
@@ -87,7 +88,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         $db->prepare("
             UPDATE members SET
               church_id=:church_id, name=:name, phone=:phone, email=:email, cpf=:cpf,
-              birth_date=:birth_date, gender=:gender, marital_status=:marital,
+              birth_date=:birth_date, gender=:gender, marital_status=:marital, wedding_date=:wedding_date,
               status=:status, cell_id=:cell_id, join_date=:join_date,
               baptism_date=:baptism, conversion_date=:conversion,
               origin_church=:origin, address=:address, number=:number, neighborhood=:neighborhood,
@@ -96,7 +97,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         ")->execute([
             ':church_id'=>$newChurchId,':name'=>$name,':phone'=>$phone,
             ':email'=>$email?:null,':cpf'=>$cpf?:null,
-            ':birth_date'=>$birthDate?:null,':gender'=>$gender?:null,':marital'=>$marital?:null,
+            ':birth_date'=>$birthDate?:null,':gender'=>$gender?:null,':marital'=>$marital?:null,':wedding_date'=>$weddingDate,
             ':status'=>$status,':cell_id'=>$cellId,':join_date'=>$joinDate,
             ':baptism'=>$baptism?:null,':conversion'=>$conversion?:null,':origin'=>$origin?:null,
             ':address'=>$address?:null,':number'=>$number?:null,':neighborhood'=>$neighborhood?:null,
@@ -195,6 +196,10 @@ require_once __DIR__ . '/../../includes/layout.php';
             <option value="<?=$k?>" <?=($m['marital_status']??'')===$k?'selected':''?>><?=$v?></option>
           <?php endforeach; ?>
         </select>
+      </div>
+      <div class="form-group">
+        <label class="form-label">Data de casamento <span style="font-weight:400;color:var(--text-muted)">(opcional)</span></label>
+        <input type="date" name="wedding_date" class="form-control" value="<?= htmlspecialchars($m['wedding_date'] ?? '') ?>">
       </div>
     </div>
   </div>

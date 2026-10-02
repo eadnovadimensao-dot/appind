@@ -50,6 +50,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     $birthDate  = trim($_POST['birth_date'] ?? '');
     $gender     = trim($_POST['gender']     ?? '');
     $marital    = trim($_POST['marital_status'] ?? '');
+    $weddingDate = trim($_POST['wedding_date'] ?? '') ?: null;
     $status     = trim($_POST['status']     ?? 'active');
     $cellId     = trim($_POST['cell_id']    ?? '') ?: null;
     $joinDate   = trim($_POST['join_date']  ?? '') ?: null;
@@ -87,18 +88,18 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 
         $stmt = $db->prepare("
             INSERT INTO members
-              (church_id, name, phone, email, cpf, birth_date, gender, marital_status,
+              (church_id, name, phone, email, cpf, birth_date, gender, marital_status, wedding_date,
                status, cell_id, join_date, baptism_date, conversion_date, origin_church,
                address, number, neighborhood, city, zip_code, notes, family_id, family_role)
             VALUES
-              (:church_id,:name,:phone,:email,:cpf,:birth_date,:gender,:marital,
+              (:church_id,:name,:phone,:email,:cpf,:birth_date,:gender,:marital,:wedding_date,
                :status,:cell_id,:join_date,:baptism,:conversion,:origin,
                :address,:number,:neighborhood,:city,:zip,:notes,:family_id,:family_role)
         ");
         $stmt->execute([
             ':church_id'=>$insertChurchId,':name'=>$name,':phone'=>$phone,
             ':email'=>$email?:null,':cpf'=>$cpf?:null,
-            ':birth_date'=>$birthDate?:null,':gender'=>$gender?:null,':marital'=>$marital?:null,
+            ':birth_date'=>$birthDate?:null,':gender'=>$gender?:null,':marital'=>$marital?:null,':wedding_date'=>$weddingDate,
             ':status'=>$status,':cell_id'=>$cellId,':join_date'=>$joinDate,
             ':baptism'=>$baptism?:null,':conversion'=>$conversion?:null,':origin'=>$origin?:null,
             ':address'=>$address?:null,':number'=>$number?:null,':neighborhood'=>$neighborhood?:null,
@@ -211,6 +212,10 @@ require_once __DIR__ . '/../../includes/layout.php';
           <option value="divorced" <?= ($_POST['marital_status']??'')==='divorced' ?'selected':''?>>Divorciado(a)</option>
           <option value="widowed"  <?= ($_POST['marital_status']??'')==='widowed'  ?'selected':''?>>Viúvo(a)</option>
         </select>
+      </div>
+      <div class="form-group">
+        <label class="form-label">Data de casamento <span style="font-weight:400;color:var(--text-muted)">(opcional)</span></label>
+        <input type="date" name="wedding_date" class="form-control" value="<?= htmlspecialchars($_POST['wedding_date'] ?? '') ?>">
       </div>
     </div>
   </div>
