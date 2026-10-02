@@ -38,6 +38,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         $neighborhood = trim($_POST['neighborhood'] ?? '');
         $city      = trim($_POST['city']      ?? '');
         $zip       = trim($_POST['zip_code']  ?? '');
+        $marital     = trim($_POST['marital_status'] ?? '') ?: null;
+        $weddingDate = trim($_POST['wedding_date']   ?? '') ?: null;
 
         // Upload de foto
         $photoUrl = $m['photo_url'];
@@ -66,12 +68,13 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         if (empty($errors)) {
             $db->prepare("
                 UPDATE members SET
-                  phone=?, email=?, address=?, neighborhood=?, city=?, zip_code=?, photo_url=?
+                  phone=?, email=?, address=?, neighborhood=?, city=?, zip_code=?, photo_url=?,
+                  marital_status=?, wedding_date=?
                 WHERE id=?
             ")->execute([
                 $phone?:null, $email?:null, $address?:null,
                 $neighborhood?:null, $city?:null, $zip?:null,
-                $photoUrl, $memberId
+                $photoUrl, $marital, $weddingDate, $memberId
             ]);
             header('Location: /pages/members/profile.php?saved=1');
             exit;
@@ -198,6 +201,27 @@ $initials = strtoupper(implode('', array_map(fn($p) => $p[0], array_slice(explod
         <input type="email" name="email" class="form-control"
                placeholder="seu@email.com"
                value="<?= htmlspecialchars($m['email'] ?? '') ?>">
+      </div>
+    </div>
+  </div>
+
+  <!-- Estado civil -->
+  <div class="card" style="margin-bottom:16px">
+    <p class="card-title">Estado civil</p>
+    <div class="form-row">
+      <div class="form-group">
+        <label class="form-label">Estado civil</label>
+        <select name="marital_status" class="form-control">
+          <option value="">Selecione</option>
+          <?php foreach (['single'=>'Solteiro(a)','married'=>'Casado(a)','divorced'=>'Divorciado(a)','widowed'=>'Viúvo(a)'] as $k=>$v): ?>
+            <option value="<?= $k ?>" <?= ($m['marital_status']??'')===$k?'selected':'' ?>><?= $v ?></option>
+          <?php endforeach; ?>
+        </select>
+      </div>
+      <div class="form-group">
+        <label class="form-label">Data de casamento <span style="font-weight:400;color:var(--text-muted)">(opcional)</span></label>
+        <input type="date" name="wedding_date" class="form-control" value="<?= htmlspecialchars($m['wedding_date'] ?? '') ?>">
+        <p style="font-size:11px;color:var(--text-muted);margin-top:4px">Pra te mandarmos os parabéns no dia certo 🙏</p>
       </div>
     </div>
   </div>
