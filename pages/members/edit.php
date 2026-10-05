@@ -163,7 +163,7 @@ require_once __DIR__ . '/../../includes/layout.php';
       <div class="form-group">
         <label class="form-label">Status *</label>
         <select name="status" class="form-control">
-          <?php foreach(['active'=>'Ativo','visitor'=>'Visitante','inactive'=>'Afastado','discipline'=>'Em disciplina','transferred'=>'Transferido','deceased'=>'Falecido'] as $k=>$v): ?>
+          <?php foreach(['active'=>'Ativo','visitor'=>'Visitante','inactive'=>'Afastado','transferred'=>'Transferido','deceased'=>'Falecido'] as $k=>$v): ?>
             <option value="<?=$k?>" <?=$m['status']===$k?'selected':''?>><?=$v?></option>
           <?php endforeach; ?>
         </select>

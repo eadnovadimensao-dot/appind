@@ -179,7 +179,6 @@ require_once __DIR__ . '/../../includes/layout.php';
           <option value="active"      <?= ($_POST['status']??'active')==='active'      ?'selected':''?>>Ativo</option>
           <option value="visitor"     <?= ($_POST['status']??'')==='visitor'            ?'selected':''?>>Visitante</option>
           <option value="inactive"    <?= ($_POST['status']??'')==='inactive'           ?'selected':''?>>Afastado</option>
-          <option value="discipline"  <?= ($_POST['status']??'')==='discipline'         ?'selected':''?>>Em disciplina</option>
           <option value="transferred" <?= ($_POST['status']??'')==='transferred'        ?'selected':''?>>Transferido</option>
         </select>
       </div>

@@ -53,7 +53,6 @@ $statusLabels = [
     'active'     => ['label' => 'Ativo',        'badge' => 'badge-green'],
     'visitor'    => ['label' => 'Visitante',     'badge' => 'badge-blue'],
     'inactive'   => ['label' => 'Afastado',      'badge' => 'badge-gray'],
-    'discipline' => ['label' => 'Em disciplina', 'badge' => 'badge-amber'],
     'transferred'=> ['label' => 'Transferido',   'badge' => 'badge-gray'],
     'deceased'   => ['label' => 'Falecido',      'badge' => 'badge-red'],
 ];

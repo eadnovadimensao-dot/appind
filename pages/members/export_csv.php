@@ -30,7 +30,7 @@ $members = $stmt->fetchAll();
 
 $statusLabels = [
     'active' => 'Ativo', 'visitor' => 'Visitante', 'inactive' => 'Afastado',
-    'discipline' => 'Disciplina', 'transferred' => 'Transferido', 'deceased' => 'Falecido',
+    'transferred' => 'Transferido', 'deceased' => 'Falecido',
 ];
 
 $rows = [];
