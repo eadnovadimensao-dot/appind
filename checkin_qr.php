@@ -2,7 +2,9 @@
 // Check-in coletivo por QR Code: um código fixo por filial, colado na entrada.
 // Público, sem login — a pessoa busca o próprio nome e confirma, igual uma
 // lista de presença de papel. Fica aberto pra confirmar a família inteira
-// num só scan, sem precisar escanear de novo a cada pessoa.
+// num só scan, sem precisar escanear de novo a cada pessoa. A lista de quem
+// já foi confirmado nessa visita viaja num campo oculto entre os formulários
+// (sem sessão/login) e cresce pra baixo conforme confirma mais gente.
 require_once __DIR__ . '/config/database.php';
 
 $db       = db();
@@ -24,9 +26,11 @@ $service = $db->prepare("SELECT id, title, time_start FROM services WHERE church
 $service->execute([$churchId]);
 $service = $service->fetch();
 
-$confirmedName = null;
+// Lista de quem já foi confirmado nessa visita (viaja entre os forms via campo oculto)
+$doneIds = array_values(array_unique(array_filter(array_map('intval', explode(',', $_POST['done'] ?? $_GET['done'] ?? '')))));
+
+$confirmedName     = null;
 $familySuggestions = [];
-$error = null;
 
 // Confirmar presença (POST de um dos botões da lista de busca ou da sugestão de família)
 if ($_SERVER['REQUEST_METHOD'] === 'POST' && $service) {
@@ -50,6 +54,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && $service) {
         }
 
         $confirmedName = $m['name'];
+        if (!in_array($memberId, $doneIds, true)) $doneIds[] = $memberId;
 
         // Sugestão de família: outros membros ativos da mesma família que ainda não confirmaram hoje
         if ($m['family_id']) {
@@ -64,6 +69,18 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && $service) {
             $familySuggestions = $fam->fetchAll();
         }
     }
+}
+$doneStr = implode(',', $doneIds);
+
+// Detalhes de quem já foi confirmado nessa visita, na ordem em que foi confirmado
+$doneList = [];
+if ($doneIds) {
+    $ph = implode(',', array_fill(0, count($doneIds), '?'));
+    $dq = $db->prepare("SELECT id, name, photo_url FROM members WHERE id IN ($ph)");
+    $dq->execute($doneIds);
+    $byId = [];
+    foreach ($dq->fetchAll() as $r) $byId[$r['id']] = $r;
+    foreach ($doneIds as $did) if (isset($byId[$did])) $doneList[] = $byId[$did];
 }
 
 // Busca por nome
@@ -116,6 +133,9 @@ if ($service && $q !== '') {
     .family-title { font-size: 13px; color: #8A5A00; margin-bottom: 10px; }
     .family-chip { display: inline-flex; align-items: center; gap: 6px; background: white; border: 1px solid #F0D595; border-radius: 20px; padding: 8px 14px; margin: 0 6px 6px 0; }
     .no-service { text-align: center; padding: 40px 20px; color: #6b7280; font-size: 14px; }
+    .done-title { font-size: 13px; font-weight: 500; color: #1a2332; margin-bottom: 10px; }
+    .done-row { display: flex; align-items: center; gap: 10px; padding: 8px 0; }
+    .done-check { color: <?= htmlspecialchars($accentColor) ?>; font-size: 16px; }
   </style>
 </head>
 <body>
@@ -146,6 +166,7 @@ if ($service && $q !== '') {
             <?php foreach ($familySuggestions as $f): ?>
               <form method="POST" style="display:inline">
                 <input type="hidden" name="member_id" value="<?= $f['id'] ?>">
+                <input type="hidden" name="done" value="<?= htmlspecialchars($doneStr) ?>">
                 <button type="submit" class="family-chip">
                   <span class="avatar" style="width:22px;height:22px;font-size:10px">
                     <?php if ($f['photo_url']): ?><img src="<?= htmlspecialchars($f['photo_url']) ?>"><?php else: ?><?= strtoupper(substr($f['name'],0,1)) ?><?php endif; ?>
@@ -159,9 +180,25 @@ if ($service && $q !== '') {
       </div>
     <?php endif; ?>
 
+    <?php if ($doneList): ?>
+      <div class="card">
+        <div class="done-title">✅ Confirmados agora (<?= count($doneList) ?>)</div>
+        <?php foreach ($doneList as $d): ?>
+          <div class="done-row">
+            <div class="avatar" style="width:30px;height:30px;font-size:11px">
+              <?php if ($d['photo_url']): ?><img src="<?= htmlspecialchars($d['photo_url']) ?>"><?php else: ?><?= strtoupper(substr($d['name'],0,1)) ?><?php endif; ?>
+            </div>
+            <div style="flex:1;font-size:13px;color:#1a2332"><?= htmlspecialchars($d['name']) ?></div>
+            <span class="done-check">✔</span>
+          </div>
+        <?php endforeach; ?>
+      </div>
+    <?php endif; ?>
+
     <div class="card">
       <form method="GET" class="search-form">
         <input type="hidden" name="c" value="<?= $churchId ?>">
+        <input type="hidden" name="done" value="<?= htmlspecialchars($doneStr) ?>">
         <input type="text" name="q" class="search-input" placeholder="Digite seu nome…" value="<?= htmlspecialchars($q) ?>" autofocus>
         <button type="submit" class="search-btn">Buscar</button>
       </form>
@@ -185,6 +222,7 @@ if ($service && $q !== '') {
                 <?php else: ?>
                   <form method="POST">
                     <input type="hidden" name="member_id" value="<?= $r['id'] ?>">
+                    <input type="hidden" name="done" value="<?= htmlspecialchars($doneStr) ?>">
                     <button type="submit" class="confirm-btn">Sou eu</button>
                   </form>
                 <?php endif; ?>

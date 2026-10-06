@@ -79,7 +79,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && empty($errors)) {
             }
 
             $blockDates = [$date];
-            if ($activityType === 'culto' && $autoRehearsal && !empty($mn['meeting_day'])) {
+            if ($activityType === 'culto' && $autoRehearsal && rehearsal_applies($date, $mn['meeting_day'] ?? null)) {
                 $blockDates[] = previous_weekday_before($date, $mn['meeting_day']);
             }
             $draw        = draw_scale($db, $ministryId, $pool, $prevMemberIds, unavailable_members($db, $blockDates));
@@ -93,7 +93,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && empty($errors)) {
             );
 
             $rehearsalCreated = false;
-            if ($activityType === 'culto' && $autoRehearsal && !empty($mn['meeting_day'])) {
+            if ($activityType === 'culto' && $autoRehearsal && rehearsal_applies($date, $mn['meeting_day'] ?? null)) {
                 $rehearsalDate = previous_weekday_before($date, $mn['meeting_day']);
                 if ($rehearsalDate >= date('Y-m-d')) {
                     $rExists = $db->prepare("SELECT id FROM ministry_activities WHERE ministry_id=? AND activity_type='ensaio' AND activity_date=? AND status != 'cancelled'");

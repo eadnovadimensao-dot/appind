@@ -622,6 +622,12 @@ function previous_weekday_before(string $baseDate, string $weekday): string {
     return $base->format('Y-m-d');
 }
 
+/** Ensaio automático só faz sentido se o dia de reunião for outro dia da semana que o culto. */
+function rehearsal_applies(string $cultoDate, ?string $meetingDay): bool {
+    if (!$meetingDay) return false;
+    return strtolower(date('l', strtotime($cultoDate))) !== strtolower($meetingDay);
+}
+
 // ── Repertório: enviar pra quem já está escalado, e lembrar o líder se ainda está vazio ──
 
 /** Dias de antecedência pra lembrar o líder, se o repertório ainda estiver vazio. */

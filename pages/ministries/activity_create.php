@@ -70,7 +70,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         );
 
         // ── Ensaio automático: mesma equipe e repertório, no dia de reunião do ministério ──
-        if ($activityType === 'culto' && $autoRehearsal && !empty($mn['meeting_day']) && !empty($scaledIds)) {
+        if ($activityType === 'culto' && $autoRehearsal && rehearsal_applies($date, $mn['meeting_day'] ?? null) && !empty($scaledIds)) {
             $rehearsalDate = previous_weekday_before($date, $mn['meeting_day']);
 
             // Se a última ocorrência do dia de ensaio antes do culto já passou (culto
