@@ -19,6 +19,12 @@ if ($ministryId && auth_can_manage_ministry((int)$ministryId) && in_array($statu
     $db->prepare("UPDATE ministry_activities SET status = ? WHERE id = ? AND church_id = ?")
        ->execute([$status, $id, current_church_id()]);
 
+    if ($status === 'cancelled') {
+        $db->prepare("UPDATE agenda_events SET status = 'cancelled' WHERE ministry_activity_id = ?")->execute([$id]);
+    } elseif ($status === 'scheduled') {
+        $db->prepare("UPDATE agenda_events SET status = 'approved' WHERE ministry_activity_id = ? AND status = 'cancelled'")->execute([$id]);
+    }
+
     if ($status === 'cancelled' && $wasScheduled) {
         require_once __DIR__ . '/../../includes/ministry_activity.php';
         notify_activity_cancelled($db, $id);
