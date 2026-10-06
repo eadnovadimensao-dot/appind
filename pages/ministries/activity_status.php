@@ -12,8 +12,17 @@ $act->execute([$id, current_church_id()]);
 $ministryId = $act->fetchColumn();
 
 if ($ministryId && auth_can_manage_ministry((int)$ministryId) && in_array($status, ['done','cancelled','scheduled'])) {
+    $wasScheduled = $db->prepare("SELECT status FROM ministry_activities WHERE id = ? AND church_id = ?");
+    $wasScheduled->execute([$id, current_church_id()]);
+    $wasScheduled = $wasScheduled->fetchColumn() === 'scheduled';
+
     $db->prepare("UPDATE ministry_activities SET status = ? WHERE id = ? AND church_id = ?")
        ->execute([$status, $id, current_church_id()]);
+
+    if ($status === 'cancelled' && $wasScheduled) {
+        require_once __DIR__ . '/../../includes/ministry_activity.php';
+        notify_activity_cancelled($db, $id);
+    }
 }
 
 header('Location: /pages/ministries/activity_view.php?id=' . $id);

@@ -622,6 +622,35 @@ function previous_weekday_before(string $baseDate, string $weekday): string {
     return $base->format('Y-m-d');
 }
 
+/** Avisa por WhatsApp todo mundo escalado numa atividade que acabou de ser cancelada. */
+function notify_activity_cancelled(PDO $db, int $activityId): void {
+    $act = $db->prepare("
+        SELECT ma.title, ma.activity_type, ma.activity_date, ma.time_start, ma.church_id, mn.name AS ministry_name
+        FROM ministry_activities ma JOIN ministries mn ON mn.id = ma.ministry_id
+        WHERE ma.id = ?
+    ");
+    $act->execute([$activityId]);
+    $act = $act->fetch();
+    if (!$act) return;
+
+    $scaled = $db->prepare("
+        SELECT m.name, m.phone FROM ministry_activity_members mam
+        JOIN members m ON m.id = mam.member_id
+        WHERE mam.activity_id = ? AND m.phone IS NOT NULL AND m.phone != ''
+    ");
+    $scaled->execute([$activityId]);
+
+    $kindLabel = $act['activity_type'] === 'ensaio' ? 'ensaio' : 'culto';
+    $timeLabel = $act['time_start'] ? ' às ' . substr($act['time_start'], 0, 5) : '';
+
+    foreach ($scaled->fetchAll() as $m) {
+        $first = explode(' ', trim($m['name']))[0];
+        $msg = "Olá, {$first}! ❌ O {$kindLabel} *{$act['title']}* ({$act['ministry_name']}) de " . date_pt($act['activity_date']) . $timeLabel
+             . " foi *cancelado*. Qualquer dúvida, fale com a liderança do ministério. 🙏";
+        queue_whatsapp($m['phone'], $msg, (int)$act['church_id'], null, 0, $activityId, 'activity_cancelled');
+    }
+}
+
 /** Limite de pessoas por escala do ministério (null = sem limite). */
 function scale_is_full(PDO $db, int $activityId, ?int $maxScaled): bool {
     if (!$maxScaled) return false;
