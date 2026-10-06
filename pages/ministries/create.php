@@ -21,6 +21,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     $autoScale   = isset($_POST['auto_scale_enabled']) ? 1 : 0;
     $isMusic     = isset($_POST['is_music_ministry']) ? 1 : 0;
     $usesDress   = isset($_POST['uses_dress_code']) ? 1 : 0;
+    $maxScaled   = max(0, (int)($_POST['max_scaled'] ?? 0)) ?: null;
     $checkinLead   = max(0, (int)($_POST['checkin_lead_minutes'] ?? 30)) ?: 30;
     $rehearsalLead = max(0, (int)($_POST['rehearsal_reminder_minutes'] ?? 30)) ?: 30;
     $memberIds   = array_map('intval', $_POST['member_ids'] ?? []);
@@ -33,12 +34,12 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         $mainLeader = $leaderId ?: ($leaderIds[0] ?? null);
 
         $db->prepare("
-            INSERT INTO ministries (church_id, name, description, leader_id, meeting_day, meeting_time, active, auto_scale_enabled, is_music_ministry, uses_dress_code, checkin_lead_minutes, rehearsal_reminder_minutes)
-            VALUES (:church_id,:name,:desc,:leader_id,:day,:time,:active,:auto_scale,:is_music,:uses_dress,:checkin_lead,:rehearsal_lead)
+            INSERT INTO ministries (church_id, name, description, leader_id, meeting_day, meeting_time, active, auto_scale_enabled, is_music_ministry, uses_dress_code, max_scaled, checkin_lead_minutes, rehearsal_reminder_minutes)
+            VALUES (:church_id,:name,:desc,:leader_id,:day,:time,:active,:auto_scale,:is_music,:uses_dress,:max_scaled,:checkin_lead,:rehearsal_lead)
         ")->execute([
             ':church_id' => $churchId, ':name' => $name, ':desc' => $description ?: null,
             ':leader_id' => $mainLeader, ':day' => $day, ':time' => $time, ':active' => $active,
-            ':auto_scale' => $autoScale, ':is_music' => $isMusic, ':uses_dress' => $usesDress, ':checkin_lead' => $checkinLead, ':rehearsal_lead' => $rehearsalLead,
+            ':auto_scale' => $autoScale, ':is_music' => $isMusic, ':uses_dress' => $usesDress, ':max_scaled' => $maxScaled, ':checkin_lead' => $checkinLead, ':rehearsal_lead' => $rehearsalLead,
         ]);
         $ministryId = $db->lastInsertId();
 
@@ -135,6 +136,10 @@ require_once __DIR__ . '/../../includes/layout.php';
       <p style="font-size:11px;color:var(--text-muted);margin-top:4px;margin-left:24px">
         Libera o card de vestimenta (cores e observação) nas atividades, pra quem gerencia enviar pra equipe.
       </p>
+    </div>
+    <div class="form-group" style="margin-bottom:0;margin-top:10px">
+      <label class="form-label">Máximo de pessoas por escala <span style="font-weight:400;color:var(--text-muted)">(vazio = sem limite)</span></label>
+      <input type="number" name="max_scaled" min="1" class="form-control" style="max-width:140px" value="<?= htmlspecialchars($_POST['max_scaled'] ?? '') ?>">
     </div>
     <div class="form-row" style="margin-top:14px">
       <div class="form-group" style="margin-bottom:0;max-width:220px">

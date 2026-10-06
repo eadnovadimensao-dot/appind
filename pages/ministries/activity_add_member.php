@@ -11,13 +11,19 @@ $memberId   = (int)($_POST['member_id']   ?? 0);
 $role       = trim($_POST['role'] ?? '');
 
 $stmt = $db->prepare("
-    SELECT ma.*, mn.name AS ministry_name
+    SELECT ma.*, mn.name AS ministry_name, mn.max_scaled
     FROM ministry_activities ma
     JOIN ministries mn ON mn.id = ma.ministry_id
     WHERE ma.id = ? AND ma.church_id = ?
 ");
 $stmt->execute([$activityId, $churchId]);
 $act = $stmt->fetch();
+
+$full = $act && scale_is_full($db, $activityId, $act['max_scaled'] ? (int)$act['max_scaled'] : null);
+if ($full) {
+    header('Location: /pages/ministries/activity_view.php?id=' . $activityId . '&scale_full=1');
+    exit;
+}
 
 if ($act && $memberId && auth_can_manage_ministry((int)$act['ministry_id'])) {
     $token   = bin2hex(random_bytes(32));

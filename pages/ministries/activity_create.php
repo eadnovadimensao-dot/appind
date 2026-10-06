@@ -62,6 +62,9 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 
     if ($title === '') $errors[] = 'Título é obrigatório.';
     if ($date  === '') $errors[] = 'Data é obrigatória.';
+    if (!empty($mn['max_scaled']) && count($scaledIds) > (int)$mn['max_scaled']) {
+        $errors[] = "Esse ministério escala no máximo {$mn['max_scaled']} " . ((int)$mn['max_scaled'] === 1 ? 'pessoa' : 'pessoas') . " por atividade.";
+    }
 
     if (empty($errors)) {
         $activityId = create_ministry_activity(

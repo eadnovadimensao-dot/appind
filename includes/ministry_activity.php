@@ -622,6 +622,14 @@ function previous_weekday_before(string $baseDate, string $weekday): string {
     return $base->format('Y-m-d');
 }
 
+/** Limite de pessoas por escala do ministério (null = sem limite). */
+function scale_is_full(PDO $db, int $activityId, ?int $maxScaled): bool {
+    if (!$maxScaled) return false;
+    $q = $db->prepare("SELECT COUNT(*) FROM ministry_activity_members WHERE activity_id = ?");
+    $q->execute([$activityId]);
+    return (int)$q->fetchColumn() >= $maxScaled;
+}
+
 /** Ensaio automático só faz sentido se o dia de reunião for outro dia da semana que o culto. */
 function rehearsal_applies(string $cultoDate, ?string $meetingDay): bool {
     if (!$meetingDay) return false;

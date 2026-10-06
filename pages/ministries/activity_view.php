@@ -158,6 +158,11 @@ $at = $actTypeLabels[$act['activity_type']] ?? null;
   </div>
 <?php endif; ?>
 
+<?php if (isset($_GET['scale_full'])): ?>
+  <div style="background:#FEF3C7;border:1px solid #FCD34D;border-radius:8px;padding:12px 16px;margin-bottom:16px;font-size:13px;color:#854F0B">
+    Essa escala já está com o máximo de pessoas definido pra esse ministério.
+  </div>
+<?php endif; ?>
 <?php if (isset($_GET['dress_saved'])): ?>
   <div style="background:#E1F5EE;border:1px solid var(--accent);border-radius:8px;padding:12px 16px;margin-bottom:16px;font-size:13px;color:#0F6E56">Vestimenta salva.</div>
 <?php elseif (isset($_GET['dress_sent'])): ?>
