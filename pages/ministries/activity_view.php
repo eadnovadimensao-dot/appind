@@ -136,9 +136,17 @@ $at = $actTypeLabels[$act['activity_type']] ?? null;
         <a href="/pages/ministries/activity_status.php?id=<?= $id ?>&status=done"
            class="btn btn-primary"
            data-confirm="Marcar esta atividade como realizada?">✓ Realizada</a>
-        <a href="/pages/ministries/activity_status.php?id=<?= $id ?>&status=cancelled"
-           class="btn btn-secondary" style="color:var(--red)"
-           data-confirm="Cancelar esta atividade?">Cancelar</a>
+        <details style="display:inline-block;position:relative">
+          <summary class="btn btn-secondary" style="color:var(--red);list-style:none;cursor:pointer">Cancelar</summary>
+          <form method="POST" action="/pages/ministries/activity_status.php" style="position:absolute;right:0;top:calc(100% + 6px);z-index:10;background:white;border:1px solid var(--border);border-radius:10px;padding:14px;width:300px;box-shadow:0 4px 16px rgba(0,0,0,.1)">
+            <input type="hidden" name="id" value="<?= $id ?>">
+            <input type="hidden" name="status" value="cancelled">
+            <label class="form-label" style="font-size:12px">Motivo do cancelamento</label>
+            <textarea name="reason" class="form-control" rows="3" required maxlength="500" placeholder="Ex: chuva forte, falta de quórum, feriado…"></textarea>
+            <p style="font-size:11px;color:var(--text-muted);margin:6px 0 10px">Os membros recebem o aviso de cancelamento. O motivo vai só pra liderança do ministério.</p>
+            <button type="submit" class="btn btn-primary" style="font-size:12px;width:100%">Confirmar cancelamento</button>
+          </form>
+        </details>
       <?php endif; ?>
       <a href="/pages/ministries/activity_delete.php?id=<?= $id ?>"
          class="btn btn-secondary" style="color:var(--red)"
@@ -158,6 +166,11 @@ $at = $actTypeLabels[$act['activity_type']] ?? null;
   </div>
 <?php endif; ?>
 
+<?php if (isset($_GET['cancel_error'])): ?>
+  <div style="background:#FCEBEB;border:1px solid #F09595;border-radius:8px;padding:12px 16px;margin-bottom:16px;font-size:13px;color:#A32D2D">
+    Informe o motivo pra cancelar a atividade.
+  </div>
+<?php endif; ?>
 <?php if (isset($_GET['scale_full'])): ?>
   <div style="background:#FEF3C7;border:1px solid #FCD34D;border-radius:8px;padding:12px 16px;margin-bottom:16px;font-size:13px;color:#854F0B">
     Essa escala já está com o máximo de pessoas definido pra esse ministério.

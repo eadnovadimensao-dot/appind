@@ -623,7 +623,7 @@ function previous_weekday_before(string $baseDate, string $weekday): string {
 }
 
 /** Avisa por WhatsApp todo mundo escalado numa atividade que acabou de ser cancelada. */
-function notify_activity_cancelled(PDO $db, int $activityId): void {
+function notify_activity_cancelled(PDO $db, int $activityId, string $reason = ''): void {
     $act = $db->prepare("
         SELECT ma.title, ma.activity_type, ma.activity_date, ma.time_start, ma.church_id, mn.name AS ministry_name
         FROM ministry_activities ma JOIN ministries mn ON mn.id = ma.ministry_id
@@ -648,6 +648,21 @@ function notify_activity_cancelled(PDO $db, int $activityId): void {
         $msg = "Olá, {$first}! ❌ O {$kindLabel} *{$act['title']}* ({$act['ministry_name']}) de " . date_pt($act['activity_date']) . $timeLabel
              . " foi *cancelado*. Qualquer dúvida, fale com a liderança do ministério. 🙏";
         queue_whatsapp($m['phone'], $msg, (int)$act['church_id'], null, 0, $activityId, 'activity_cancelled');
+    }
+
+    // Liderança recebe o motivo (não os membros)
+    if ($reason !== '') {
+        $leaders = $db->prepare("
+            SELECT DISTINCT m.phone FROM ministry_leaders ml JOIN members m ON m.id = ml.member_id
+            WHERE ml.ministry_id = (SELECT ministry_id FROM ministry_activities WHERE id = ?)
+              AND m.phone IS NOT NULL AND m.phone != ''
+        ");
+        $leaders->execute([$activityId]);
+        $leaderMsg = "❌ *{$kindLabel} cancelado*: {$act['title']} ({$act['ministry_name']}) de " . date_pt($act['activity_date']) . $timeLabel
+                   . "\n\nMotivo: {$reason}";
+        foreach ($leaders->fetchAll(PDO::FETCH_COLUMN) as $phone) {
+            queue_whatsapp($phone, $leaderMsg, (int)$act['church_id'], null, 0, $activityId, 'cancel_leader');
+        }
     }
 }
 
