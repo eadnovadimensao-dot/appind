@@ -9,7 +9,7 @@ $churchId = current_church_id();
 $id       = (int)($_GET['id'] ?? 0);
 
 $stmt = $db->prepare("
-    SELECT ma.*, mn.name AS ministry_name, mn.id AS ministry_id, mn.auto_scale_enabled
+    SELECT ma.*, mn.name AS ministry_name, mn.id AS ministry_id, mn.auto_scale_enabled, mn.uses_dress_code
     FROM ministry_activities ma
     JOIN ministries mn ON mn.id = ma.ministry_id
     WHERE ma.id = ? AND ma.church_id = ?
@@ -172,8 +172,8 @@ $at = $actTypeLabels[$act['activity_type']] ?? null;
 $dressPalette = dress_palette();
 $dressColors  = dress_colors_parse($act['dress_colors'] ?? '');
 $dressNote    = trim((string)($act['dress_note'] ?? ''));
-$canDress = auth_can_manage_dress((int)$act['ministry_id']);
-if ($canDress || $dressColors || $dressNote):
+$canDress = auth_can_manage_dress((int)$act['ministry_id']) && (!empty($act['uses_dress_code']) || $dressColors || $dressNote);
+if (!empty($act['uses_dress_code']) || $dressColors || $dressNote):
 ?>
 <!-- Vestimenta -->
 <div class="card" style="padding:0;margin-bottom:16px">
