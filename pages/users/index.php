@@ -234,87 +234,75 @@ require_once __DIR__ . '/../../includes/layout.php';
   <div style="padding:16px 20px;border-bottom:1px solid var(--border)">
     <span style="font-size:13px;color:var(--text-muted)"><?= count($users) ?> usuário(s)</span>
   </div>
-  <div class="table-wrap">
-    <table>
-      <thead>
-        <tr><th>Nome</th><th>E-mail</th><th>Membro vinculado</th><th>Perfil</th><th>Último acesso</th><th>Status</th><th></th></tr>
-      </thead>
-      <tbody>
-        <?php foreach ($users as $u):
-          $rl = $roleLabels[$u['role']] ?? ['label'=>$u['role'],'badge'=>'badge-gray'];
-          $isMe = $u['id'] == ($_SESSION['user_id'] ?? 0);
-        ?>
-          <tr>
-            <td>
-              <div style="font-weight:500"><?= htmlspecialchars($u['name']) ?></div>
-              <?php if ($isMe): ?>
-                <span style="font-size:11px;color:var(--accent)">← você</span>
-              <?php endif; ?>
-            </td>
-            <td style="color:var(--text-muted)"><?= htmlspecialchars($u['email']) ?></td>
-            <td style="color:var(--text-muted)"><?= htmlspecialchars($u['member_name'] ?? '—') ?></td>
-            <td>
-              <?php if (!$isMe && $u['role'] !== 'supermaster'): ?>
-                <form method="POST" style="display:inline">
-                  <input type="hidden" name="action" value="change_role">
-                  <input type="hidden" name="user_id" value="<?= $u['id'] ?>">
-                  <select name="role" class="form-control" style="padding:4px 8px;font-size:12px;width:auto"
-                          onchange="this.form.submit()">
-                    <?php foreach ($roleLabels as $rk => $rv): ?>
-                      <?php if ($rk === 'supermaster' && auth_role() !== 'supermaster') continue; ?>
-                      <option value="<?= $rk ?>" <?= $u['role']===$rk?'selected':''?>><?= $rv['label'] ?></option>
-                    <?php endforeach; ?>
-                  </select>
-                </form>
-              <?php else: ?>
-                <span class="badge <?= $rl['badge'] ?>"><?= $rl['label'] ?></span>
-              <?php endif; ?>
-            </td>
-            <td style="color:var(--text-muted);font-size:12px">
-              <?= $u['last_login'] ? date('d/m/Y H:i', strtotime($u['last_login'])) : 'Nunca' ?>
-            </td>
-            <td>
-              <span class="badge <?= $u['active'] ? 'badge-green' : 'badge-gray' ?>">
-                <?= $u['active'] ? 'Ativo' : 'Inativo' ?>
-              </span>
-            </td>
-            <td style="text-align:right">
-              <?php if (!$isMe && ($u['role'] !== 'supermaster' || auth_role() === 'supermaster')): ?>
-                <form method="POST" style="display:inline">
-                  <input type="hidden" name="action" value="set_password">
-                  <input type="hidden" name="user_id" value="<?= $u['id'] ?>">
-                  <button type="submit" class="btn btn-secondary" style="font-size:12px;padding:5px 12px"
-                          onclick="return confirm('Definir uma nova senha temporária para <?= htmlspecialchars($u['name']) ?>? A senha atual dela deixa de funcionar.')">
-                    🔑 Nova senha
-                  </button>
-                </form>
-              <?php endif; ?>
-              <?php if (!$isMe && $u['role'] !== 'supermaster'): ?>
-                <form method="POST" style="display:inline">
-                  <input type="hidden" name="action" value="toggle">
-                  <input type="hidden" name="user_id" value="<?= $u['id'] ?>">
-                  <input type="hidden" name="active" value="<?= $u['active'] ?>">
-                  <button type="submit" class="btn btn-secondary" style="font-size:12px;padding:5px 12px"
-                          onclick="return confirm('<?= $u['active'] ? 'Desativar' : 'Ativar' ?> este usuário?')">
-                    <?= $u['active'] ? 'Desativar' : 'Ativar' ?>
-                  </button>
-                </form>
-                <form method="POST" style="display:inline">
-                  <input type="hidden" name="action" value="delete">
-                  <input type="hidden" name="user_id" value="<?= $u['id'] ?>">
-                  <button type="submit" class="btn btn-secondary"
-                          style="font-size:12px;padding:5px 12px;color:var(--red)"
-                          onclick="return confirm('Excluir o usuário <?= htmlspecialchars($u['name']) ?>? O e-mail ficará disponível para novo cadastro.')">
-                    Excluir
-                  </button>
-                </form>
-              <?php endif; ?>
-            </td>
-          </tr>
-        <?php endforeach; ?>
-      </tbody>
-    </table>
-  </div>
+  <?php foreach ($users as $u):
+    $rl = $roleLabels[$u['role']] ?? ['label'=>$u['role'],'badge'=>'badge-gray'];
+    $isMe = $u['id'] == ($_SESSION['user_id'] ?? 0);
+  ?>
+    <div style="padding:12px 20px;border-bottom:1px solid var(--border)">
+      <div style="font-size:14px;font-weight:500">
+        <?= htmlspecialchars($u['name']) ?>
+        <?php if ($isMe): ?><span style="font-size:11px;color:var(--accent)">← você</span><?php endif; ?>
+        <span class="badge <?= $u['active'] ? 'badge-green' : 'badge-gray' ?>" style="font-size:10px">
+          <?= $u['active'] ? 'Ativo' : 'Inativo' ?>
+        </span>
+      </div>
+      <div style="font-size:12px;color:var(--text-muted);margin-top:3px">
+        <?= htmlspecialchars($u['email']) ?>
+        <?= $u['member_name'] ? ' · vinculado a ' . htmlspecialchars($u['member_name']) : '' ?>
+      </div>
+      <div style="font-size:12px;color:var(--text-muted);margin-top:4px;display:flex;align-items:center;gap:6px;flex-wrap:wrap">
+        <?php if (!$isMe && $u['role'] !== 'supermaster'): ?>
+          <form method="POST" style="display:inline">
+            <input type="hidden" name="action" value="change_role">
+            <input type="hidden" name="user_id" value="<?= $u['id'] ?>">
+            <select name="role" class="form-control" style="padding:4px 8px;font-size:12px;width:auto"
+                    onchange="this.form.submit()">
+              <?php foreach ($roleLabels as $rk => $rv): ?>
+                <?php if ($rk === 'supermaster' && auth_role() !== 'supermaster') continue; ?>
+                <option value="<?= $rk ?>" <?= $u['role']===$rk?'selected':''?>><?= $rv['label'] ?></option>
+              <?php endforeach; ?>
+            </select>
+          </form>
+        <?php else: ?>
+          <span class="badge <?= $rl['badge'] ?>"><?= $rl['label'] ?></span>
+        <?php endif; ?>
+        <span>·</span>
+        <span>Último acesso: <?= $u['last_login'] ? date('d/m/Y H:i', strtotime($u['last_login'])) : 'Nunca' ?></span>
+      </div>
+      <div style="display:flex;gap:8px;flex-wrap:wrap;margin-top:10px">
+        <?php if (!$isMe && ($u['role'] !== 'supermaster' || auth_role() === 'supermaster')): ?>
+          <form method="POST" style="display:inline">
+            <input type="hidden" name="action" value="set_password">
+            <input type="hidden" name="user_id" value="<?= $u['id'] ?>">
+            <button type="submit" class="btn btn-secondary" style="font-size:12px;padding:5px 12px"
+                    onclick="return confirm('Definir uma nova senha temporária para <?= htmlspecialchars($u['name']) ?>? A senha atual dela deixa de funcionar.')">
+              🔑 Nova senha
+            </button>
+          </form>
+        <?php endif; ?>
+        <?php if (!$isMe && $u['role'] !== 'supermaster'): ?>
+          <form method="POST" style="display:inline">
+            <input type="hidden" name="action" value="toggle">
+            <input type="hidden" name="user_id" value="<?= $u['id'] ?>">
+            <input type="hidden" name="active" value="<?= $u['active'] ?>">
+            <button type="submit" class="btn btn-secondary" style="font-size:12px;padding:5px 12px"
+                    onclick="return confirm('<?= $u['active'] ? 'Desativar' : 'Ativar' ?> este usuário?')">
+              <?= $u['active'] ? 'Desativar' : 'Ativar' ?>
+            </button>
+          </form>
+          <form method="POST" style="display:inline">
+            <input type="hidden" name="action" value="delete">
+            <input type="hidden" name="user_id" value="<?= $u['id'] ?>">
+            <button type="submit" class="btn btn-secondary"
+                    style="font-size:12px;padding:5px 12px;color:var(--red)"
+                    onclick="return confirm('Excluir o usuário <?= htmlspecialchars($u['name']) ?>? O e-mail ficará disponível para novo cadastro.')">
+              Excluir
+            </button>
+          </form>
+        <?php endif; ?>
+      </div>
+    </div>
+  <?php endforeach; ?>
 </div>
 
 <?php

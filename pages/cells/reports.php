@@ -44,44 +44,31 @@ $reports = $reports->fetchAll();
       <a href="/pages/cells/report_create.php?cell_id=<?= $cellId ?>" class="btn btn-primary" style="margin-top:16px">+ Enviar primeiro relatório</a>
     </div>
   <?php else: ?>
-    <div class="table-wrap">
-      <table>
-        <thead>
-          <tr>
-            <th>Data</th>
-            <th>Tema</th>
-            <th>Presentes</th>
-            <th>Visitantes</th>
-            <th>Oferta</th>
-            <th></th>
-          </tr>
-        </thead>
-        <tbody>
-          <?php foreach ($reports as $r): ?>
-            <?php if (!$r['happened']): ?>
-            <tr>
-              <td style="font-weight:500"><?= date('d/m/Y', strtotime($r['report_date'])) ?></td>
-              <td colspan="4"><span class="badge badge-gray">Não houve reunião</span> <span style="color:var(--text-muted);font-size:12px"><?= htmlspecialchars($r['no_meeting_reason'] ?? '') ?></span></td>
-              <td style="text-align:right">
-                <a href="/pages/cells/report_view.php?id=<?= $r['id'] ?>" class="btn btn-secondary" style="font-size:12px;padding:5px 12px">Ver</a>
-              </td>
-            </tr>
-            <?php else: ?>
-            <tr>
-              <td style="font-weight:500"><?= date('d/m/Y', strtotime($r['report_date'])) ?></td>
-              <td style="color:var(--text-muted)"><?= htmlspecialchars($r['subject'] ?? '—') ?></td>
-              <td><?= $r['total_present'] ?></td>
-              <td><?= $r['visitors'] ?></td>
-              <td>R$ <?= number_format($r['offering'], 2, ',', '.') ?></td>
-              <td style="text-align:right">
-                <a href="/pages/cells/report_view.php?id=<?= $r['id'] ?>" class="btn btn-secondary" style="font-size:12px;padding:5px 12px">Ver</a>
-              </td>
-            </tr>
-            <?php endif; ?>
-          <?php endforeach; ?>
-        </tbody>
-      </table>
-    </div>
+    <?php foreach ($reports as $r): ?>
+      <div style="padding:12px 20px;border-bottom:1px solid var(--border)">
+        <div style="font-size:14px;font-weight:500"><?= date('d/m/Y', strtotime($r['report_date'])) ?></div>
+        <?php if (!$r['happened']): ?>
+          <div style="font-size:12px;color:var(--text-muted);margin-top:4px">
+            <span class="badge badge-gray">Não houve reunião</span>
+            <?= $r['no_meeting_reason'] ? ' ' . htmlspecialchars($r['no_meeting_reason']) : '' ?>
+          </div>
+        <?php else: ?>
+          <div style="font-size:12px;color:var(--text-muted);margin-top:4px">
+            <?= htmlspecialchars($r['subject'] ?? 'Sem tema definido') ?>
+          </div>
+          <div style="font-size:12px;color:var(--text-muted);margin-top:4px;display:flex;align-items:center;gap:6px;flex-wrap:wrap">
+            <span><?= $r['total_present'] ?> presente(s)</span>
+            <span>·</span>
+            <span><?= $r['visitors'] ?> visitante(s)</span>
+            <span>·</span>
+            <span>R$ <?= number_format($r['offering'], 2, ',', '.') ?></span>
+          </div>
+        <?php endif; ?>
+        <div style="display:flex;gap:8px;flex-wrap:wrap;margin-top:10px">
+          <a href="/pages/cells/report_view.php?id=<?= $r['id'] ?>" class="btn btn-secondary" style="font-size:12px;padding:5px 12px">Ver</a>
+        </div>
+      </div>
+    <?php endforeach; ?>
   <?php endif; ?>
 </div>
 

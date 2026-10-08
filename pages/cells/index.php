@@ -71,58 +71,41 @@ $days = ['monday'=>'Segunda','tuesday'=>'Terça','wednesday'=>'Quarta',
       <?php endif; ?>
     </div>
   <?php else: ?>
-    <div class="table-wrap">
-      <table>
-        <thead>
-          <tr>
-            <th>Nome</th>
-            <th>Líder</th>
-            <th>Dia / Horário</th>
-            <th>Membros</th>
-            <th>Status</th>
-            <th></th>
-          </tr>
-        </thead>
-        <tbody>
-          <?php foreach ($cells as $c): ?>
-            <tr>
-              <td style="font-weight:500"><?= htmlspecialchars($c['name']) ?></td>
-              <td>
-                <?php if ($c['leader_name']): ?>
-                  <div style="display:flex;align-items:center;gap:8px">
-                    <div class="avatar" style="width:28px;height:28px;font-size:10px">
-                      <?= strtoupper(substr($c['leader_name'], 0, 2)) ?>
-                    </div>
-                    <?= htmlspecialchars($c['leader_name']) ?>
-                  </div>
-                <?php else: ?>
-                  <span style="color:var(--text-muted)">—</span>
-                <?php endif; ?>
-              </td>
-              <td style="color:var(--text-muted);font-size:13px">
-                <?= $c['day_of_week'] ? ($days[$c['day_of_week']] ?? $c['day_of_week']) : '—' ?>
-                <?= $c['time_start'] ? ' · ' . substr($c['time_start'], 0, 5) : '' ?>
-              </td>
-              <td>
-                <span style="font-weight:500"><?= $c['member_count'] ?></span>
-                <span style="color:var(--text-muted);font-size:12px"> membros</span>
-              </td>
-              <td>
-                <span class="badge <?= $c['active'] ? 'badge-green' : 'badge-gray' ?>">
-                  <?= $c['active'] ? 'Ativa' : 'Inativa' ?>
-                </span>
-              </td>
-              <td style="text-align:right">
-                <a href="/pages/cells/view.php?id=<?= $c['id'] ?>" class="btn btn-secondary" style="font-size:12px;padding:5px 12px">Ver</a>
-                <?php if ($canManageCells || auth_can_manage_cell((int)$c['id'])): ?>
-                  <a href="/pages/cells/edit.php?id=<?= $c['id'] ?>" class="btn btn-secondary" style="font-size:12px;padding:5px 12px">Editar</a>
-                <?php endif; ?>
-              </td>
-            </tr>
-          <?php endforeach; ?>
-        </tbody>
-      </table>
-    </div>
+    <?php foreach ($cells as $c): ?>
+      <div style="padding:12px 20px;border-bottom:1px solid var(--border)">
+        <div style="font-size:14px;font-weight:500">
+          <?= htmlspecialchars($c['name']) ?>
+          <span class="badge <?= $c['active'] ? 'badge-green' : 'badge-gray' ?>" style="font-size:10px">
+            <?= $c['active'] ? 'Ativa' : 'Inativa' ?>
+          </span>
+        </div>
+        <div style="font-size:12px;color:var(--text-muted);margin-top:6px;display:flex;align-items:center;gap:6px;flex-wrap:wrap">
+          <?php if ($c['leader_name']): ?>
+            <span style="display:flex;align-items:center;gap:5px">
+              <span class="avatar" style="width:20px;height:20px;font-size:9px">
+                <?= strtoupper(substr($c['leader_name'], 0, 2)) ?>
+              </span>
+              <?= htmlspecialchars($c['leader_name']) ?>
+            </span>
+          <?php else: ?>
+            <span>Sem líder definido</span>
+          <?php endif; ?>
+          <span>·</span>
+          <span>
+            <?= $c['day_of_week'] ? ($days[$c['day_of_week']] ?? $c['day_of_week']) : 'Sem dia definido' ?>
+            <?= $c['time_start'] ? ' · ' . substr($c['time_start'], 0, 5) : '' ?>
+          </span>
+          <span>·</span>
+          <span><?= $c['member_count'] ?> membro(s)</span>
+        </div>
+        <div style="display:flex;gap:8px;flex-wrap:wrap;margin-top:10px">
+          <a href="/pages/cells/view.php?id=<?= $c['id'] ?>" class="btn btn-secondary" style="font-size:12px;padding:5px 12px">Ver</a>
+          <?php if ($canManageCells || auth_can_manage_cell((int)$c['id'])): ?>
+            <a href="/pages/cells/edit.php?id=<?= $c['id'] ?>" class="btn btn-secondary" style="font-size:12px;padding:5px 12px">Editar</a>
+          <?php endif; ?>
+        </div>
+      </div>
+    <?php endforeach; ?>
   <?php endif; ?>
 </div>
 

@@ -103,10 +103,11 @@ require_once __DIR__ . '/../../includes/layout.php';
             <span>Nenhuma atividade agendada</span>
           <?php endif; ?>
         </div>
+        <?php $btnStyle = 'font-size:12px;padding:5px 12px' . ($mn['i_participate'] ? ';background:white;border-color:var(--accent)' : ''); ?>
         <div style="display:flex;gap:8px;flex-wrap:wrap;margin-top:10px">
-          <a href="/pages/ministries/view.php?id=<?= $mn['id'] ?>" class="btn btn-secondary" style="font-size:12px;padding:5px 12px">Ver</a>
+          <a href="/pages/ministries/view.php?id=<?= $mn['id'] ?>" class="btn btn-secondary" style="<?= $btnStyle ?>">Ver</a>
           <?php if ($canCreateMinistry || auth_can_manage_ministry((int)$mn['id'])): ?>
-            <a href="/pages/ministries/edit.php?id=<?= $mn['id'] ?>" class="btn btn-secondary" style="font-size:12px;padding:5px 12px">Editar</a>
+            <a href="/pages/ministries/edit.php?id=<?= $mn['id'] ?>" class="btn btn-secondary" style="<?= $btnStyle ?>">Editar</a>
           <?php endif; ?>
         </div>
       </div>

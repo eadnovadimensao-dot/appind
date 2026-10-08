@@ -62,48 +62,38 @@ $statusLabels = [
       <?php endif; ?>
     </div>
   <?php else: ?>
-    <div class="table-wrap">
-      <table>
-        <thead>
-          <tr><th>Data</th><th>Culto</th><th>Tipo</th><th>Pregador</th><th>Escala</th><th>Status</th><th></th></tr>
-        </thead>
-        <tbody>
-          <?php foreach ($services as $s):
-            $tl = $typeLabels[$s['type']]     ?? ['label'=>$s['type'],   'badge'=>'badge-gray'];
-            $sl = $statusLabels[$s['status']] ?? ['label'=>$s['status'], 'badge'=>'badge-gray'];
-          ?>
-            <tr>
-              <td style="white-space:nowrap;font-weight:500">
-                <?= date('d/m/Y', strtotime($s['service_date'])) ?>
-                <?php if ($s['time_start']): ?>
-                  <div style="font-size:11px;color:var(--text-muted)"><?= substr($s['time_start'],0,5) ?></div>
-                <?php endif; ?>
-              </td>
-              <td>
-                <div style="font-weight:500"><?= htmlspecialchars($s['title']) ?></div>
-                <?php if ($s['sermon_title']): ?>
-                  <div style="font-size:12px;color:var(--text-muted)">📖 <?= htmlspecialchars($s['sermon_title']) ?></div>
-                <?php endif; ?>
-              </td>
-              <td><span class="badge <?= $tl['badge'] ?>"><?= $tl['label'] ?></span></td>
-              <td style="color:var(--text-muted);font-size:13px"><?= htmlspecialchars($s['preacher_name'] ?? '—') ?></td>
-              <td>
-                <span style="font-weight:500"><?= $s['scale_count'] ?></span>
-                <span style="font-size:12px;color:var(--text-muted)"> pessoas</span>
-              </td>
-              <td><span class="badge <?= $sl['badge'] ?>"><?= $sl['label'] ?></span></td>
-              <td style="text-align:right">
-                <a href="/pages/services/view.php?id=<?= $s['id'] ?>" class="btn btn-secondary" style="font-size:12px;padding:5px 12px">Ver</a>
-                <?php if ($canEditServices): ?>
-                <a href="/pages/services/supervisor_view.php?id=<?= $s['id'] ?>" class="btn btn-secondary" style="font-size:12px;padding:5px 12px">📋 Programação</a>
-                <a href="/pages/services/edit.php?id=<?= $s['id'] ?>" class="btn btn-secondary" style="font-size:12px;padding:5px 12px">Editar</a>
-                <?php endif; ?>
-              </td>
-            </tr>
-          <?php endforeach; ?>
-        </tbody>
-      </table>
-    </div>
+    <?php foreach ($services as $s):
+      $tl = $typeLabels[$s['type']]     ?? ['label'=>$s['type'],   'badge'=>'badge-gray'];
+      $sl = $statusLabels[$s['status']] ?? ['label'=>$s['status'], 'badge'=>'badge-gray'];
+    ?>
+      <div style="padding:12px 20px;border-bottom:1px solid var(--border)">
+        <div style="font-size:14px;font-weight:500">
+          <?= htmlspecialchars($s['title']) ?>
+          <span class="badge <?= $tl['badge'] ?>" style="font-size:10px"><?= $tl['label'] ?></span>
+          <span class="badge <?= $sl['badge'] ?>" style="font-size:10px"><?= $sl['label'] ?></span>
+        </div>
+        <?php if ($s['sermon_title']): ?>
+          <div style="font-size:12px;color:var(--text-muted);margin-top:2px">📖 <?= htmlspecialchars($s['sermon_title']) ?></div>
+        <?php endif; ?>
+        <div style="font-size:12px;color:var(--text-muted);margin-top:6px;display:flex;align-items:center;gap:6px;flex-wrap:wrap">
+          <span>
+            <?= date('d/m/Y', strtotime($s['service_date'])) ?>
+            <?= $s['time_start'] ? ' · ' . substr($s['time_start'],0,5) : '' ?>
+          </span>
+          <span>·</span>
+          <span><?= htmlspecialchars($s['preacher_name'] ?? 'Sem pregador definido') ?></span>
+          <span>·</span>
+          <span><?= $s['scale_count'] ?> pessoa(s) na escala</span>
+        </div>
+        <div style="display:flex;gap:8px;flex-wrap:wrap;margin-top:10px">
+          <a href="/pages/services/view.php?id=<?= $s['id'] ?>" class="btn btn-secondary" style="font-size:12px;padding:5px 12px">Ver</a>
+          <?php if ($canEditServices): ?>
+          <a href="/pages/services/supervisor_view.php?id=<?= $s['id'] ?>" class="btn btn-secondary" style="font-size:12px;padding:5px 12px">📋 Programação</a>
+          <a href="/pages/services/edit.php?id=<?= $s['id'] ?>" class="btn btn-secondary" style="font-size:12px;padding:5px 12px">Editar</a>
+          <?php endif; ?>
+        </div>
+      </div>
+    <?php endforeach; ?>
   <?php endif; ?>
 </div>
 

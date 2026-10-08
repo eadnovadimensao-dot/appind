@@ -56,38 +56,37 @@ $typeIcons = ['event'=>'📅','ministry_activity'=>'✝️','cell_meeting'=>'�
       <p>Nenhum evento encontrado.</p>
     </div>
   <?php else: ?>
-    <div class="table-wrap">
-      <table>
-        <thead>
-          <tr><th>Evento</th><th>Data</th><th>Horário</th><th>Local</th><th>Ministério</th><th>Status</th><th></th></tr>
-        </thead>
-        <tbody>
-          <?php foreach ($events as $ev):
-            $st   = $statusLabels[$ev['status']] ?? ['label'=>$ev['status'],'badge'=>'badge-gray'];
-            $icon = $typeIcons[$ev['type']] ?? '📅';
-          ?>
-            <tr>
-              <td>
-                <div style="display:flex;align-items:center;gap:8px">
-                  <span style="font-size:15px"><?= $icon ?></span>
-                  <div>
-                    <div style="font-weight:500"><?= htmlspecialchars($ev['title']) ?></div>
-                  </div>
-                </div>
-              </td>
-              <td><?= date('d/m/Y', strtotime($ev['event_date'])) ?></td>
-              <td style="color:var(--text-muted);white-space:nowrap"><?= substr($ev['time_start'],0,5) ?> – <?= substr($ev['time_end'],0,5) ?></td>
-              <td style="color:var(--text-muted)"><?= htmlspecialchars($ev['location_name'] ?? '—') ?></td>
-              <td style="color:var(--text-muted)"><?= htmlspecialchars($ev['ministry_name'] ?? '—') ?></td>
-              <td><span class="badge <?= $st['badge'] ?>"><?= $st['label'] ?></span></td>
-              <td style="text-align:right">
-                <a href="/pages/events/view.php?id=<?= $ev['id'] ?>" class="btn btn-secondary" style="font-size:12px;padding:5px 12px">Ver</a>
-              </td>
-            </tr>
-          <?php endforeach; ?>
-        </tbody>
-      </table>
-    </div>
+    <?php foreach ($events as $ev):
+      $st   = $statusLabels[$ev['status']] ?? ['label'=>$ev['status'],'badge'=>'badge-gray'];
+      $icon = $typeIcons[$ev['type']] ?? '📅';
+    ?>
+      <div style="padding:12px 20px;border-bottom:1px solid var(--border)">
+        <div style="display:flex;align-items:flex-start;gap:10px">
+          <span style="font-size:18px;flex-shrink:0"><?= $icon ?></span>
+          <div style="flex:1;min-width:0">
+            <div style="font-size:14px;font-weight:500">
+              <?= htmlspecialchars($ev['title']) ?>
+              <span class="badge <?= $st['badge'] ?>" style="font-size:10px"><?= $st['label'] ?></span>
+            </div>
+            <div style="font-size:12px;color:var(--text-muted);margin-top:4px;display:flex;align-items:center;gap:6px;flex-wrap:wrap">
+              <span>
+                <?= date('d/m/Y', strtotime($ev['event_date'])) ?>
+                · <?= substr($ev['time_start'],0,5) ?> – <?= substr($ev['time_end'],0,5) ?>
+              </span>
+              <span>·</span>
+              <span><?= htmlspecialchars($ev['location_name'] ?? 'Sem local definido') ?></span>
+              <?php if ($ev['ministry_name']): ?>
+                <span>·</span>
+                <span><?= htmlspecialchars($ev['ministry_name']) ?></span>
+              <?php endif; ?>
+            </div>
+          </div>
+        </div>
+        <div style="display:flex;gap:8px;flex-wrap:wrap;margin-top:10px;margin-left:28px">
+          <a href="/pages/events/view.php?id=<?= $ev['id'] ?>" class="btn btn-secondary" style="font-size:12px;padding:5px 12px">Ver</a>
+        </div>
+      </div>
+    <?php endforeach; ?>
   <?php endif; ?>
 </div>
 
