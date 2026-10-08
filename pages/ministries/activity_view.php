@@ -378,86 +378,61 @@ if (!empty($act['uses_dress_code']) || $dressColors || $dressNote):
   <?php if (empty($scaled)): ?>
     <div class="empty-state" style="padding:24px">Nenhuma pessoa escalada.</div>
   <?php else: ?>
-    <div class="table-wrap">
-      <table>
-        <thead>
-          <tr>
-            <th>Nome</th>
-            <th>Função</th>
-            <th>Telefone</th>
-            <th>Resposta do membro</th>
-            <th>Chegada</th>
-            <th></th>
-          </tr>
-        </thead>
-        <tbody>
-          <?php
-            $respStatusLabels = [
-                'pending'   => ['label'=>'Pendente',      'badge'=>'badge-gray'],
-                'confirmed' => ['label'=>'✓ Confirmado',  'badge'=>'badge-green'],
-                'refused'   => ['label'=>'✗ Recusou',     'badge'=>'badge-red'],
-            ];
-          ?>
-          <?php foreach ($scaled as $s):
-            $initials = strtoupper(implode('', array_map(fn($p) => $p[0], array_slice(explode(' ',$s['name']),0,2))));
-            $rs = $respStatusLabels[$s['status'] ?? 'pending'] ?? $respStatusLabels['pending'];
-          ?>
-            <tr>
-              <td>
-                <div style="display:flex;align-items:center;gap:10px">
-                  <div class="avatar"><?= $initials ?></div>
-                  <a href="/pages/members/view.php?id=<?= $s['id'] ?>" style="color:var(--text);text-decoration:none;font-weight:500">
-                    <?= htmlspecialchars($s['name']) ?>
-                  </a>
-                  <?php if (isset($unavailable[(int)$s['id']])): ?>
-                    <span class="badge badge-amber" style="font-size:10px"
-                          title="<?= htmlspecialchars($unavailable[(int)$s['id']]) ?>">⚠️ marcou indisponível nessa data</span>
-                  <?php endif; ?>
-                </div>
-              </td>
-              <td style="color:var(--text-muted)"><?= htmlspecialchars($s['role'] ?? '—') ?></td>
-              <td style="color:var(--text-muted)"><?= htmlspecialchars($s['phone'] ?? '—') ?></td>
-              <td>
-                <a href="/pages/ministries/activity_confirm.php?activity_id=<?= $id ?>&member_id=<?= $s['id'] ?>&confirmed=<?= $s['status']==='confirmed' ? 0 : 1 ?>"
-                   class="badge <?= $rs['badge'] ?>"
-                   style="cursor:pointer;text-decoration:none"
-                   title="Clique pra marcar/desmarcar manualmente (sobrescreve a resposta do membro)">
-                  <?= $rs['label'] ?>
-                </a>
-                <?php if ($s['status'] === 'refused' && $s['refuse_reason']): ?>
-                  <div style="font-size:11px;color:var(--text-muted);margin-top:4px;max-width:220px">
-                    💬 <?= htmlspecialchars($s['refuse_reason']) ?>
-                  </div>
-                <?php endif; ?>
-              </td>
-              <td>
-                <?php
-                  $eventAt = $act['time_start'] ? strtotime($act['activity_date'] . ' ' . $act['time_start']) : null;
-                ?>
-                <?php if ($s['checked_in_at']): ?>
-                  <?php $lateBy = $eventAt ? round((strtotime($s['checked_in_at']) - $eventAt) / 60) : 0; ?>
-                  <span class="badge <?= $lateBy > 5 ? 'badge-amber' : 'badge-green' ?>">
-                    <?= date('H:i', strtotime($s['checked_in_at'])) ?><?= $lateBy > 5 ? " · {$lateBy}min atrasado" : '' ?>
-                  </span>
-                <?php elseif ($s['status'] === 'confirmed' && $eventAt && time() > $eventAt): ?>
-                  <span class="badge badge-red">⚠ não chegou</span>
-                <?php else: ?>
-                  <span style="color:var(--text-muted);font-size:12px">—</span>
-                <?php endif; ?>
-              </td>
-              <td style="text-align:right">
-                <?php if ($canManage && $act['status'] === 'scheduled'): ?>
-                  <a href="/pages/ministries/activity_remove_member.php?activity_id=<?= $id ?>&member_id=<?= $s['id'] ?>"
-                     style="font-size:18px;color:var(--text-muted);text-decoration:none;line-height:1"
-                     title="Tirar da escala"
-                     data-confirm="Tirar <?= htmlspecialchars($s['name']) ?> da escala? Pra substituir, use '+ Adicionar / Substituir' logo depois.">×</a>
-                <?php endif; ?>
-              </td>
-            </tr>
-          <?php endforeach; ?>
-        </tbody>
-      </table>
-    </div>
+    <?php
+      $respStatusLabels = [
+          'pending'   => ['label'=>'Pendente',      'badge'=>'badge-gray'],
+          'confirmed' => ['label'=>'✓ Confirmado',  'badge'=>'badge-green'],
+          'refused'   => ['label'=>'✗ Recusou',     'badge'=>'badge-red'],
+      ];
+      $eventAt = $act['time_start'] ? strtotime($act['activity_date'] . ' ' . $act['time_start']) : null;
+    ?>
+    <?php foreach ($scaled as $s):
+      $initials = strtoupper(implode('', array_map(fn($p) => $p[0], array_slice(explode(' ',$s['name']),0,2))));
+      $rs = $respStatusLabels[$s['status'] ?? 'pending'] ?? $respStatusLabels['pending'];
+    ?>
+      <div style="padding:10px 18px;border-bottom:1px solid var(--border)">
+        <div style="display:flex;align-items:center;gap:10px">
+          <div class="avatar"><?= $initials ?></div>
+          <div style="flex:1;min-width:0">
+            <a href="/pages/members/view.php?id=<?= $s['id'] ?>" style="color:var(--text);text-decoration:none;font-weight:500;font-size:13px">
+              <?= htmlspecialchars($s['name']) ?>
+            </a>
+            <?php if (isset($unavailable[(int)$s['id']])): ?>
+              <span class="badge badge-amber" style="font-size:10px"
+                    title="<?= htmlspecialchars($unavailable[(int)$s['id']]) ?>">⚠️ marcou indisponível nessa data</span>
+            <?php endif; ?>
+            <?php if ($s['role']): ?>
+              <div style="font-size:11px;color:var(--text-muted);margin-top:1px"><?= htmlspecialchars($s['role']) ?></div>
+            <?php endif; ?>
+          </div>
+          <?php if ($canManage && $act['status'] === 'scheduled'): ?>
+            <a href="/pages/ministries/activity_remove_member.php?activity_id=<?= $id ?>&member_id=<?= $s['id'] ?>"
+               style="font-size:18px;color:var(--text-muted);text-decoration:none;line-height:1;flex-shrink:0"
+               title="Tirar da escala"
+               data-confirm="Tirar <?= htmlspecialchars($s['name']) ?> da escala? Pra substituir, use '+ Adicionar / Substituir' logo depois.">×</a>
+          <?php endif; ?>
+        </div>
+        <div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap;margin-top:8px;margin-left:46px">
+          <a href="/pages/ministries/activity_confirm.php?activity_id=<?= $id ?>&member_id=<?= $s['id'] ?>&confirmed=<?= $s['status']==='confirmed' ? 0 : 1 ?>"
+             class="badge <?= $rs['badge'] ?>"
+             style="cursor:pointer;text-decoration:none"
+             title="Clique pra marcar/desmarcar manualmente (sobrescreve a resposta do membro)">
+            <?= $rs['label'] ?>
+          </a>
+          <?php if ($s['checked_in_at']): ?>
+            <?php $lateBy = $eventAt ? round((strtotime($s['checked_in_at']) - $eventAt) / 60) : 0; ?>
+            <span class="badge <?= $lateBy > 5 ? 'badge-amber' : 'badge-green' ?>">
+              <?= date('H:i', strtotime($s['checked_in_at'])) ?><?= $lateBy > 5 ? " · {$lateBy}min atrasado" : '' ?>
+            </span>
+          <?php elseif ($s['status'] === 'confirmed' && $eventAt && time() > $eventAt): ?>
+            <span class="badge badge-red">⚠ não chegou</span>
+          <?php endif; ?>
+          <?php if ($s['status'] === 'refused' && $s['refuse_reason']): ?>
+            <span style="font-size:11px;color:var(--text-muted)">💬 <?= htmlspecialchars($s['refuse_reason']) ?></span>
+          <?php endif; ?>
+        </div>
+      </div>
+    <?php endforeach; ?>
   <?php endif; ?>
 </div>
 

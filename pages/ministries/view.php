@@ -203,6 +203,73 @@ $actTypeLabels = [
 
 <div style="display:grid;grid-template-columns:1fr 1fr;gap:16px">
 
+  <?php if (!$isParticipant && !$canManage): ?>
+  <!-- Não participa: programação fica restrita -->
+  <div class="card">
+    <p class="card-title">Próximas atividades</p>
+    <p style="font-size:13px;color:var(--text-muted)">A programação é visível só pra quem participa do ministério.</p>
+  </div>
+  <?php else: ?>
+  <!-- Próximas atividades -->
+  <div class="card" style="padding:0">
+    <div style="padding:14px 18px;border-bottom:1px solid var(--border);display:flex;justify-content:space-between;align-items:center">
+      <p style="font-weight:500;font-size:14px">Próximas atividades</p>
+      <?php if ($canManage): ?>
+        <a href="/pages/ministries/activity_create.php?ministry_id=<?= $id ?>" style="font-size:12px;color:var(--accent);text-decoration:none">+ Nova</a>
+      <?php endif; ?>
+    </div>
+    <?php if (empty($upcoming)): ?>
+      <div class="empty-state" style="padding:24px">Nenhuma atividade agendada.</div>
+    <?php else: ?>
+      <?php foreach ($upcoming as $act): ?>
+        <a href="/pages/ministries/activity_view.php?id=<?= $act['id'] ?>"
+           style="display:block;padding:12px 18px;border-bottom:1px solid var(--border);text-decoration:none;color:var(--text)">
+          <div style="display:flex;justify-content:space-between;align-items:flex-start;gap:8px">
+            <div>
+              <div style="display:flex;align-items:center;gap:6px">
+                <span style="font-size:13px;font-weight:500"><?= htmlspecialchars($act['title']) ?></span>
+                <?php $at = $actTypeLabels[$act['activity_type']] ?? null; if ($at): ?>
+                  <span class="badge <?= $at['badge'] ?>" style="font-size:10px"><?= $at['label'] ?></span>
+                <?php endif; ?>
+              </div>
+              <div style="font-size:12px;color:var(--text-muted);margin-top:2px">
+                📅 <?= date('d/m/Y', strtotime($act['activity_date'])) ?>
+                <?= $act['time_start'] ? ' às ' . substr($act['time_start'],0,5) : '' ?>
+              </div>
+              <?php if ($act['location']): ?>
+                <div style="font-size:12px;color:var(--text-muted)">📍 <?= htmlspecialchars($act['location']) ?></div>
+              <?php endif; ?>
+            </div>
+            <div style="text-align:right;flex-shrink:0">
+              <span class="badge badge-blue"><?= $act['scaled_count'] ?> escalado(s)</span>
+            </div>
+          </div>
+        </a>
+      <?php endforeach; ?>
+    <?php endif; ?>
+
+    <?php if (!empty($past)): ?>
+      <div style="padding:10px 18px;border-top:1px solid var(--border)">
+        <p style="font-size:12px;color:var(--text-muted);font-weight:500;margin-bottom:8px">Atividades anteriores</p>
+        <?php foreach ($past as $act):
+          $as = $actStatusLabels[$act['status']] ?? ['label'=>$act['status'],'badge'=>'badge-gray'];
+        ?>
+          <a href="/pages/ministries/activity_view.php?id=<?= $act['id'] ?>"
+             style="display:flex;justify-content:space-between;align-items:center;padding:7px 0;border-bottom:1px solid var(--border);text-decoration:none;color:var(--text);font-size:13px">
+            <span>
+              <?= htmlspecialchars($act['title']) ?> · <?= date('d/m/Y', strtotime($act['activity_date'])) ?>
+              <?php $at = $actTypeLabels[$act['activity_type']] ?? null; if ($at): ?>
+                <span class="badge <?= $at['badge'] ?>" style="font-size:10px"><?= $at['label'] ?></span>
+              <?php endif; ?>
+            </span>
+            <span class="badge <?= $as['badge'] ?>"><?= $as['label'] ?></span>
+          </a>
+        <?php endforeach; ?>
+      </div>
+    <?php endif; ?>
+  </div>
+  <?php endif; ?>
+
   <!-- Membros -->
   <div class="card" style="padding:0">
     <div style="padding:14px 18px;border-bottom:1px solid var(--border);display:flex;justify-content:space-between;align-items:center">
@@ -320,73 +387,6 @@ $actTypeLabels = [
       <?php endforeach; ?>
     <?php endif; ?>
   </div>
-
-  <?php if (!$isParticipant && !$canManage): ?>
-  <!-- Não participa: programação fica restrita -->
-  <div class="card">
-    <p class="card-title">Próximas atividades</p>
-    <p style="font-size:13px;color:var(--text-muted)">A programação é visível só pra quem participa do ministério.</p>
-  </div>
-  <?php else: ?>
-  <!-- Próximas atividades -->
-  <div class="card" style="padding:0">
-    <div style="padding:14px 18px;border-bottom:1px solid var(--border);display:flex;justify-content:space-between;align-items:center">
-      <p style="font-weight:500;font-size:14px">Próximas atividades</p>
-      <?php if ($canManage): ?>
-        <a href="/pages/ministries/activity_create.php?ministry_id=<?= $id ?>" style="font-size:12px;color:var(--accent);text-decoration:none">+ Nova</a>
-      <?php endif; ?>
-    </div>
-    <?php if (empty($upcoming)): ?>
-      <div class="empty-state" style="padding:24px">Nenhuma atividade agendada.</div>
-    <?php else: ?>
-      <?php foreach ($upcoming as $act): ?>
-        <a href="/pages/ministries/activity_view.php?id=<?= $act['id'] ?>"
-           style="display:block;padding:12px 18px;border-bottom:1px solid var(--border);text-decoration:none;color:var(--text)">
-          <div style="display:flex;justify-content:space-between;align-items:flex-start;gap:8px">
-            <div>
-              <div style="display:flex;align-items:center;gap:6px">
-                <span style="font-size:13px;font-weight:500"><?= htmlspecialchars($act['title']) ?></span>
-                <?php $at = $actTypeLabels[$act['activity_type']] ?? null; if ($at): ?>
-                  <span class="badge <?= $at['badge'] ?>" style="font-size:10px"><?= $at['label'] ?></span>
-                <?php endif; ?>
-              </div>
-              <div style="font-size:12px;color:var(--text-muted);margin-top:2px">
-                📅 <?= date('d/m/Y', strtotime($act['activity_date'])) ?>
-                <?= $act['time_start'] ? ' às ' . substr($act['time_start'],0,5) : '' ?>
-              </div>
-              <?php if ($act['location']): ?>
-                <div style="font-size:12px;color:var(--text-muted)">📍 <?= htmlspecialchars($act['location']) ?></div>
-              <?php endif; ?>
-            </div>
-            <div style="text-align:right;flex-shrink:0">
-              <span class="badge badge-blue"><?= $act['scaled_count'] ?> escalado(s)</span>
-            </div>
-          </div>
-        </a>
-      <?php endforeach; ?>
-    <?php endif; ?>
-
-    <?php if (!empty($past)): ?>
-      <div style="padding:10px 18px;border-top:1px solid var(--border)">
-        <p style="font-size:12px;color:var(--text-muted);font-weight:500;margin-bottom:8px">Atividades anteriores</p>
-        <?php foreach ($past as $act):
-          $as = $actStatusLabels[$act['status']] ?? ['label'=>$act['status'],'badge'=>'badge-gray'];
-        ?>
-          <a href="/pages/ministries/activity_view.php?id=<?= $act['id'] ?>"
-             style="display:flex;justify-content:space-between;align-items:center;padding:7px 0;border-bottom:1px solid var(--border);text-decoration:none;color:var(--text);font-size:13px">
-            <span>
-              <?= htmlspecialchars($act['title']) ?> · <?= date('d/m/Y', strtotime($act['activity_date'])) ?>
-              <?php $at = $actTypeLabels[$act['activity_type']] ?? null; if ($at): ?>
-                <span class="badge <?= $at['badge'] ?>" style="font-size:10px"><?= $at['label'] ?></span>
-              <?php endif; ?>
-            </span>
-            <span class="badge <?= $as['badge'] ?>"><?= $as['label'] ?></span>
-          </a>
-        <?php endforeach; ?>
-      </div>
-    <?php endif; ?>
-  </div>
-  <?php endif; ?>
 
 </div>
 
