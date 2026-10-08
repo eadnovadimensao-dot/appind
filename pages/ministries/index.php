@@ -54,74 +54,49 @@ require_once __DIR__ . '/../../includes/layout.php';
       <?php endif; ?>
     </div>
   <?php else: ?>
-    <div class="table-wrap">
-      <table>
-        <thead>
-          <tr>
-            <th>Nome</th>
-            <?php if ($isAdmin && $churchId === SEDE_ID): ?>
-            <th>Filial</th>
-            <?php endif; ?>
-            <th>Líder</th>
-            <th>Próx. atividades</th>
-            <th>Status</th>
-            <th></th>
-          </tr>
-        </thead>
-        <tbody>
-          <?php foreach ($ministries as $mn): ?>
-            <tr>
-              <td>
-                <div style="display:flex;align-items:center;gap:6px">
-                  <span style="font-weight:500"><?= htmlspecialchars($mn['name']) ?></span>
-                  <?php if ($mn['i_participate']): ?><span class="badge badge-green" style="font-size:10px">Participo</span><?php endif; ?>
-                </div>
-                <?php if ($mn['description']): ?>
-                  <div style="font-size:12px;color:var(--text-muted)"><?= htmlspecialchars(mb_substr($mn['description'],0,60)) ?>…</div>
-                <?php endif; ?>
-              </td>
-              <?php if ($isAdmin && $churchId === SEDE_ID): ?>
-              <td>
-                <span class="badge <?= ($mn['branch_type']??'')==='sede'?'badge-blue':'badge-green' ?>" style="font-size:11px">
-                  <?= htmlspecialchars($mn['branch_name'] ?? '—') ?>
-                </span>
-              </td>
-              <?php endif; ?>
-              <td>
-                <?php if ($mn['leader_name']): ?>
-                  <div style="display:flex;align-items:center;gap:8px">
-                    <div class="avatar" style="width:28px;height:28px;font-size:10px">
-                      <?= strtoupper(substr($mn['leader_name'],0,2)) ?>
-                    </div>
-                    <?= htmlspecialchars($mn['leader_name']) ?>
-                  </div>
-                <?php else: ?>
-                  <span style="color:var(--text-muted)">—</span>
-                <?php endif; ?>
-              </td>
-              <td>
-                <?php if ($mn['activity_count'] > 0): ?>
-                  <span class="badge badge-blue"><?= $mn['activity_count'] ?> agendada(s)</span>
-                <?php else: ?>
-                  <span style="color:var(--text-muted);font-size:12px">Nenhuma</span>
-                <?php endif; ?>
-              </td>
-              <td>
-                <span class="badge <?= $mn['active'] ? 'badge-green' : 'badge-gray' ?>">
-                  <?= $mn['active'] ? 'Ativo' : 'Inativo' ?>
-                </span>
-              </td>
-              <td style="text-align:right">
-                <a href="/pages/ministries/view.php?id=<?= $mn['id'] ?>" class="btn btn-secondary" style="font-size:12px;padding:5px 12px">Ver</a>
-                <?php if ($canCreateMinistry || auth_can_manage_ministry((int)$mn['id'])): ?>
-                  <a href="/pages/ministries/edit.php?id=<?= $mn['id'] ?>" class="btn btn-secondary" style="font-size:12px;padding:5px 12px">Editar</a>
-                <?php endif; ?>
-              </td>
-            </tr>
-          <?php endforeach; ?>
-        </tbody>
-      </table>
-    </div>
+    <?php foreach ($ministries as $mn): ?>
+      <div style="padding:12px 20px;border-bottom:1px solid var(--border)">
+        <div style="font-size:14px;font-weight:500">
+          <?= htmlspecialchars($mn['name']) ?>
+          <?php if ($mn['i_participate']): ?><span class="badge badge-green" style="font-size:10px">Participo</span><?php endif; ?>
+          <?php if ($isAdmin && $churchId === SEDE_ID): ?>
+            <span class="badge <?= ($mn['branch_type']??'')==='sede'?'badge-blue':'badge-green' ?>" style="font-size:10px">
+              <?= htmlspecialchars($mn['branch_name'] ?? '—') ?>
+            </span>
+          <?php endif; ?>
+          <span class="badge <?= $mn['active'] ? 'badge-green' : 'badge-gray' ?>" style="font-size:10px">
+            <?= $mn['active'] ? 'Ativo' : 'Inativo' ?>
+          </span>
+        </div>
+        <?php if ($mn['description']): ?>
+          <div style="font-size:12px;color:var(--text-muted);margin-top:2px"><?= htmlspecialchars(mb_substr($mn['description'],0,80)) ?>…</div>
+        <?php endif; ?>
+        <div style="font-size:12px;color:var(--text-muted);margin-top:6px;display:flex;align-items:center;gap:6px;flex-wrap:wrap">
+          <?php if ($mn['leader_name']): ?>
+            <span style="display:flex;align-items:center;gap:5px">
+              <span class="avatar" style="width:20px;height:20px;font-size:9px">
+                <?= strtoupper(substr($mn['leader_name'],0,2)) ?>
+              </span>
+              <?= htmlspecialchars($mn['leader_name']) ?>
+            </span>
+          <?php else: ?>
+            <span>Sem líder definido</span>
+          <?php endif; ?>
+          <span>·</span>
+          <?php if ($mn['activity_count'] > 0): ?>
+            <span class="badge badge-blue" style="font-size:10px"><?= $mn['activity_count'] ?> agendada(s)</span>
+          <?php else: ?>
+            <span>Nenhuma atividade agendada</span>
+          <?php endif; ?>
+        </div>
+        <div style="display:flex;gap:8px;flex-wrap:wrap;margin-top:10px">
+          <a href="/pages/ministries/view.php?id=<?= $mn['id'] ?>" class="btn btn-secondary" style="font-size:12px;padding:5px 12px">Ver</a>
+          <?php if ($canCreateMinistry || auth_can_manage_ministry((int)$mn['id'])): ?>
+            <a href="/pages/ministries/edit.php?id=<?= $mn['id'] ?>" class="btn btn-secondary" style="font-size:12px;padding:5px 12px">Editar</a>
+          <?php endif; ?>
+        </div>
+      </div>
+    <?php endforeach; ?>
   <?php endif; ?>
 </div>
 
