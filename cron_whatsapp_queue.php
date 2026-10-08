@@ -180,6 +180,6 @@ foreach ($batch as $i => $item) {
 }
 
 // Limpeza: some com registros antigos já processados (mantém a tabela enxuta)
-$db->exec("DELETE FROM whatsapp_queue WHERE status IN ('sent','failed') AND created_at < DATE_SUB(NOW(), INTERVAL 7 DAY)");
+$db->exec("DELETE FROM whatsapp_queue WHERE status IN ('sent','failed','expired') AND created_at < DATE_SUB(NOW(), INTERVAL 7 DAY)");
 
 echo "Processed: " . count($batch) . " | sent: $sent | failed: $failed\n";

@@ -89,7 +89,9 @@ function queue_checkin_reminder(PDO $db, int $activityId, int $memberId, int $ch
         $message,
         $churchId,
         [['label' => '✅ Cheguei', 'url' => $checkinUrl]],
-        $delayMinutes
+        $delayMinutes,
+        $activityId,
+        'activity_checkin'
     );
 }
 
@@ -205,7 +207,7 @@ function notify_scale_invitation(
     if ($memberPhone) {
         $waBody = $whatsappButtons ? $tpl['content'] : $fullContent;
         $waText = "*🎵 {$title}*\n" . $tpl['title'] . "\n\n" . $waBody;
-        queue_whatsapp($memberPhone, $waText, $churchId, $whatsappButtons, $whatsappDelayMinutes);
+        queue_whatsapp($memberPhone, $waText, $churchId, $whatsappButtons, $whatsappDelayMinutes, $activityId, 'scale_invite');
     }
 
     if ($memberEmail) {
