@@ -26,7 +26,7 @@ $stmt = $db->prepare("
     LEFT JOIN ministry_activities ma ON ma.ministry_id = mn.id AND ma.status='scheduled' AND ma.activity_date >= CURDATE()
     WHERE mn.church_id = ?
     GROUP BY mn.id
-    ORDER BY mn.name
+    ORDER BY i_participate DESC, mn.name
 ");
 $stmt->execute([$memberId ?: 0, $churchId]);
 $ministries = $stmt->fetchAll();
@@ -54,8 +54,22 @@ require_once __DIR__ . '/../../includes/layout.php';
       <?php endif; ?>
     </div>
   <?php else: ?>
-    <?php foreach ($ministries as $mn): ?>
-      <div style="padding:12px 20px;border-bottom:1px solid var(--border)">
+    <?php
+      $myCount    = count(array_filter($ministries, fn($mn) => $mn['i_participate']));
+      $otherCount = count($ministries) - $myCount;
+      $section    = null;
+    ?>
+    <?php foreach ($ministries as $mn):
+      $thisSection = $mn['i_participate'] ? 'mine' : 'others';
+      $showHeader  = $thisSection !== $section && $myCount > 0 && $otherCount > 0;
+      $section     = $thisSection;
+    ?>
+      <?php if ($showHeader): ?>
+        <div style="padding:10px 20px;background:#fafafa;font-size:11px;font-weight:600;color:var(--text-muted);text-transform:uppercase;letter-spacing:.05em;border-bottom:1px solid var(--border)">
+          <?= $thisSection === 'mine' ? 'Meus ministérios' : 'Outros ministérios' ?>
+        </div>
+      <?php endif; ?>
+      <div style="padding:12px 20px;border-bottom:1px solid var(--border);<?= $mn['i_participate'] ? 'background:var(--accent-lt);border-left:3px solid var(--accent)' : '' ?>">
         <div style="font-size:14px;font-weight:500">
           <?= htmlspecialchars($mn['name']) ?>
           <?php if ($mn['i_participate']): ?><span class="badge badge-green" style="font-size:10px">Participo</span><?php endif; ?>
