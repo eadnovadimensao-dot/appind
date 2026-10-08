@@ -129,54 +129,35 @@ $statusLabels = [
       <?php endif; ?>
     </div>
   <?php else: ?>
-    <div class="table-wrap">
-      <table>
-        <thead>
-          <tr>
-            <th>Nome</th>
-            <th>Filial</th>
-            <th>Telefone</th>
-            <th>Célula</th>
-            <th>Status</th>
-            <th></th>
-          </tr>
-        </thead>
-        <tbody>
-          <?php foreach ($members as $m):
-            $initials = strtoupper(implode('', array_map(fn($p) => $p[0], array_slice(explode(' ', $m['name']), 0, 2))));
-            $st = $statusLabels[$m['status']] ?? ['label' => $m['status'], 'badge' => 'badge-gray'];
-          ?>
-            <tr>
-              <td>
-                <div style="display:flex;align-items:center;gap:10px">
-                  <div class="avatar"><?= $initials ?></div>
-                  <div>
-                    <div style="font-weight:500"><?= htmlspecialchars($m['name']) ?></div>
-                    <?php if ($m['email']): ?>
-                      <div style="font-size:12px;color:var(--text-muted)"><?= htmlspecialchars($m['email']) ?></div>
-                    <?php endif; ?>
-                  </div>
-                </div>
-              </td>
-              <td>
-                <span class="badge <?= $m['branch_type']==='sede'?'badge-blue':'badge-green' ?>" style="font-size:10px">
-                  <?= htmlspecialchars($m['branch_name'] ?? '—') ?>
-                </span>
-              </td>
-              <td><?= htmlspecialchars($m['phone'] ?? '—') ?></td>
-              <td><?= htmlspecialchars($m['cell_name'] ?? '—') ?></td>
-              <td><span class="badge <?= $st['badge'] ?>"><?= $st['label'] ?></span></td>
-              <td style="text-align:right">
-                <a href="/pages/members/view.php?id=<?= $m['id'] ?>" class="btn btn-secondary" style="font-size:12px;padding:5px 12px">Ver</a>
-                <?php if ($canManageMembers): ?>
-                  <a href="/pages/members/edit.php?id=<?= $m['id'] ?>" class="btn btn-secondary" style="font-size:12px;padding:5px 12px">Editar</a>
-                <?php endif; ?>
-              </td>
-            </tr>
-          <?php endforeach; ?>
-        </tbody>
-      </table>
-    </div>
+    <?php foreach ($members as $m):
+      $initials = strtoupper(implode('', array_map(fn($p) => $p[0], array_slice(explode(' ', $m['name']), 0, 2))));
+      $st = $statusLabels[$m['status']] ?? ['label' => $m['status'], 'badge' => 'badge-gray'];
+    ?>
+      <div style="padding:12px 20px;border-bottom:1px solid var(--border)">
+        <div style="display:flex;align-items:flex-start;gap:10px">
+          <div class="avatar"><?= $initials ?></div>
+          <div style="flex:1;min-width:0">
+            <div style="font-weight:500;font-size:14px">
+              <?= htmlspecialchars($m['name']) ?>
+              <span class="badge <?= $m['branch_type']==='sede'?'badge-blue':'badge-green' ?>" style="font-size:10px;margin-left:6px">
+                <?= htmlspecialchars($m['branch_name'] ?? '—') ?>
+              </span>
+              <span class="badge <?= $st['badge'] ?>" style="font-size:10px;margin-left:4px"><?= $st['label'] ?></span>
+            </div>
+            <div style="font-size:12px;color:var(--text-muted);margin-top:3px">
+              <?= $m['email'] ? htmlspecialchars($m['email']) . ' · ' : '' ?>📱 <?= htmlspecialchars($m['phone'] ?? '—') ?>
+              <?= $m['cell_name'] ? ' · 🔗 ' . htmlspecialchars($m['cell_name']) : '' ?>
+            </div>
+          </div>
+        </div>
+        <div style="display:flex;gap:8px;flex-wrap:wrap;margin-top:10px;margin-left:46px">
+          <a href="/pages/members/view.php?id=<?= $m['id'] ?>" class="btn btn-secondary" style="font-size:12px;padding:5px 12px">Ver</a>
+          <?php if ($canManageMembers): ?>
+            <a href="/pages/members/edit.php?id=<?= $m['id'] ?>" class="btn btn-secondary" style="font-size:12px;padding:5px 12px">Editar</a>
+          <?php endif; ?>
+        </div>
+      </div>
+    <?php endforeach; ?>
   <?php endif; ?>
 </div>
 
