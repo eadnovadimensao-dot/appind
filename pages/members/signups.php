@@ -49,26 +49,28 @@ require_once __DIR__ . '/../../includes/layout.php';
     <?php foreach ($signups as $s):
       $initials = strtoupper(implode('', array_map(fn($p) => $p[0], array_slice(explode(' ', $s['name']), 0, 2))));
     ?>
-      <div style="display:flex;align-items:flex-start;gap:14px;padding:14px 20px;border-bottom:1px solid var(--border)">
-        <div class="avatar" style="flex-shrink:0"><?= $initials ?></div>
-        <div style="flex:1;min-width:0">
-          <div style="font-weight:500;font-size:14px"><?= htmlspecialchars($s['name']) ?>
-            <?php if (isset($s['branch_name'])): ?>
-              <span class="badge badge-gray" style="font-size:10px;margin-left:6px"><?= htmlspecialchars($s['branch_name']) ?></span>
-            <?php endif; ?>
-          </div>
-          <div style="font-size:12px;color:var(--text-muted);margin-top:3px;display:flex;flex-direction:column;gap:2px">
-            <span>📱 <?= htmlspecialchars($s['phone']) ?><?= $s['email'] ? ' · ✉️ ' . htmlspecialchars($s['email']) : '' ?><?= $s['cpf'] ? ' · CPF ' . htmlspecialchars($s['cpf']) : '' ?></span>
-            <?php if ($s['cell_name']): ?>
-              <span>🔗 Interesse: <?= htmlspecialchars($s['cell_name']) ?></span>
-            <?php endif; ?>
-            <?php if ($s['notes']): ?>
-              <span style="font-style:italic">"<?= htmlspecialchars($s['notes']) ?>"</span>
-            <?php endif; ?>
-            <span>Enviado em <?= date('d/m/Y \à\s H:i', strtotime($s['created_at'])) ?></span>
+      <div style="padding:14px 20px;border-bottom:1px solid var(--border)">
+        <div style="display:flex;align-items:flex-start;gap:14px">
+          <div class="avatar" style="flex-shrink:0"><?= $initials ?></div>
+          <div style="flex:1;min-width:0">
+            <div style="font-weight:500;font-size:14px"><?= htmlspecialchars($s['name']) ?>
+              <?php if (isset($s['branch_name'])): ?>
+                <span class="badge badge-gray" style="font-size:10px;margin-left:6px"><?= htmlspecialchars($s['branch_name']) ?></span>
+              <?php endif; ?>
+            </div>
+            <div style="font-size:12px;color:var(--text-muted);margin-top:3px;display:flex;flex-direction:column;gap:2px">
+              <span>📱 <?= htmlspecialchars($s['phone']) ?><?= $s['email'] ? ' · ✉️ ' . htmlspecialchars($s['email']) : '' ?><?= $s['cpf'] ? ' · CPF ' . htmlspecialchars($s['cpf']) : '' ?></span>
+              <?php if ($s['cell_name']): ?>
+                <span>🔗 Interesse: <?= htmlspecialchars($s['cell_name']) ?></span>
+              <?php endif; ?>
+              <?php if ($s['notes']): ?>
+                <span style="font-style:italic">"<?= htmlspecialchars($s['notes']) ?>"</span>
+              <?php endif; ?>
+              <span>Enviado em <?= date('d/m/Y \à\s H:i', strtotime($s['created_at'])) ?></span>
+            </div>
           </div>
         </div>
-        <div style="display:flex;gap:6px;flex-shrink:0">
+        <div style="display:flex;gap:6px;flex-wrap:wrap;margin-top:10px;margin-left:50px">
           <a href="/pages/members/create.php?from_signup=<?= $s['id'] ?>" class="btn btn-primary" style="font-size:12px;padding:5px 12px">✓ Revisar e aprovar</a>
           <a href="/pages/members/signup_reject.php?id=<?= $s['id'] ?>" class="btn btn-secondary" style="font-size:12px;padding:5px 12px;color:var(--red)"
              data-confirm="Recusar o cadastro de <?= htmlspecialchars($s['name']) ?>?">✗ Recusar</a>

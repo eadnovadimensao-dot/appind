@@ -200,25 +200,27 @@ function resource_size(?int $bytes): string {
         </p>
       </div>
       <?php foreach ($items as $r): ?>
-        <div style="display:flex;align-items:flex-start;gap:12px;padding:12px 18px;border-bottom:1px solid var(--border)">
-          <div style="font-size:22px;flex-shrink:0"><?= resource_icon($r['file_name'], $r['external_url']) ?></div>
-          <div style="flex:1;min-width:0">
-            <div style="font-size:13px;font-weight:500">
-              <?= htmlspecialchars($r['title']) ?>
-              <?php if ($r['key_tone']): ?>
-                <span class="badge badge-gray" style="font-size:10px;margin-left:6px">Tom: <?= htmlspecialchars($r['key_tone']) ?></span>
+        <div style="padding:12px 18px;border-bottom:1px solid var(--border)">
+          <div style="display:flex;align-items:flex-start;gap:12px">
+            <div style="font-size:22px;flex-shrink:0"><?= resource_icon($r['file_name'], $r['external_url']) ?></div>
+            <div style="flex:1;min-width:0">
+              <div style="font-size:13px;font-weight:500">
+                <?= htmlspecialchars($r['title']) ?>
+                <?php if ($r['key_tone']): ?>
+                  <span class="badge badge-gray" style="font-size:10px;margin-left:6px">Tom: <?= htmlspecialchars($r['key_tone']) ?></span>
+                <?php endif; ?>
+              </div>
+              <?php if ($r['description']): ?>
+                <div style="font-size:12px;color:var(--text-muted);margin-top:2px"><?= nl2br(htmlspecialchars($r['description'])) ?></div>
               <?php endif; ?>
-            </div>
-            <?php if ($r['description']): ?>
-              <div style="font-size:12px;color:var(--text-muted);margin-top:2px"><?= nl2br(htmlspecialchars($r['description'])) ?></div>
-            <?php endif; ?>
-            <div style="font-size:11px;color:var(--text-muted);margin-top:4px">
-              <?= htmlspecialchars($r['created_by_name'] ?? 'Alguém') ?> ·
-              <?= date('d/m/Y', strtotime($r['created_at'])) ?>
-              <?= $r['file_size'] ? ' · ' . resource_size($r['file_size']) : '' ?>
+              <div style="font-size:11px;color:var(--text-muted);margin-top:4px">
+                <?= htmlspecialchars($r['created_by_name'] ?? 'Alguém') ?> ·
+                <?= date('d/m/Y', strtotime($r['created_at'])) ?>
+                <?= $r['file_size'] ? ' · ' . resource_size($r['file_size']) : '' ?>
+              </div>
             </div>
           </div>
-          <div style="display:flex;align-items:center;gap:8px;flex-shrink:0;flex-wrap:wrap">
+          <div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap;margin-top:10px;margin-left:34px">
             <?php if ($r['external_url']): ?>
               <a href="<?= htmlspecialchars($r['external_url']) ?>" target="_blank" rel="noopener"
                  class="btn btn-secondary" style="font-size:12px;padding:5px 12px"><?= $r['type'] === 'song' ? '▶ Referência' : '🔗 Abrir' ?></a>

@@ -106,22 +106,26 @@ require_once __DIR__ . '/../../includes/layout.php';
 
 <div class="card" style="padding:0;margin-bottom:16px">
   <?php foreach ($steps as $i => $s): ?>
-    <div style="display:flex;align-items:center;gap:12px;padding:12px 18px;border-bottom:1px solid var(--border)">
-      <div style="display:flex;flex-direction:column;gap:2px">
-        <a href="?move=<?= $s['id'] ?>&dir=up" style="color:<?= $i===0?'var(--border)':'var(--text-muted)' ?>;text-decoration:none;font-size:12px">▲</a>
-        <a href="?move=<?= $s['id'] ?>&dir=down" style="color:<?= $i===count($steps)-1?'var(--border)':'var(--text-muted)' ?>;text-decoration:none;font-size:12px">▼</a>
+    <div style="padding:12px 18px;border-bottom:1px solid var(--border)">
+      <div style="display:flex;align-items:center;gap:12px">
+        <div style="display:flex;flex-direction:column;gap:2px">
+          <a href="?move=<?= $s['id'] ?>&dir=up" style="color:<?= $i===0?'var(--border)':'var(--text-muted)' ?>;text-decoration:none;font-size:12px">▲</a>
+          <a href="?move=<?= $s['id'] ?>&dir=down" style="color:<?= $i===count($steps)-1?'var(--border)':'var(--text-muted)' ?>;text-decoration:none;font-size:12px">▼</a>
+        </div>
+        <div style="font-size:20px;flex-shrink:0"><?= htmlspecialchars($s['icon']) ?></div>
+        <div style="flex:1;min-width:0">
+          <div style="font-size:14px;font-weight:500"><?= htmlspecialchars($s['name']) ?></div>
+          <?php if ($s['description']): ?>
+            <div style="font-size:12px;color:var(--text-muted)"><?= htmlspecialchars($s['description']) ?></div>
+          <?php endif; ?>
+        </div>
       </div>
-      <div style="font-size:20px;flex-shrink:0"><?= htmlspecialchars($s['icon']) ?></div>
-      <div style="flex:1;min-width:0">
-        <div style="font-size:14px;font-weight:500"><?= htmlspecialchars($s['name']) ?></div>
-        <?php if ($s['description']): ?>
-          <div style="font-size:12px;color:var(--text-muted)"><?= htmlspecialchars($s['description']) ?></div>
-        <?php endif; ?>
+      <div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap;margin-top:8px;margin-left:56px">
+        <span style="font-size:12px;color:var(--text-muted)"><?= $s['members_done'] ?> concluído(s)</span>
+        <button type="button" onclick="toggleEdit(<?= $s['id'] ?>)" class="btn btn-secondary" style="font-size:12px">Editar</button>
+        <a href="?delete=<?= $s['id'] ?>" class="btn btn-secondary" style="font-size:12px;color:var(--red)"
+           data-confirm="Excluir a etapa '<?= htmlspecialchars($s['name']) ?>'? Isso apaga o progresso de todos os membros nela.">Excluir</a>
       </div>
-      <span style="font-size:12px;color:var(--text-muted);flex-shrink:0"><?= $s['members_done'] ?> concluído(s)</span>
-      <button type="button" onclick="toggleEdit(<?= $s['id'] ?>)" class="btn btn-secondary" style="font-size:12px;flex-shrink:0">Editar</button>
-      <a href="?delete=<?= $s['id'] ?>" class="btn btn-secondary" style="font-size:12px;flex-shrink:0;color:var(--red)"
-         data-confirm="Excluir a etapa '<?= htmlspecialchars($s['name']) ?>'? Isso apaga o progresso de todos os membros nela.">Excluir</a>
     </div>
     <form method="POST" id="edit-<?= $s['id'] ?>" style="display:none;padding:12px 18px;border-bottom:1px solid var(--border);background:var(--content-bg)">
       <input type="hidden" name="action" value="update">

@@ -102,21 +102,25 @@ require_once __DIR__ . '/../../includes/layout.php';
 
 <div class="card" style="padding:0;margin-bottom:16px">
   <?php foreach ($roles as $i => $r): ?>
-    <div style="display:flex;align-items:center;gap:12px;padding:12px 18px;border-bottom:1px solid var(--border)">
-      <div style="display:flex;flex-direction:column;gap:2px">
-        <a href="?ministry_id=<?= $ministryId ?>&move=<?= $r['id'] ?>&dir=up" style="color:<?= $i===0?'var(--border)':'var(--text-muted)' ?>;text-decoration:none;font-size:12px">▲</a>
-        <a href="?ministry_id=<?= $ministryId ?>&move=<?= $r['id'] ?>&dir=down" style="color:<?= $i===count($roles)-1?'var(--border)':'var(--text-muted)' ?>;text-decoration:none;font-size:12px">▼</a>
-      </div>
-      <div style="flex:1;min-width:0">
-        <div style="font-size:14px;font-weight:500"><?= htmlspecialchars($r['name']) ?></div>
-        <div style="font-size:12px;color:var(--text-muted)">
-          <?= $r['always_include'] ? 'Sempre inclui todo mundo' : $r['quantity_needed'] . ' vaga(s) por rodízio' ?>
-          <?= $r['use_naipe'] ? ' · usa naipe' : '' ?>
+    <div style="padding:12px 18px;border-bottom:1px solid var(--border)">
+      <div style="display:flex;align-items:center;gap:12px">
+        <div style="display:flex;flex-direction:column;gap:2px">
+          <a href="?ministry_id=<?= $ministryId ?>&move=<?= $r['id'] ?>&dir=up" style="color:<?= $i===0?'var(--border)':'var(--text-muted)' ?>;text-decoration:none;font-size:12px">▲</a>
+          <a href="?ministry_id=<?= $ministryId ?>&move=<?= $r['id'] ?>&dir=down" style="color:<?= $i===count($roles)-1?'var(--border)':'var(--text-muted)' ?>;text-decoration:none;font-size:12px">▼</a>
+        </div>
+        <div style="flex:1;min-width:0">
+          <div style="font-size:14px;font-weight:500"><?= htmlspecialchars($r['name']) ?></div>
+          <div style="font-size:12px;color:var(--text-muted)">
+            <?= $r['always_include'] ? 'Sempre inclui todo mundo' : $r['quantity_needed'] . ' vaga(s) por rodízio' ?>
+            <?= $r['use_naipe'] ? ' · usa naipe' : '' ?>
+          </div>
         </div>
       </div>
-      <button type="button" onclick="toggleEdit(<?= $r['id'] ?>)" class="btn btn-secondary" style="font-size:12px;flex-shrink:0">Editar</button>
-      <a href="?ministry_id=<?= $ministryId ?>&delete=<?= $r['id'] ?>" class="btn btn-secondary" style="font-size:12px;flex-shrink:0;color:var(--red)"
-         data-confirm="Excluir a função '<?= htmlspecialchars($r['name']) ?>'?">Excluir</a>
+      <div style="display:flex;gap:8px;flex-wrap:wrap;margin-top:8px;margin-left:24px">
+        <button type="button" onclick="toggleEdit(<?= $r['id'] ?>)" class="btn btn-secondary" style="font-size:12px">Editar</button>
+        <a href="?ministry_id=<?= $ministryId ?>&delete=<?= $r['id'] ?>" class="btn btn-secondary" style="font-size:12px;color:var(--red)"
+           data-confirm="Excluir a função '<?= htmlspecialchars($r['name']) ?>'?">Excluir</a>
+      </div>
     </div>
     <form method="POST" id="edit-<?= $r['id'] ?>" style="display:none;padding:12px 18px;border-bottom:1px solid var(--border);background:var(--content-bg)">
       <input type="hidden" name="action" value="update">
