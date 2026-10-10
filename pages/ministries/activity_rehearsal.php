@@ -112,7 +112,7 @@ require_once __DIR__ . '/../../includes/layout.php';
             <button type="button" data-transpose-up title="Subir um tom">+</button>
             <button type="button" data-transpose-reset style="width:auto;padding:0 10px;font-size:12px">Original</button>
           </div>
-          <div class="chord-sheet"><?= render_chord_sheet($sg['chord_sheet_text']) ?></div>
+          <?= render_chord_chart($sg['chord_sheet_text']) ?>
         </div>
       <?php endif; ?>
     <?php endif; ?>

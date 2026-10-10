@@ -191,7 +191,21 @@ function resource_size(?int $bytes): string {
     <div class="form-group" id="chord-sheet-group" style="display:none">
       <label class="form-label">Cifra <span style="font-weight:400;color:var(--text-muted)">— opcional, mas habilita o Modo Ensaio com transposição</span></label>
       <textarea name="chord_sheet_text" class="form-control chord-sheet" rows="8" placeholder="[G]Tudo é [D]perda comparado a [Em]Ti&#10;[C]Nada mais importa [D]além de [G]Ti"></textarea>
-      <div style="font-size:11px;color:var(--text-muted);margin-top:4px">Coloque o acorde entre colchetes antes da sílaba, ex: <code>[G]Tudo é [D]perda</code>. Dá pra tocar tom pra cima/baixo depois sem editar de novo.</div>
+      <div style="font-size:11px;color:var(--text-muted);margin-top:4px">
+        Acorde entre colchetes antes da sílaba, ex: <code>[G]Tudo é [D]perda</code>. Dá pra transpor o tom depois sem editar de novo.
+        <details style="margin-top:6px">
+          <summary style="cursor:pointer;color:var(--accent)">Quer organizar em seções (Intro, Verso, Refrão…)? Veja como</summary>
+          <div style="margin-top:6px;background:#fafafa;border-radius:6px;padding:10px;font-family:'Courier New',monospace;white-space:pre-wrap">[Verso]
+nota: Toda banda, dinâmica média
+G              Bm
+És a vida,    és o amor
+
+[Refrão (2x)]
+G         Bm        A
+Grande     é o Senhor</div>
+          <p style="margin-top:6px">Acorde numa linha sozinha, letra embaixo. O "(2x)" no título é opcional (repetição). "nota:" é opcional, pra observação de dinâmica/instrumentação. O mapa no topo é montado sozinho, na ordem das seções.</p>
+        </details>
+      </div>
     </div>
     <button type="submit" class="btn btn-primary">Salvar material</button>
   </form>

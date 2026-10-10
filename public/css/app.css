@@ -207,6 +207,7 @@ body {
 .badge-amber  { background: #FAEEDA; color: #854F0B; }
 .badge-gray   { background: #F1EFE8; color: #5F5E5A; }
 .badge-red    { background: #FCEBEB; color: #A32D2D; }
+.badge-purple { background: #F0EAFB; color: #6B3FA0; }
 
 /* ── Tabela ── */
 .table-wrap { overflow-x: auto; }
@@ -253,6 +254,20 @@ tbody tr:hover td { background: #fafafa; }
 }
 .chord-controls button:hover { background: var(--content-bg); }
 .chord-controls [data-current-key] { font-size: 14px; font-weight: 600; min-width: 90px; text-align: center; }
+
+/* ── Mapa da música e seções (cifra com [Seção]) ── */
+.chart-map {
+  display: flex; gap: 6px; flex-wrap: wrap; margin-bottom: 18px;
+  padding-bottom: 14px; border-bottom: 1px solid var(--border);
+}
+.chart-map .badge { font-size: 12px; padding: 5px 11px; }
+.chart-section {
+  border: 1px solid var(--border); border-radius: 10px; padding: 14px 16px; margin-bottom: 14px;
+}
+.chart-section-header {
+  display: flex; align-items: baseline; gap: 10px; flex-wrap: wrap; margin-bottom: 10px;
+}
+.chart-note { font-size: 11px; color: var(--text-muted); font-style: italic; }
 
 /* ── Utilitários ── */
 .flex { display: flex; }

@@ -45,7 +45,7 @@ require_once __DIR__ . '/../../includes/layout.php';
       <button type="button" data-transpose-up title="Subir um tom">+</button>
       <button type="button" data-transpose-reset style="width:auto;padding:0 10px;font-size:12px" title="Voltar ao tom original">Original</button>
     </div>
-    <div class="chord-sheet"><?= render_chord_sheet($res['chord_sheet_text']) ?></div>
+    <?= render_chord_chart($res['chord_sheet_text']) ?>
   </div>
 </div>
 
