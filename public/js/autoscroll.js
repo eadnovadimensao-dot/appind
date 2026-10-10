@@ -6,10 +6,24 @@
   const bar = document.getElementById('autoscroll-bar');
   if (!bar) return;
 
-  // O layout do app rola dentro de um container interno (.page), não na
-  // janela do navegador (.main tem overflow:hidden de propósito) — rolar
-  // a window não tinha efeito confiável, por isso funcionava só às vezes.
-  const scrollEl = document.querySelector('.page') || document.scrollingElement || document.documentElement;
+  // O layout do app geralmente rola dentro de um container interno
+  // (.page), não na janela do navegador — mas isso pode variar por
+  // navegador/dispositivo. Em vez de presumir qual é, checa na hora
+  // (toda vez que clica em "Rolar sozinho") qual dos candidatos
+  // realmente tem conteúdo sobrando pra rolar.
+  function pickScrollElement() {
+    const candidates = [
+      document.querySelector('.page'),
+      document.scrollingElement,
+      document.documentElement,
+      document.body,
+    ].filter(Boolean);
+    for (let i = 0; i < candidates.length; i++) {
+      if (candidates[i].scrollHeight > candidates[i].clientHeight + 10) return candidates[i];
+    }
+    return candidates[0] || document.documentElement;
+  }
+  let scrollEl = pickScrollElement();
 
   const toggleBtn = document.getElementById('autoscroll-toggle');
   const slowerBtn = document.getElementById('autoscroll-slower');
@@ -50,6 +64,7 @@
   }
 
   function start() {
+    scrollEl = pickScrollElement(); // reavalia na hora, layout pode ter mudado
     running = true;
     lastTime = null;
     toggleBtn.textContent = '⏸ Pausar';
