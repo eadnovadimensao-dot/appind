@@ -36,24 +36,39 @@
     return out;
   }
 
-  // Encolhe só o(s) bloco(s) de cifra cuja linha mais longa não cabe na
-  // tela (comum quando a letra é comprida), em vez de deixar rolar de
-  // lado. Reduz o próprio font-size daquele bloco até caber, sem afetar
-  // os outros — o alinhamento acorde/sílaba continua certo porque é só
-  // uma fonte menor, não um reflow.
+  // Se alguma linha (em qualquer seção) não couber na tela, encolhe TODAS
+  // as seções da música junto, no mesmo tamanho — nunca só o trecho
+  // problemático, pra não ficar com letra de tamanho diferente de uma
+  // parte pra outra. O tamanho final é ditado pela linha mais exigente.
   function fitChordSheets() {
-    document.querySelectorAll('.chord-sheet').forEach(function (el) {
-      const base = parseFloat(el.dataset.baseFontSize || window.getComputedStyle(el).fontSize);
-      el.dataset.baseFontSize = base;
-      let size = base;
-      el.style.fontSize = size + 'px';
-      let guard = 0;
-      while (el.scrollWidth > el.clientWidth + 1 && size > 11 && guard < 40) {
-        size -= 0.5;
-        el.style.fontSize = size + 'px';
-        guard++;
-      }
+    const sheets = document.querySelectorAll('.chord-sheet');
+    if (!sheets.length) return;
+
+    let base = null;
+    sheets.forEach(function (el) {
+      if (!el.dataset.baseFontSize) el.dataset.baseFontSize = window.getComputedStyle(el).fontSize;
+      const b = parseFloat(el.dataset.baseFontSize);
+      if (base === null || b < base) base = b;
     });
+    if (base === null) return;
+
+    function setAll(size) {
+      sheets.forEach(function (el) { el.style.fontSize = size + 'px'; });
+    }
+    function anyOverflow() {
+      let overflow = false;
+      sheets.forEach(function (el) { if (el.scrollWidth > el.clientWidth + 1) overflow = true; });
+      return overflow;
+    }
+
+    let size = base;
+    setAll(size);
+    let guard = 0;
+    while (anyOverflow() && size > 11 && guard < 40) {
+      size -= 0.5;
+      setAll(size);
+      guard++;
+    }
   }
 
   function updateCapoPicker(container) {
