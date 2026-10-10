@@ -26,6 +26,33 @@
  * aqui só marcamos cada acorde com <span class="chord"> pra o JS achar.
  */
 
+const CHORD_NOTES = ['C', 'C#', 'D', 'D#', 'E', 'F', 'F#', 'G', 'G#', 'A', 'A#', 'B'];
+const CHORD_FLAT_TO_SHARP = ['Db' => 'C#', 'Eb' => 'D#', 'Gb' => 'F#', 'Ab' => 'G#', 'Bb' => 'A#'];
+
+/**
+ * Transpõe um nome de tom/acorde simples (ex: "D", "Bbm", "F#") em N
+ * semitons — usado só pra calcular a "forma" que o violão com capotraste
+ * toca (capotraste é por instrumento, não muda o acorde real que os
+ * outros músicos leem — ver capo_shape_label()).
+ */
+function transpose_chord_name(string $note, int $semitones): string {
+    if (!preg_match('/^([A-G][#b]?)(.*)$/', trim($note), $m)) return $note;
+    $root = CHORD_FLAT_TO_SHARP[$m[1]] ?? $m[1];
+    $idx  = array_search($root, CHORD_NOTES, true);
+    if ($idx === false) return $note;
+    return CHORD_NOTES[($idx - $semitones + 1200) % 12] . $m[2];
+}
+
+/**
+ * Texto pronto tipo "Capotraste: 2ª casa (violão toca como se fosse em C)".
+ * Null se não tiver tom ou capo cadastrado (nada a calcular).
+ */
+function capo_shape_label(?string $keyTone, ?int $capo): ?string {
+    if (!$capo || !$keyTone) return null;
+    $shape = transpose_chord_name($keyTone, $capo);
+    return "Capotraste: {$capo}ª casa (violão toca como se fosse em {$shape})";
+}
+
 function render_chord_sheet(string $text): string {
     // Sem nl2br() aqui — o CSS do .chord-sheet usa white-space:pre-wrap,
     // que já preserva as quebras de linha originais. Usar os dois juntos

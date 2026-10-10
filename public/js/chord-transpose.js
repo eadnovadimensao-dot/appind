@@ -36,17 +36,6 @@
     return out;
   }
 
-  function updateCapoButton(container) {
-    const btn = container.querySelector('[data-capo-view]');
-    if (!btn) return;
-    const capo = parseInt(container.dataset.capo, 10) || 0;
-    if (!capo) { btn.style.display = 'none'; return; }
-    const active = parseInt(container.dataset.offset, 10) === -capo;
-    btn.textContent = active ? '🎸 Formas c/ capo (tocando)' : '🎸 Ver formas c/ capo';
-    btn.style.background = active ? 'var(--accent-lt)' : '';
-    btn.style.borderColor = active ? 'var(--accent)' : '';
-  }
-
   function applyTranspose(container, semitones) {
     container.querySelectorAll('.chord').forEach(function (el) {
       if (!el.dataset.original) el.dataset.original = el.textContent;
@@ -58,7 +47,6 @@
       keyLabel.textContent = transposeChord(keyLabel.dataset.original, semitones);
     }
     container.dataset.offset = semitones;
-    updateCapoButton(container);
   }
 
   document.querySelectorAll('[data-chord-sheet]').forEach(function (container) {
@@ -66,7 +54,6 @@
     const up = container.querySelector('[data-transpose-up]');
     const down = container.querySelector('[data-transpose-down]');
     const reset = container.querySelector('[data-transpose-reset]');
-    const capoBtn = container.querySelector('[data-capo-view]');
     if (up) up.addEventListener('click', function () {
       applyTranspose(container, parseInt(container.dataset.offset, 10) + 1);
     });
@@ -76,12 +63,6 @@
     if (reset) reset.addEventListener('click', function () {
       applyTranspose(container, 0);
     });
-    if (capoBtn) capoBtn.addEventListener('click', function () {
-      const capo = parseInt(container.dataset.capo, 10) || 0;
-      const current = parseInt(container.dataset.offset, 10);
-      applyTranspose(container, current === -capo ? 0 : -capo);
-    });
-    updateCapoButton(container);
   });
 
   // ── Tamanho da letra da cifra (A-/A+), lembrado no navegador de cada pessoa ──

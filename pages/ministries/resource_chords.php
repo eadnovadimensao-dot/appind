@@ -37,8 +37,13 @@ require_once __DIR__ . '/../../includes/layout.php';
     <?php if ($res['capo']): ?><span class="badge badge-gray">Capo <?= (int)$res['capo'] ?></span><?php endif; ?>
     <?php if ($res['bpm']): ?><span class="badge badge-gray"><?= (int)$res['bpm'] ?> BPM</span><?php endif; ?>
   </div>
+  <?php if ($capoLabel = capo_shape_label($res['key_tone'], $res['capo'])): ?>
+    <div style="font-size:12px;color:var(--text-muted);margin:-10px 0 16px;display:flex;align-items:center;gap:6px">
+      🎸 <?= htmlspecialchars($capoLabel) ?> — só vale pra quem toca violão com capotraste; os outros instrumentos tocam no acorde real mostrado abaixo.
+    </div>
+  <?php endif; ?>
 
-  <div data-chord-sheet data-offset="0" data-capo="<?= (int)($res['capo'] ?? 0) ?>">
+  <div data-chord-sheet data-offset="0">
     <div class="chord-controls">
       <button type="button" data-transpose-down title="Baixar um tom">−</button>
       <span>Tom: <strong data-current-key><?= htmlspecialchars($res['key_tone'] ?: '—') ?></strong></span>
@@ -47,9 +52,6 @@ require_once __DIR__ . '/../../includes/layout.php';
       <span style="width:1px;align-self:stretch;background:var(--border);margin:0 2px"></span>
       <button type="button" data-font-down title="Diminuir a letra" style="font-size:13px">A−</button>
       <button type="button" data-font-up title="Aumentar a letra" style="font-size:17px">A+</button>
-      <?php if ($res['capo']): ?>
-        <button type="button" data-capo-view style="width:auto;padding:0 10px;font-size:12px">🎸 Ver formas c/ capo</button>
-      <?php endif; ?>
     </div>
     <?= render_chord_chart($res['chord_sheet_text']) ?>
   </div>

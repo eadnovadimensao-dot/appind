@@ -96,6 +96,12 @@ require_once __DIR__ . '/../../includes/layout.php';
     </div>
   </div>
 
+  <?php if ($capoLabel = capo_shape_label($sg['key_tone'], $sg['capo'])): ?>
+    <div style="font-size:12px;color:var(--text-muted);margin-bottom:12px;display:flex;align-items:center;gap:6px">
+      🎸 <?= htmlspecialchars($capoLabel) ?> — só pra quem toca violão com capotraste; os outros instrumentos tocam o acorde real.
+    </div>
+  <?php endif; ?>
+
   <?php if (!$sg['reference_link'] && !$sg['file_path'] && !$sg['materials_url'] && !$sg['chord_sheet_text']): ?>
     <p style="font-size:13px;color:var(--text-muted)">Sem material cadastrado pra essa música.</p>
   <?php else: ?>
@@ -114,7 +120,7 @@ require_once __DIR__ . '/../../includes/layout.php';
       <?php endif; ?>
     </div>
     <?php if ($sg['chord_sheet_text']): ?>
-      <div data-chord-sheet data-offset="0" data-capo="<?= (int)($sg['capo'] ?? 0) ?>" style="border-top:1px solid var(--border);padding-top:14px">
+      <div data-chord-sheet data-offset="0" style="border-top:1px solid var(--border);padding-top:14px">
         <div class="chord-controls">
           <button type="button" data-transpose-down title="Baixar um tom">−</button>
           <span>Tom: <strong data-current-key><?= htmlspecialchars($sg['key_tone'] ?: '—') ?></strong></span>
@@ -123,9 +129,6 @@ require_once __DIR__ . '/../../includes/layout.php';
           <span style="width:1px;align-self:stretch;background:var(--border);margin:0 2px"></span>
           <button type="button" data-font-down title="Diminuir a letra" style="font-size:13px">A−</button>
           <button type="button" data-font-up title="Aumentar a letra" style="font-size:17px">A+</button>
-          <?php if ($sg['capo']): ?>
-            <button type="button" data-capo-view style="width:auto;padding:0 10px;font-size:12px">🎸 Ver formas c/ capo</button>
-          <?php endif; ?>
         </div>
         <?= render_chord_chart($sg['chord_sheet_text']) ?>
       </div>
