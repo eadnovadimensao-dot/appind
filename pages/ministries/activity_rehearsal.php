@@ -67,11 +67,14 @@ require_once __DIR__ . '/../../includes/layout.php';
 </div>
 
 <?php if ($total > 1): ?>
-<div style="display:flex;gap:6px;flex-wrap:wrap;margin-bottom:20px">
+<div style="display:flex;gap:8px;flex-wrap:wrap;margin-bottom:20px">
   <?php foreach ($songs as $idx => $s): ?>
     <a href="?id=<?= $id ?>&song=<?= $idx + 1 ?>"
-       class="badge <?= $idx === $i ? 'badge-green' : 'badge-gray' ?>"
-       style="font-size:13px;padding:6px 12px;text-decoration:none<?= $idx === $i ? ';font-weight:700' : '' ?>">
+       style="display:flex;align-items:center;justify-content:center;width:40px;height:40px;border-radius:50%;
+              text-decoration:none;font-size:16px;font-weight:700;flex-shrink:0;
+              <?= $idx === $i
+                  ? 'background:var(--accent);color:white;box-shadow:0 3px 8px rgba(0,0,0,.18)'
+                  : 'background:var(--content-bg);color:var(--text)' ?>">
       <?= $idx + 1 ?>
     </a>
   <?php endforeach; ?>
