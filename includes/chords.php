@@ -45,10 +45,12 @@ function transpose_chord_name(string $note, int $semitones): string {
 
 /**
  * Texto pronto tipo "Sugestão de capotraste: 2ª casa (violão toca como se fosse em C)".
- * Null se não tiver tom ou capo cadastrado (nada a calcular).
+ * Null só se não tiver capo nenhum cadastrado — se tiver capo mas faltar
+ * o Tom, ainda mostra a casa do capo (só não dá pra calcular a forma).
  */
 function capo_shape_label(?string $keyTone, ?int $capo): ?string {
-    if (!$capo || !$keyTone) return null;
+    if (!$capo) return null;
+    if (!$keyTone) return "Sugestão de capotraste: {$capo}ª casa (defina o Tom da música pra calcular a forma)";
     $shape = transpose_chord_name($keyTone, $capo);
     return "Sugestão de capotraste: {$capo}ª casa (violão toca como se fosse em {$shape})";
 }
