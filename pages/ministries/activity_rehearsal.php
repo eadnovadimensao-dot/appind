@@ -81,7 +81,7 @@ require_once __DIR__ . '/../../includes/layout.php';
   <div style="display:flex;align-items:baseline;gap:10px;margin-bottom:12px">
     <span style="font-size:15px;color:var(--text-muted);font-weight:500"><?= $current ?>.</span>
     <div>
-      <div style="font-size:18px;font-weight:600"><?= htmlspecialchars($sg['title']) ?></div>
+      <div style="font-size:21px;font-weight:600"><?= htmlspecialchars($sg['title']) ?></div>
       <div style="display:flex;gap:6px;flex-wrap:wrap;margin-top:4px">
         <?php if ($sg['key_tone']): ?>
           <span class="badge badge-gray">Tom: <?= htmlspecialchars($sg['key_tone']) ?></span>

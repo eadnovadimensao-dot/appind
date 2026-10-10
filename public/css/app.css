@@ -242,7 +242,7 @@ tbody tr:hover td { background: #fafafa; }
 /* ── Cifra (acordes) ── */
 .chord-sheet {
   font-family: 'Courier New', Courier, monospace;
-  font-size: 15px; line-height: 2;
+  font-size: 18px; line-height: 2;
   /* "pre" (não "pre-wrap") de propósito: acorde e letra se alinham por
      coluna de caractere — se a linha quebrasse, o acorde desalinharia
      da sílaba embaixo. Em vez de quebrar, rola só essa caixa de lado,
@@ -275,7 +275,7 @@ tbody tr:hover td { background: #fafafa; }
 .chart-section-header {
   display: flex; align-items: baseline; gap: 10px; flex-wrap: wrap; margin-bottom: 10px;
 }
-.chart-note { font-size: 11px; color: var(--text-muted); font-style: italic; }
+.chart-note { font-size: 13px; color: var(--text-muted); font-style: italic; }
 
 /* ── Utilitários ── */
 .flex { display: flex; }
