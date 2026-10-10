@@ -97,8 +97,8 @@ require_once __DIR__ . '/../../includes/layout.php';
   </div>
 
   <?php if ($capoLabel = capo_shape_label($sg['key_tone'], $sg['capo'])): ?>
-    <div style="font-size:12px;color:var(--text-muted);margin-bottom:12px;display:flex;align-items:center;gap:6px">
-      🎸 <?= htmlspecialchars($capoLabel) ?> — só pra quem toca violão com capotraste; os outros instrumentos tocam o acorde real.
+    <div style="font-size:12px;color:var(--text-muted);margin-bottom:12px">
+      🎸 <?= htmlspecialchars($capoLabel) ?> — dica: pra ver essa forma, use os botões "−" de tom aqui embaixo.
     </div>
   <?php endif; ?>
 

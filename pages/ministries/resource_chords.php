@@ -38,11 +38,10 @@ require_once __DIR__ . '/../../includes/layout.php';
     <?php if ($res['bpm']): ?><span class="badge badge-gray"><?= (int)$res['bpm'] ?> BPM</span><?php endif; ?>
   </div>
   <?php if ($capoLabel = capo_shape_label($res['key_tone'], $res['capo'])): ?>
-    <div style="font-size:12px;color:var(--text-muted);margin:-10px 0 16px;display:flex;align-items:center;gap:6px">
-      🎸 <?= htmlspecialchars($capoLabel) ?> — só vale pra quem toca violão com capotraste; os outros instrumentos tocam no acorde real mostrado abaixo.
+    <div style="font-size:12px;color:var(--text-muted);margin-bottom:14px">
+      🎸 <?= htmlspecialchars($capoLabel) ?> — dica: pra ver essa forma, use os botões "−" de tom aqui embaixo.
     </div>
   <?php endif; ?>
-
   <div data-chord-sheet data-offset="0">
     <div class="chord-controls">
       <button type="button" data-transpose-down title="Baixar um tom">−</button>

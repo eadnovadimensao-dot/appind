@@ -49,6 +49,9 @@
     container.dataset.offset = semitones;
   }
 
+  // Os mesmos botões +/- servem pra ver as formas de capotraste — não
+  // precisa de um controle separado: capotraste na 2ª casa = clicar "−"
+  // duas vezes, funciona em qualquer música, com ou sem sugestão cadastrada.
   document.querySelectorAll('[data-chord-sheet]').forEach(function (container) {
     container.dataset.offset = container.dataset.offset || '0';
     const up = container.querySelector('[data-transpose-up]');
