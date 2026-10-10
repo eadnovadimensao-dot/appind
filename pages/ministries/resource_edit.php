@@ -145,8 +145,9 @@ require_once __DIR__ . '/../../includes/layout.php';
     </div>
     <div class="form-row" id="capo-bpm-group" style="<?= $res['type'] === 'song' ? 'display:flex' : 'display:none' ?>">
       <div class="form-group">
-        <label class="form-label">Capotraste <span style="font-weight:400;color:var(--text-muted)">(casa, opcional)</span></label>
+        <label class="form-label">Sugestão de capotraste <span style="font-weight:400;color:var(--text-muted)">(casa, opcional)</span></label>
         <input type="number" name="capo" class="form-control" min="0" max="11" placeholder="Ex: 2" value="<?= htmlspecialchars($res['capo'] ?? '') ?>">
+        <div style="font-size:11px;color:var(--text-muted);margin-top:4px">Mostra uma referência pro violonista; cada um decide se usa ou não.</div>
       </div>
       <div class="form-group">
         <label class="form-label">BPM <span style="font-weight:400;color:var(--text-muted)">(andamento, opcional)</span></label>
