@@ -55,6 +55,18 @@ function capo_shape_label(?string $keyTone, ?int $capo): ?string {
     return "Sugestão de capotraste: {$capo}ª casa (violão toca como se fosse em {$shape})";
 }
 
+/**
+ * <option>s do seletor de capotraste (0 a 11), pra usar em qualquer
+ * música — não depende de nenhuma sugestão cadastrada.
+ */
+function render_capo_picker_options(): string {
+    $html = '<option value="0">Sem capo</option>';
+    for ($i = 1; $i <= 11; $i++) {
+        $html .= "<option value=\"{$i}\">{$i}ª casa</option>";
+    }
+    return $html;
+}
+
 function render_chord_sheet(string $text): string {
     // Sem nl2br() aqui — o CSS do .chord-sheet usa white-space:pre-wrap,
     // que já preserva as quebras de linha originais. Usar os dois juntos

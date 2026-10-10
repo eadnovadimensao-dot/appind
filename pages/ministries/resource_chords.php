@@ -39,7 +39,7 @@ require_once __DIR__ . '/../../includes/layout.php';
   </div>
   <?php if ($capoLabel = capo_shape_label($res['key_tone'], $res['capo'])): ?>
     <div style="font-size:12px;color:var(--text-muted);margin-bottom:14px">
-      🎸 <?= htmlspecialchars($capoLabel) ?> — dica: pra ver essa forma, use os botões "−" de tom aqui embaixo.
+      🎸 <?= htmlspecialchars($capoLabel) ?> — selecione a casa no seletor de capotraste aqui embaixo pra ver.
     </div>
   <?php endif; ?>
   <div data-chord-sheet data-offset="0">
@@ -51,6 +51,13 @@ require_once __DIR__ . '/../../includes/layout.php';
       <span style="width:1px;align-self:stretch;background:var(--border);margin:0 2px"></span>
       <button type="button" data-font-down title="Diminuir a letra" style="font-size:13px">A−</button>
       <button type="button" data-font-up title="Aumentar a letra" style="font-size:17px">A+</button>
+      <span style="width:1px;align-self:stretch;background:var(--border);margin:0 2px"></span>
+      <label style="display:flex;align-items:center;gap:6px;font-size:12px;color:var(--text-muted)">
+        🎸
+        <select data-capo-picker class="form-control" style="width:auto;padding:5px 8px;font-size:12px">
+          <?= render_capo_picker_options() ?>
+        </select>
+      </label>
     </div>
     <?= render_chord_chart($res['chord_sheet_text']) ?>
   </div>

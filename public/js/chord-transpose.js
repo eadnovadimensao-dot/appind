@@ -36,6 +36,13 @@
     return out;
   }
 
+  function updateCapoPicker(container) {
+    const picker = container.querySelector('[data-capo-picker]');
+    if (!picker) return;
+    const capo = -parseInt(container.dataset.offset, 10);
+    picker.value = (capo >= 0 && capo <= 11) ? String(capo) : '0';
+  }
+
   function applyTranspose(container, semitones) {
     container.querySelectorAll('.chord').forEach(function (el) {
       if (!el.dataset.original) el.dataset.original = el.textContent;
@@ -47,16 +54,19 @@
       keyLabel.textContent = transposeChord(keyLabel.dataset.original, semitones);
     }
     container.dataset.offset = semitones;
+    updateCapoPicker(container);
   }
 
-  // Os mesmos botões +/- servem pra ver as formas de capotraste — não
-  // precisa de um controle separado: capotraste na 2ª casa = clicar "−"
-  // duas vezes, funciona em qualquer música, com ou sem sugestão cadastrada.
+  // Seletor de capotraste: independe de qualquer sugestão cadastrada na
+  // edição — existe em toda música, escolhe a casa, aplica na hora.
+  // Reaproveita o mesmo mecanismo dos botões +/- de tom (capo na 2ª casa
+  // é só transpor pra baixo 2 semitons), nunca aplica nada sozinho.
   document.querySelectorAll('[data-chord-sheet]').forEach(function (container) {
     container.dataset.offset = container.dataset.offset || '0';
     const up = container.querySelector('[data-transpose-up]');
     const down = container.querySelector('[data-transpose-down]');
     const reset = container.querySelector('[data-transpose-reset]');
+    const capoPicker = container.querySelector('[data-capo-picker]');
     if (up) up.addEventListener('click', function () {
       applyTranspose(container, parseInt(container.dataset.offset, 10) + 1);
     });
@@ -65,6 +75,9 @@
     });
     if (reset) reset.addEventListener('click', function () {
       applyTranspose(container, 0);
+    });
+    if (capoPicker) capoPicker.addEventListener('change', function () {
+      applyTranspose(container, -parseInt(capoPicker.value, 10));
     });
   });
 
