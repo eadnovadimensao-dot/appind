@@ -48,7 +48,7 @@ $sg = $songs[$i];
 
 $pageTitle      = 'Modo Ensaio · ' . $act['title'];
 $activePage     = 'ministries';
-$extraScriptSrc = '/public/js/chord-transpose.js';
+$extraScriptSrc = ['/public/js/chord-transpose.js', '/public/js/autoscroll.js'];
 require_once __DIR__ . '/../../includes/layout.php';
 ?>
 
@@ -114,7 +114,7 @@ require_once __DIR__ . '/../../includes/layout.php';
       <?php endif; ?>
     </div>
     <?php if ($sg['chord_sheet_text']): ?>
-      <div data-chord-sheet data-offset="0" style="border-top:1px solid var(--border);padding-top:14px">
+      <div data-chord-sheet data-offset="0" data-capo="<?= (int)($sg['capo'] ?? 0) ?>" style="border-top:1px solid var(--border);padding-top:14px">
         <div class="chord-controls">
           <button type="button" data-transpose-down title="Baixar um tom">−</button>
           <span>Tom: <strong data-current-key><?= htmlspecialchars($sg['key_tone'] ?: '—') ?></strong></span>
@@ -123,6 +123,9 @@ require_once __DIR__ . '/../../includes/layout.php';
           <span style="width:1px;align-self:stretch;background:var(--border);margin:0 2px"></span>
           <button type="button" data-font-down title="Diminuir a letra" style="font-size:13px">A−</button>
           <button type="button" data-font-up title="Aumentar a letra" style="font-size:17px">A+</button>
+          <?php if ($sg['capo']): ?>
+            <button type="button" data-capo-view style="width:auto;padding:0 10px;font-size:12px">🎸 Ver formas c/ capo</button>
+          <?php endif; ?>
         </div>
         <?= render_chord_chart($sg['chord_sheet_text']) ?>
       </div>
@@ -146,5 +149,13 @@ require_once __DIR__ . '/../../includes/layout.php';
 <a href="/pages/ministries/activity_view.php?id=<?= $id ?>" class="btn btn-secondary" style="justify-content:center;width:100%">
   ← Voltar pra atividade
 </a>
+
+<div class="autoscroll-spacer"></div>
+<div class="autoscroll-bar" id="autoscroll-bar">
+  <button type="button" id="autoscroll-slower" title="Mais devagar">🐢</button>
+  <span class="autoscroll-speed" id="autoscroll-speed-label">4</span>
+  <button type="button" id="autoscroll-faster" title="Mais rápido">🐇</button>
+  <button type="button" id="autoscroll-toggle">▶ Rolar sozinho</button>
+</div>
 
 <?php require_once __DIR__ . '/../../includes/layout-footer.php'; ?>

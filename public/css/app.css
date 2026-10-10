@@ -277,6 +277,26 @@ tbody tr:hover td { background: #fafafa; }
 }
 .chart-note { font-size: 13px; color: var(--text-muted); font-style: italic; }
 
+/* ── Barra de rolagem automática (fixa no rodapé) ── */
+.autoscroll-bar {
+  position: fixed; left: 0; right: 0; bottom: 0; z-index: 40;
+  display: flex; align-items: center; justify-content: center; gap: 8px;
+  padding: 10px 16px calc(10px + env(safe-area-inset-bottom, 0px));
+  background: white; border-top: 1px solid var(--border);
+  box-shadow: 0 -2px 10px rgba(0,0,0,.08);
+}
+.autoscroll-bar button {
+  border: 1px solid var(--border); border-radius: 8px; background: white;
+  font-size: 14px; font-weight: 600; cursor: pointer; color: var(--text);
+  padding: 10px 14px;
+}
+.autoscroll-bar button:hover { background: var(--content-bg); }
+.autoscroll-bar #autoscroll-toggle { flex: 1; max-width: 220px; }
+.autoscroll-bar #autoscroll-toggle.active { background: var(--accent); border-color: var(--accent); color: white; }
+.autoscroll-bar #autoscroll-slower, .autoscroll-bar #autoscroll-faster { width: 42px; padding: 10px 0; }
+.autoscroll-speed { font-size: 11px; color: var(--text-muted); min-width: 16px; text-align: center; }
+.autoscroll-spacer { height: 72px; }
+
 /* ── Utilitários ── */
 .flex { display: flex; }
 .items-center { align-items: center; }
