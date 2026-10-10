@@ -38,6 +38,14 @@ $songs = $songs->fetchAll();
 
 if (empty($songs)) { header('Location: /pages/ministries/activity_view.php?id=' . $id); exit; }
 
+$total = count($songs);
+// "song" na URL é 1-based (mais natural pra link/compartilhar); clampa pro intervalo válido.
+$current = (int)($_GET['song'] ?? 1);
+if ($current < 1) $current = 1;
+if ($current > $total) $current = $total;
+$i  = $current - 1; // índice 0-based pro array
+$sg = $songs[$i];
+
 $pageTitle      = 'Modo Ensaio · ' . $act['title'];
 $activePage     = 'ministries';
 $extraScriptSrc = '/public/js/chord-transpose.js';
@@ -53,71 +61,84 @@ require_once __DIR__ . '/../../includes/layout.php';
     <?= htmlspecialchars($act['ministry_name']) ?> ·
     <?= date('d/m/Y', strtotime($act['activity_date'])) ?>
     <?= $act['time_start'] ? ' às ' . substr($act['time_start'], 0, 5) : '' ?>
-    · <?= count($songs) ?> música(s)
+    · Música <?= $current ?> de <?= $total ?>
   </p>
 </div>
 
-<?php if (count($songs) > 1): ?>
+<?php if ($total > 1): ?>
 <div style="display:flex;gap:6px;flex-wrap:wrap;margin-bottom:20px">
-  <?php foreach ($songs as $i => $sg): ?>
-    <a href="#song-<?= $i + 1 ?>" class="badge badge-gray" style="font-size:13px;padding:6px 12px;text-decoration:none">
-      <?= $i + 1 ?>
+  <?php foreach ($songs as $idx => $s): ?>
+    <a href="?id=<?= $id ?>&song=<?= $idx + 1 ?>"
+       class="badge <?= $idx === $i ? 'badge-green' : 'badge-gray' ?>"
+       style="font-size:13px;padding:6px 12px;text-decoration:none<?= $idx === $i ? ';font-weight:700' : '' ?>">
+      <?= $idx + 1 ?>
     </a>
   <?php endforeach; ?>
 </div>
 <?php endif; ?>
 
-<?php foreach ($songs as $i => $sg): ?>
-  <div id="song-<?= $i + 1 ?>" class="card" style="margin-bottom:16px;scroll-margin-top:16px">
-    <div style="display:flex;align-items:baseline;gap:10px;margin-bottom:12px">
-      <span style="font-size:15px;color:var(--text-muted);font-weight:500"><?= $i + 1 ?>.</span>
-      <div>
-        <div style="font-size:18px;font-weight:600"><?= htmlspecialchars($sg['title']) ?></div>
-        <div style="display:flex;gap:6px;flex-wrap:wrap;margin-top:4px">
-          <?php if ($sg['key_tone']): ?>
-            <span class="badge badge-gray">Tom: <?= htmlspecialchars($sg['key_tone']) ?></span>
-          <?php endif; ?>
-          <?php if ($sg['capo']): ?>
-            <span class="badge badge-gray">Capo <?= (int)$sg['capo'] ?></span>
-          <?php endif; ?>
-          <?php if ($sg['bpm']): ?>
-            <span class="badge badge-gray"><?= (int)$sg['bpm'] ?> BPM</span>
-          <?php endif; ?>
-        </div>
+<div class="card" style="margin-bottom:16px">
+  <div style="display:flex;align-items:baseline;gap:10px;margin-bottom:12px">
+    <span style="font-size:15px;color:var(--text-muted);font-weight:500"><?= $current ?>.</span>
+    <div>
+      <div style="font-size:18px;font-weight:600"><?= htmlspecialchars($sg['title']) ?></div>
+      <div style="display:flex;gap:6px;flex-wrap:wrap;margin-top:4px">
+        <?php if ($sg['key_tone']): ?>
+          <span class="badge badge-gray">Tom: <?= htmlspecialchars($sg['key_tone']) ?></span>
+        <?php endif; ?>
+        <?php if ($sg['capo']): ?>
+          <span class="badge badge-gray">Capo <?= (int)$sg['capo'] ?></span>
+        <?php endif; ?>
+        <?php if ($sg['bpm']): ?>
+          <span class="badge badge-gray"><?= (int)$sg['bpm'] ?> BPM</span>
+        <?php endif; ?>
       </div>
     </div>
-
-    <?php if (!$sg['reference_link'] && !$sg['file_path'] && !$sg['materials_url'] && !$sg['chord_sheet_text']): ?>
-      <p style="font-size:13px;color:var(--text-muted)">Sem material cadastrado pra essa música.</p>
-    <?php else: ?>
-      <div style="display:flex;flex-direction:column;gap:8px;margin-bottom:<?= $sg['chord_sheet_text'] ? '16px' : '0' ?>">
-        <?php if ($sg['reference_link']): ?>
-          <a href="<?= htmlspecialchars($sg['reference_link']) ?>" target="_blank" rel="noopener"
-             class="btn btn-primary" style="justify-content:center;padding:12px;font-size:14px">▶ Ouvir referência</a>
-        <?php endif; ?>
-        <?php if ($sg['file_path']): ?>
-          <a href="<?= htmlspecialchars($sg['file_path']) ?>" target="_blank" rel="noopener"
-             class="btn btn-secondary" style="justify-content:center;padding:12px;font-size:14px">📄 Ver cifra/partitura</a>
-        <?php endif; ?>
-        <?php if ($sg['materials_url']): ?>
-          <a href="<?= htmlspecialchars($sg['materials_url']) ?>" target="_blank" rel="noopener"
-             class="btn btn-secondary" style="justify-content:center;padding:12px;font-size:14px">📁 Abrir materiais (Drive)</a>
-        <?php endif; ?>
-      </div>
-      <?php if ($sg['chord_sheet_text']): ?>
-        <div data-chord-sheet data-offset="0" style="border-top:1px solid var(--border);padding-top:14px">
-          <div class="chord-controls">
-            <button type="button" data-transpose-down title="Baixar um tom">−</button>
-            <span>Tom: <strong data-current-key><?= htmlspecialchars($sg['key_tone'] ?: '—') ?></strong></span>
-            <button type="button" data-transpose-up title="Subir um tom">+</button>
-            <button type="button" data-transpose-reset style="width:auto;padding:0 10px;font-size:12px">Original</button>
-          </div>
-          <?= render_chord_chart($sg['chord_sheet_text']) ?>
-        </div>
-      <?php endif; ?>
-    <?php endif; ?>
   </div>
-<?php endforeach; ?>
+
+  <?php if (!$sg['reference_link'] && !$sg['file_path'] && !$sg['materials_url'] && !$sg['chord_sheet_text']): ?>
+    <p style="font-size:13px;color:var(--text-muted)">Sem material cadastrado pra essa música.</p>
+  <?php else: ?>
+    <div style="display:flex;flex-direction:column;gap:8px;margin-bottom:<?= $sg['chord_sheet_text'] ? '16px' : '0' ?>">
+      <?php if ($sg['reference_link']): ?>
+        <a href="<?= htmlspecialchars($sg['reference_link']) ?>" target="_blank" rel="noopener"
+           class="btn btn-primary" style="justify-content:center;padding:12px;font-size:14px">▶ Ouvir referência</a>
+      <?php endif; ?>
+      <?php if ($sg['file_path']): ?>
+        <a href="<?= htmlspecialchars($sg['file_path']) ?>" target="_blank" rel="noopener"
+           class="btn btn-secondary" style="justify-content:center;padding:12px;font-size:14px">📄 Ver cifra/partitura</a>
+      <?php endif; ?>
+      <?php if ($sg['materials_url']): ?>
+        <a href="<?= htmlspecialchars($sg['materials_url']) ?>" target="_blank" rel="noopener"
+           class="btn btn-secondary" style="justify-content:center;padding:12px;font-size:14px">📁 Abrir materiais (Drive)</a>
+      <?php endif; ?>
+    </div>
+    <?php if ($sg['chord_sheet_text']): ?>
+      <div data-chord-sheet data-offset="0" style="border-top:1px solid var(--border);padding-top:14px">
+        <div class="chord-controls">
+          <button type="button" data-transpose-down title="Baixar um tom">−</button>
+          <span>Tom: <strong data-current-key><?= htmlspecialchars($sg['key_tone'] ?: '—') ?></strong></span>
+          <button type="button" data-transpose-up title="Subir um tom">+</button>
+          <button type="button" data-transpose-reset style="width:auto;padding:0 10px;font-size:12px">Original</button>
+        </div>
+        <?= render_chord_chart($sg['chord_sheet_text']) ?>
+      </div>
+    <?php endif; ?>
+  <?php endif; ?>
+</div>
+
+<div style="display:flex;gap:10px;margin-bottom:10px">
+  <?php if ($current > 1): ?>
+    <a href="?id=<?= $id ?>&song=<?= $current - 1 ?>" class="btn btn-secondary" style="flex:1;justify-content:center;padding:14px;font-size:15px">← Anterior</a>
+  <?php else: ?>
+    <span class="btn btn-secondary" style="flex:1;justify-content:center;padding:14px;font-size:15px;opacity:.4;cursor:default">← Anterior</span>
+  <?php endif; ?>
+  <?php if ($current < $total): ?>
+    <a href="?id=<?= $id ?>&song=<?= $current + 1 ?>" class="btn btn-primary" style="flex:1;justify-content:center;padding:14px;font-size:15px">Próxima →</a>
+  <?php else: ?>
+    <span class="btn btn-secondary" style="flex:1;justify-content:center;padding:14px;font-size:15px;opacity:.4;cursor:default">Próxima →</span>
+  <?php endif; ?>
+</div>
 
 <a href="/pages/ministries/activity_view.php?id=<?= $id ?>" class="btn btn-secondary" style="justify-content:center;width:100%">
   ← Voltar pra atividade
