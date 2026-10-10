@@ -1,10 +1,15 @@
 // Rolagem automática da tela — pra ler a cifra sem precisar tocar no
 // celular com a mão ocupada no instrumento. Velocidade lembrada no
-// navegador de cada pessoa. Pausa sozinha se a pessoa tocar na tela
-// (scroll manual via toque/mouse) ou ao chegar no fim da página.
+// navegador de cada pessoa. Só para quando clica em Pausar (não para
+// sozinha ao tocar na tela) ou ao chegar no fim do conteúdo.
 (function () {
   const bar = document.getElementById('autoscroll-bar');
   if (!bar) return;
+
+  // O layout do app rola dentro de um container interno (.page), não na
+  // janela do navegador (.main tem overflow:hidden de propósito) — rolar
+  // a window não tinha efeito confiável, por isso funcionava só às vezes.
+  const scrollEl = document.querySelector('.page') || document.scrollingElement || document.documentElement;
 
   const toggleBtn = document.getElementById('autoscroll-toggle');
   const slowerBtn = document.getElementById('autoscroll-slower');
@@ -36,8 +41,8 @@
   function step(timestamp) {
     if (!running) return;
     if (lastTime !== null) {
-      window.scrollBy(0, pxPerMs() * (timestamp - lastTime));
-      const atBottom = window.innerHeight + window.scrollY >= document.body.scrollHeight - 2;
+      scrollEl.scrollTop += pxPerMs() * (timestamp - lastTime);
+      const atBottom = scrollEl.scrollTop + scrollEl.clientHeight >= scrollEl.scrollHeight - 2;
       if (atBottom) { stop(); return; }
     }
     lastTime = timestamp;
@@ -72,9 +77,4 @@
     updateSpeedLabel();
     try { localStorage.setItem(SPEED_KEY, speed); } catch (e) { /* ok ignorar */ }
   });
-
-  // Toque/arraste manual na tela interrompe a rolagem automática (scroll
-  // programático via JS não dispara touchmove, só o dedo de verdade dispara).
-  window.addEventListener('touchmove', function () { if (running) stop(); }, { passive: true });
-  window.addEventListener('wheel', function () { if (running) stop(); }, { passive: true });
 })();
