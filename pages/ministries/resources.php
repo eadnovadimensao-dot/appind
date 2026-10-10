@@ -54,6 +54,16 @@ foreach ($resources as $r) {
 }
 ksort($grouped);
 
+// Marca títulos de música repetidos (mesmo nome, caixa-baixa) — pra pegar
+// duplicata tipo "Tudo é Perda" cadastrada duas vezes sem ninguém notar.
+$titleCounts = [];
+foreach ($resources as $r) {
+    if ($r['type'] === 'song') {
+        $key = mb_strtolower(trim($r['title']));
+        $titleCounts[$key] = ($titleCounts[$key] ?? 0) + 1;
+    }
+}
+
 $categorySuggestions = ['Repertório', 'Exercícios', 'Partituras', 'Outros'];
 
 function resource_icon(?string $fileName, ?string $externalUrl): string {
@@ -106,6 +116,13 @@ function resource_size(?int $bytes): string {
   </div>
 <?php endif; ?>
 
+<?php if (!empty($_GET['dup_id'])): ?>
+  <div style="background:#FEF3C7;border:1px solid #FCD34D;border-radius:8px;padding:12px 16px;margin-bottom:16px;font-size:13px;color:#854F0B">
+    ⚠️ Já existia uma música com esse mesmo título aqui. Dá uma olhada se não ficou duplicada —
+    <a href="/pages/ministries/resource_edit.php?id=<?= (int)$_GET['dup_id'] ?>" style="color:#854F0B;font-weight:500">ver a outra entrada</a>.
+  </div>
+<?php endif; ?>
+
 <?php if ($canManage): ?>
 <div id="add-resource-form" class="card" style="display:none;margin-bottom:16px">
   <p class="card-title">Novo material</p>
@@ -124,6 +141,16 @@ function resource_size(?int $bytes): string {
       <div class="form-group" id="key-tone-group" style="display:none">
         <label class="form-label">Tom</label>
         <input type="text" name="key_tone" class="form-control" placeholder="Ex: G, D, A#m…">
+      </div>
+    </div>
+    <div class="form-row" id="capo-bpm-group" style="display:none">
+      <div class="form-group">
+        <label class="form-label">Capotraste <span style="font-weight:400;color:var(--text-muted)">(casa, opcional)</span></label>
+        <input type="number" name="capo" class="form-control" min="0" max="11" placeholder="Ex: 2">
+      </div>
+      <div class="form-group">
+        <label class="form-label">BPM <span style="font-weight:400;color:var(--text-muted)">(andamento, opcional)</span></label>
+        <input type="number" name="bpm" class="form-control" min="0" placeholder="Ex: 120">
       </div>
     </div>
     <div class="form-row">
@@ -161,6 +188,11 @@ function resource_size(?int $bytes): string {
       <label class="form-label">Link de materiais (Drive) <span style="font-weight:400;color:var(--text-muted)">— multitracks, cifra, pasta completa</span></label>
       <input type="url" name="materials_url" class="form-control" placeholder="https://drive.google.com/…">
     </div>
+    <div class="form-group" id="chord-sheet-group" style="display:none">
+      <label class="form-label">Cifra <span style="font-weight:400;color:var(--text-muted)">— opcional, mas habilita o Modo Ensaio com transposição</span></label>
+      <textarea name="chord_sheet_text" class="form-control chord-sheet" rows="8" placeholder="[G]Tudo é [D]perda comparado a [Em]Ti&#10;[C]Nada mais importa [D]além de [G]Ti"></textarea>
+      <div style="font-size:11px;color:var(--text-muted);margin-top:4px">Coloque o acorde entre colchetes antes da sílaba, ex: <code>[G]Tudo é [D]perda</code>. Dá pra tocar tom pra cima/baixo depois sem editar de novo.</div>
+    </div>
     <button type="submit" class="btn btn-primary">Salvar material</button>
   </form>
   <script>
@@ -168,6 +200,8 @@ function resource_size(?int $bytes): string {
       const isSong = this.value === 'song';
       document.getElementById('key-tone-group').style.display = isSong ? 'block' : 'none';
       document.getElementById('materials-url-group').style.display = isSong ? 'block' : 'none';
+      document.getElementById('capo-bpm-group').style.display = isSong ? 'flex' : 'none';
+      document.getElementById('chord-sheet-group').style.display = isSong ? 'block' : 'none';
       document.getElementById('external-url-label').textContent = isSong ? 'Link de referência (YouTube)' : 'ou link externo';
       document.getElementById('external-url-input').placeholder = isSong ? 'https://youtube.com/…' : 'https://…';
       document.getElementById('external-url-hint').textContent = isSong
@@ -209,6 +243,15 @@ function resource_size(?int $bytes): string {
                 <?php if ($r['key_tone']): ?>
                   <span class="badge badge-gray" style="font-size:10px;margin-left:6px">Tom: <?= htmlspecialchars($r['key_tone']) ?></span>
                 <?php endif; ?>
+                <?php if ($r['capo']): ?>
+                  <span class="badge badge-gray" style="font-size:10px">Capo <?= (int)$r['capo'] ?></span>
+                <?php endif; ?>
+                <?php if ($r['bpm']): ?>
+                  <span class="badge badge-gray" style="font-size:10px"><?= (int)$r['bpm'] ?> BPM</span>
+                <?php endif; ?>
+                <?php if ($r['type'] === 'song' && ($titleCounts[mb_strtolower(trim($r['title']))] ?? 0) > 1): ?>
+                  <span class="badge badge-amber" style="font-size:10px" title="Existe mais de uma música com esse título nesse ministério">⚠️ duplicada</span>
+                <?php endif; ?>
               </div>
               <?php if ($r['description']): ?>
                 <div style="font-size:12px;color:var(--text-muted);margin-top:2px"><?= nl2br(htmlspecialchars($r['description'])) ?></div>
@@ -221,6 +264,10 @@ function resource_size(?int $bytes): string {
             </div>
           </div>
           <div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap;margin-top:10px;margin-left:34px">
+            <?php if ($r['chord_sheet_text']): ?>
+              <a href="/pages/ministries/resource_chords.php?id=<?= $r['id'] ?>"
+                 class="btn btn-primary" style="font-size:12px;padding:5px 12px">📝 Ver cifra</a>
+            <?php endif; ?>
             <?php if ($r['external_url']): ?>
               <a href="<?= htmlspecialchars($r['external_url']) ?>" target="_blank" rel="noopener"
                  class="btn btn-secondary" style="font-size:12px;padding:5px 12px"><?= $r['type'] === 'song' ? '▶ Referência' : '🔗 Abrir' ?></a>

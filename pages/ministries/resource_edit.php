@@ -27,6 +27,9 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     $description  = trim($_POST['description'] ?? '');
     $externalUrl  = trim($_POST['external_url'] ?? '');
     $materialsUrl = trim($_POST['materials_url'] ?? '');
+    $chordSheet   = trim($_POST['chord_sheet_text'] ?? '') ?: null;
+    $capo         = ($type === 'song' && trim($_POST['capo'] ?? '') !== '') ? max(0, min(11, (int)$_POST['capo'])) : null;
+    $bpm          = ($type === 'song' && trim($_POST['bpm'] ?? '') !== '') ? max(0, (int)$_POST['bpm']) : null;
     $removeFile   = isset($_POST['remove_file']);
 
     if ($title === '') $errors[] = 'Dê um título pro material.';
@@ -60,8 +63,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         $filePath = null; $fileName = null; $fileSize = null;
     }
 
-    if (empty($errors) && !$filePath && $externalUrl === '' && $materialsUrl === '') {
-        $errors[] = 'Anexe um arquivo ou informe pelo menos um link.';
+    if (empty($errors) && !$filePath && $externalUrl === '' && $materialsUrl === '' && !$chordSheet) {
+        $errors[] = 'Anexe um arquivo, informe pelo menos um link ou cole a cifra.';
     }
 
     if (empty($errors)) {
@@ -86,11 +89,11 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 
         $db->prepare("
             UPDATE ministry_resources SET
-              type=?, title=?, key_tone=?, category=?, description=?,
+              type=?, title=?, key_tone=?, chord_sheet_text=?, capo=?, bpm=?, category=?, description=?,
               file_path=?, file_name=?, file_size=?, external_url=?, materials_url=?
             WHERE id=?
         ")->execute([
-            $type, $title, $keyTone, $category, $description ?: null,
+            $type, $title, $keyTone, $chordSheet, $capo, $bpm, $category, $description ?: null,
             $filePath, $fileName, $fileSize, $externalUrl ?: null, $materialsUrl ?: null,
             $resId,
         ]);
@@ -99,6 +102,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     }
     // Reexibe o formulário com o que a pessoa já tinha digitado
     $res = array_merge($res, ['type' => $type, 'title' => $title, 'key_tone' => $keyTone,
+        'chord_sheet_text' => $chordSheet, 'capo' => $capo, 'bpm' => $bpm,
         'category' => $category, 'description' => $description, 'external_url' => $externalUrl,
         'materials_url' => $materialsUrl]);
 }
@@ -137,6 +141,16 @@ require_once __DIR__ . '/../../includes/layout.php';
       <div class="form-group" id="key-tone-group" style="<?= $res['type'] === 'song' ? '' : 'display:none' ?>">
         <label class="form-label">Tom</label>
         <input type="text" name="key_tone" class="form-control" placeholder="Ex: G, D, A#m…" value="<?= htmlspecialchars($res['key_tone'] ?? '') ?>">
+      </div>
+    </div>
+    <div class="form-row" id="capo-bpm-group" style="<?= $res['type'] === 'song' ? 'display:flex' : 'display:none' ?>">
+      <div class="form-group">
+        <label class="form-label">Capotraste <span style="font-weight:400;color:var(--text-muted)">(casa, opcional)</span></label>
+        <input type="number" name="capo" class="form-control" min="0" max="11" placeholder="Ex: 2" value="<?= htmlspecialchars($res['capo'] ?? '') ?>">
+      </div>
+      <div class="form-group">
+        <label class="form-label">BPM <span style="font-weight:400;color:var(--text-muted)">(andamento, opcional)</span></label>
+        <input type="number" name="bpm" class="form-control" min="0" placeholder="Ex: 120" value="<?= htmlspecialchars($res['bpm'] ?? '') ?>">
       </div>
     </div>
     <div class="form-row">
@@ -186,6 +200,12 @@ require_once __DIR__ . '/../../includes/layout.php';
       </div>
     </div>
 
+    <div class="form-group" id="chord-sheet-group" style="<?= $res['type'] === 'song' ? '' : 'display:none' ?>">
+      <label class="form-label">Cifra <span style="font-weight:400;color:var(--text-muted)">— opcional, mas habilita o Modo Ensaio com transposição</span></label>
+      <textarea name="chord_sheet_text" class="form-control chord-sheet" rows="10" placeholder="[G]Tudo é [D]perda comparado a [Em]Ti&#10;[C]Nada mais importa [D]além de [G]Ti"><?= htmlspecialchars($res['chord_sheet_text'] ?? '') ?></textarea>
+      <div style="font-size:11px;color:var(--text-muted);margin-top:4px">Coloque o acorde entre colchetes antes da sílaba, ex: <code>[G]Tudo é [D]perda</code>. Dá pra tocar tom pra cima/baixo depois sem editar de novo.</div>
+    </div>
+
     <div style="display:flex;gap:10px;margin-top:8px">
       <button type="submit" class="btn btn-primary">Salvar alterações</button>
       <a href="/pages/ministries/resources.php?ministry_id=<?= $res['ministry_id'] ?>" class="btn btn-secondary">Cancelar</a>
@@ -199,6 +219,8 @@ document.getElementById('resource-type').addEventListener('change', function() {
   const isSong = this.value === 'song';
   document.getElementById('key-tone-group').style.display = isSong ? 'block' : 'none';
   document.getElementById('materials-url-group').style.display = isSong ? 'block' : 'none';
+  document.getElementById('capo-bpm-group').style.display = isSong ? 'flex' : 'none';
+  document.getElementById('chord-sheet-group').style.display = isSong ? 'block' : 'none';
   document.getElementById('external-url-label').textContent = isSong ? 'Link de referência (YouTube)' : 'Link externo';
 });
 JS;

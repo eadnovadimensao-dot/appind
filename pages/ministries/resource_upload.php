@@ -21,6 +21,9 @@ $category     = trim($_POST['category'] ?? '') ?: 'Geral';
 $description  = trim($_POST['description'] ?? '');
 $externalUrl  = trim($_POST['external_url'] ?? '');  // Referência (YouTube)
 $materialsUrl = trim($_POST['materials_url'] ?? ''); // Materiais (Drive — multitracks, cifra…)
+$chordSheet   = trim($_POST['chord_sheet_text'] ?? '') ?: null;
+$capo         = ($type === 'song' && trim($_POST['capo'] ?? '') !== '') ? max(0, min(11, (int)$_POST['capo'])) : null;
+$bpm          = ($type === 'song' && trim($_POST['bpm'] ?? '') !== '') ? max(0, (int)$_POST['bpm']) : null;
 
 if ($title === '') {
     header('Location: /pages/ministries/resources.php?ministry_id=' . $ministryId . '&error=titulo');
@@ -60,15 +63,25 @@ if (!empty($_FILES['file']['tmp_name']) && $_FILES['file']['error'] === UPLOAD_E
     }
 }
 
-if (!$filePath && $externalUrl === '' && $materialsUrl === '') {
+if (!$filePath && $externalUrl === '' && $materialsUrl === '' && !$chordSheet) {
     header('Location: /pages/ministries/resources.php?ministry_id=' . $ministryId . '&error=arquivo');
     exit;
 }
 
+// Alerta (não bloqueia) se já existe uma música com esse título nesse ministério —
+// evita duplicata tipo "Tudo é Perda" cadastrada duas vezes sem ninguém notar.
+$dupId = null;
+if ($type === 'song') {
+    $dup = $db->prepare("SELECT id FROM ministry_resources WHERE ministry_id = ? AND type = 'song' AND LOWER(title) = LOWER(?) LIMIT 1");
+    $dup->execute([$ministryId, $title]);
+    $dupId = $dup->fetchColumn() ?: null;
+}
+
 $ins = $db->prepare("
     INSERT INTO ministry_resources
-      (ministry_id, church_id, category, type, title, key_tone, description, file_path, file_name, file_size, external_url, materials_url, created_by)
-    VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?)
+      (ministry_id, church_id, category, type, title, key_tone, chord_sheet_text, capo, bpm,
+       description, file_path, file_name, file_size, external_url, materials_url, created_by)
+    VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)
 ");
 $ins->execute([
     $ministryId,
@@ -77,6 +90,9 @@ $ins->execute([
     $type,
     $title,
     $keyTone,
+    $chordSheet,
+    $capo,
+    $bpm,
     $description ?: null,
     $filePath,
     $fileName,
@@ -86,5 +102,6 @@ $ins->execute([
     auth_member_id(),
 ]);
 
-header('Location: /pages/ministries/resources.php?ministry_id=' . $ministryId . '&added=1');
+$dupQs = $dupId ? '&dup_id=' . $dupId : '';
+header('Location: /pages/ministries/resources.php?ministry_id=' . $ministryId . '&added=1' . $dupQs);
 exit;

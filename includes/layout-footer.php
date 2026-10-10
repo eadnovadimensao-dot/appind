@@ -3,6 +3,9 @@
 </div><!-- .app -->
 
 <script src="/public/js/app.js"></script>
+<?php if (isset($extraScriptSrc)): foreach ((array)$extraScriptSrc as $src): ?>
+  <script src="<?= htmlspecialchars($src) ?>"></script>
+<?php endforeach; endif; ?>
 <?php if (isset($extraJs)): ?>
   <script><?= $extraJs ?></script>
 <?php endif; ?>

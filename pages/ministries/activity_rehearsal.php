@@ -1,6 +1,7 @@
 <?php
 require_once __DIR__ . "/../../config/database.php";
 require_once __DIR__ . "/../../includes/auth.php";
+require_once __DIR__ . "/../../includes/chords.php";
 auth_check();
 $db       = db();
 $churchId = current_church_id();
@@ -25,7 +26,8 @@ $songs = $db->prepare("
            COALESCE(r.key_tone, mas.key_tone) AS key_tone,
            COALESCE(r.external_url, mas.reference_link) AS reference_link,
            r.materials_url,
-           COALESCE(r.file_path, mas.file_path) AS file_path
+           COALESCE(r.file_path, mas.file_path) AS file_path,
+           r.chord_sheet_text, r.capo, r.bpm
     FROM ministry_activity_songs mas
     LEFT JOIN ministry_resources r ON r.id = mas.resource_id
     WHERE mas.activity_id = ?
@@ -36,8 +38,9 @@ $songs = $songs->fetchAll();
 
 if (empty($songs)) { header('Location: /pages/ministries/activity_view.php?id=' . $id); exit; }
 
-$pageTitle  = 'Modo Ensaio · ' . $act['title'];
-$activePage = 'ministries';
+$pageTitle      = 'Modo Ensaio · ' . $act['title'];
+$activePage     = 'ministries';
+$extraScriptSrc = '/public/js/chord-transpose.js';
 require_once __DIR__ . '/../../includes/layout.php';
 ?>
 
@@ -70,16 +73,24 @@ require_once __DIR__ . '/../../includes/layout.php';
       <span style="font-size:15px;color:var(--text-muted);font-weight:500"><?= $i + 1 ?>.</span>
       <div>
         <div style="font-size:18px;font-weight:600"><?= htmlspecialchars($sg['title']) ?></div>
-        <?php if ($sg['key_tone']): ?>
-          <span class="badge badge-gray" style="margin-top:4px">Tom: <?= htmlspecialchars($sg['key_tone']) ?></span>
-        <?php endif; ?>
+        <div style="display:flex;gap:6px;flex-wrap:wrap;margin-top:4px">
+          <?php if ($sg['key_tone']): ?>
+            <span class="badge badge-gray">Tom: <?= htmlspecialchars($sg['key_tone']) ?></span>
+          <?php endif; ?>
+          <?php if ($sg['capo']): ?>
+            <span class="badge badge-gray">Capo <?= (int)$sg['capo'] ?></span>
+          <?php endif; ?>
+          <?php if ($sg['bpm']): ?>
+            <span class="badge badge-gray"><?= (int)$sg['bpm'] ?> BPM</span>
+          <?php endif; ?>
+        </div>
       </div>
     </div>
 
-    <?php if (!$sg['reference_link'] && !$sg['file_path'] && !$sg['materials_url']): ?>
+    <?php if (!$sg['reference_link'] && !$sg['file_path'] && !$sg['materials_url'] && !$sg['chord_sheet_text']): ?>
       <p style="font-size:13px;color:var(--text-muted)">Sem material cadastrado pra essa música.</p>
     <?php else: ?>
-      <div style="display:flex;flex-direction:column;gap:8px">
+      <div style="display:flex;flex-direction:column;gap:8px;margin-bottom:<?= $sg['chord_sheet_text'] ? '16px' : '0' ?>">
         <?php if ($sg['reference_link']): ?>
           <a href="<?= htmlspecialchars($sg['reference_link']) ?>" target="_blank" rel="noopener"
              class="btn btn-primary" style="justify-content:center;padding:12px;font-size:14px">▶ Ouvir referência</a>
@@ -93,6 +104,17 @@ require_once __DIR__ . '/../../includes/layout.php';
              class="btn btn-secondary" style="justify-content:center;padding:12px;font-size:14px">📁 Abrir materiais (Drive)</a>
         <?php endif; ?>
       </div>
+      <?php if ($sg['chord_sheet_text']): ?>
+        <div data-chord-sheet data-offset="0" style="border-top:1px solid var(--border);padding-top:14px">
+          <div class="chord-controls">
+            <button type="button" data-transpose-down title="Baixar um tom">−</button>
+            <span>Tom: <strong data-current-key><?= htmlspecialchars($sg['key_tone'] ?: '—') ?></strong></span>
+            <button type="button" data-transpose-up title="Subir um tom">+</button>
+            <button type="button" data-transpose-reset style="width:auto;padding:0 10px;font-size:12px">Original</button>
+          </div>
+          <div class="chord-sheet"><?= render_chord_sheet($sg['chord_sheet_text']) ?></div>
+        </div>
+      <?php endif; ?>
     <?php endif; ?>
   </div>
 <?php endforeach; ?>
