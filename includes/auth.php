@@ -92,6 +92,7 @@ function auth_member_redirect(): void {
         // Atividades e materiais continuam só pra quem participa de algum ministério
         if ($inMinistry) {
             $allowed[] = '/pages/ministries/activity_view.php';
+            $allowed[] = '/pages/ministries/activity_rehearsal.php';
             $allowed[] = '/pages/ministries/resources.php';
             $allowed[] = '/pages/ministries/resource_edit.php';
             $allowed[] = '/pages/ministries/items.php';

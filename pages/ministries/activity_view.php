@@ -252,12 +252,19 @@ if (!empty($act['uses_dress_code']) || $dressColors || $dressNote):
 <div class="card" style="padding:0;margin-bottom:16px">
   <div style="padding:14px 18px;border-bottom:1px solid var(--border);display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:8px">
     <p style="font-weight:500;font-size:14px">Repertório <span style="color:var(--text-muted);font-weight:400">(<?= count($songs) ?>)</span></p>
-    <?php if ($canManage && !empty($songs) && !empty($scaled)): ?>
-      <a href="/pages/ministries/activity_send_songs.php?id=<?= $id ?>" class="btn btn-secondary" style="font-size:12px;padding:5px 12px"
-         data-confirm="Enviar o repertório por WhatsApp pra todos escalados nessa atividade?">
-        📤 <?= $act['songs_sent_at'] ? 'Reenviar repertório' : 'Enviar repertório' ?>
-      </a>
-    <?php endif; ?>
+    <div style="display:flex;gap:8px;flex-wrap:wrap">
+      <?php if (!empty($songs)): ?>
+        <a href="/pages/ministries/activity_rehearsal.php?id=<?= $id ?>" class="btn btn-primary" style="font-size:12px;padding:5px 12px">
+          🎤 Modo Ensaio
+        </a>
+      <?php endif; ?>
+      <?php if ($canManage && !empty($songs) && !empty($scaled)): ?>
+        <a href="/pages/ministries/activity_send_songs.php?id=<?= $id ?>" class="btn btn-secondary" style="font-size:12px;padding:5px 12px"
+           data-confirm="Enviar o repertório por WhatsApp pra todos escalados nessa atividade?">
+          📤 <?= $act['songs_sent_at'] ? 'Reenviar repertório' : 'Enviar repertório' ?>
+        </a>
+      <?php endif; ?>
+    </div>
   </div>
   <?php if ($act['songs_sent_at']): ?>
     <div style="padding:8px 18px;font-size:11px;color:var(--text-muted);border-bottom:1px solid var(--border)">
