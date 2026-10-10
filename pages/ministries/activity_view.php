@@ -255,7 +255,7 @@ if (!empty($act['uses_dress_code']) || $dressColors || $dressNote):
     <div style="display:flex;gap:8px;flex-wrap:wrap">
       <?php if (!empty($songs)): ?>
         <a href="/pages/ministries/activity_rehearsal.php?id=<?= $id ?>" class="btn btn-primary" style="font-size:12px;padding:5px 12px">
-          🎤 Modo Ensaio
+          🎤 <?= $act['activity_type'] === 'culto' ? 'Modo Culto' : 'Modo Ensaio' ?>
         </a>
       <?php endif; ?>
       <?php if ($canManage && !empty($songs) && !empty($scaled)): ?>

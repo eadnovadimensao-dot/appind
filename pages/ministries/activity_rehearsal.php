@@ -46,7 +46,8 @@ if ($current > $total) $current = $total;
 $i  = $current - 1; // índice 0-based pro array
 $sg = $songs[$i];
 
-$pageTitle      = 'Modo Ensaio · ' . $act['title'];
+$modeLabel      = $act['activity_type'] === 'culto' ? 'Modo Culto' : 'Modo Ensaio';
+$pageTitle      = $modeLabel . ' · ' . $act['title'];
 $activePage     = 'ministries';
 $extraScriptSrc = ['/public/js/chord-transpose.js', '/public/js/autoscroll.js'];
 require_once __DIR__ . '/../../includes/layout.php';
@@ -56,7 +57,7 @@ require_once __DIR__ . '/../../includes/layout.php';
   <a href="/pages/ministries/activity_view.php?id=<?= $id ?>" style="font-size:13px;color:var(--text-muted);text-decoration:none">
     ← <?= htmlspecialchars($act['title']) ?>
   </a>
-  <h1 style="font-size:20px;font-weight:600;margin-top:6px">🎤 Modo Ensaio</h1>
+  <h1 style="font-size:20px;font-weight:600;margin-top:6px">🎤 <?= $modeLabel ?></h1>
   <p style="font-size:13px;color:var(--text-muted);margin-top:2px">
     <?= htmlspecialchars($act['ministry_name']) ?> ·
     <?= date('d/m/Y', strtotime($act['activity_date'])) ?>
