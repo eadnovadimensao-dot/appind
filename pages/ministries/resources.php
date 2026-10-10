@@ -1,6 +1,7 @@
 <?php
 require_once __DIR__ . "/../../config/database.php";
 require_once __DIR__ . "/../../includes/auth.php";
+require_once __DIR__ . "/../../includes/chords.php";
 auth_check();
 
 $db = db();
@@ -270,6 +271,9 @@ Grande     é o Senhor</div>
               </div>
               <?php if ($r['description']): ?>
                 <div style="font-size:12px;color:var(--text-muted);margin-top:2px"><?= nl2br(htmlspecialchars($r['description'])) ?></div>
+              <?php endif; ?>
+              <?php if ($capoLabel = capo_shape_label($r['key_tone'], $r['capo'])): ?>
+                <div style="font-size:12px;color:var(--text-muted);margin-top:2px">🎸 <?= htmlspecialchars($capoLabel) ?></div>
               <?php endif; ?>
               <div style="font-size:11px;color:var(--text-muted);margin-top:4px">
                 <?= htmlspecialchars($r['created_by_name'] ?? 'Alguém') ?> ·
