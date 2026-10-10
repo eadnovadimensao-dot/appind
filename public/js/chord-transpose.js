@@ -90,7 +90,6 @@
     }
     container.dataset.offset = semitones;
     updateCapoPicker(container);
-    fitChordSheets();
   }
 
   // Seletor de capotraste: independe de qualquer sugestão cadastrada na
@@ -129,17 +128,21 @@
     return FONT_DEFAULT;
   }
 
+  // Clique em A+/A- é uma escolha explícita da pessoa — sempre muda de
+  // verdade pro tamanho pedido. Se uma linha não couber depois disso, ela
+  // rola de lado só ali (CSS overflow-x:auto), não fica mais fácil de
+  // ficar "sem efeito" encolhendo escondido de volta.
   function applyFontSize(size) {
     document.querySelectorAll('.chord-sheet').forEach(function (el) {
       el.style.fontSize = size + 'px';
-      delete el.dataset.baseFontSize; // recalcula o encolhimento automático a partir desse novo tamanho
+      el.dataset.baseFontSize = size;
     });
     try { localStorage.setItem(FONT_KEY, size); } catch (e) { /* ok ignorar */ }
-    fitChordSheets();
   }
 
   let fontSize = getSavedFontSize();
-  applyFontSize(fontSize); // sempre roda — até no tamanho padrão, uma linha pode não caber
+  applyFontSize(fontSize);
+  fitChordSheets(); // só na carga da página: encolhe pra caber sem pedir nada à pessoa
 
   document.querySelectorAll('[data-font-up]').forEach(function (btn) {
     btn.addEventListener('click', function () {
@@ -154,12 +157,15 @@
     });
   });
 
-  // Reencolhe se a tela girar/mudar de tamanho (ex: rotacionar o celular)
+  // Reencolhe se a tela girar/mudar de tamanho (ex: rotacionar o celular).
+  // Parte sempre do tamanho que a pessoa pediu (fontSize), não do que
+  // ficou depois de um encolhimento anterior — senão nunca cresce de
+  // volta ao virar pra paisagem, por exemplo.
   let resizeTimer = null;
   window.addEventListener('resize', function () {
     clearTimeout(resizeTimer);
     resizeTimer = setTimeout(function () {
-      document.querySelectorAll('.chord-sheet').forEach(function (el) { delete el.dataset.baseFontSize; });
+      applyFontSize(fontSize);
       fitChordSheets();
     }, 200);
   });
