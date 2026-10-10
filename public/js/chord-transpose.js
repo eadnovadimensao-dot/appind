@@ -36,6 +36,26 @@
     return out;
   }
 
+  // Encolhe só o(s) bloco(s) de cifra cuja linha mais longa não cabe na
+  // tela (comum quando a letra é comprida), em vez de deixar rolar de
+  // lado. Reduz o próprio font-size daquele bloco até caber, sem afetar
+  // os outros — o alinhamento acorde/sílaba continua certo porque é só
+  // uma fonte menor, não um reflow.
+  function fitChordSheets() {
+    document.querySelectorAll('.chord-sheet').forEach(function (el) {
+      const base = parseFloat(el.dataset.baseFontSize || window.getComputedStyle(el).fontSize);
+      el.dataset.baseFontSize = base;
+      let size = base;
+      el.style.fontSize = size + 'px';
+      let guard = 0;
+      while (el.scrollWidth > el.clientWidth + 1 && size > 11 && guard < 40) {
+        size -= 0.5;
+        el.style.fontSize = size + 'px';
+        guard++;
+      }
+    });
+  }
+
   function updateCapoPicker(container) {
     const picker = container.querySelector('[data-capo-picker]');
     if (!picker) return;
@@ -55,6 +75,7 @@
     }
     container.dataset.offset = semitones;
     updateCapoPicker(container);
+    fitChordSheets();
   }
 
   // Seletor de capotraste: independe de qualquer sugestão cadastrada na
@@ -96,12 +117,14 @@
   function applyFontSize(size) {
     document.querySelectorAll('.chord-sheet').forEach(function (el) {
       el.style.fontSize = size + 'px';
+      delete el.dataset.baseFontSize; // recalcula o encolhimento automático a partir desse novo tamanho
     });
     try { localStorage.setItem(FONT_KEY, size); } catch (e) { /* ok ignorar */ }
+    fitChordSheets();
   }
 
   let fontSize = getSavedFontSize();
-  if (fontSize !== FONT_DEFAULT) applyFontSize(fontSize);
+  applyFontSize(fontSize); // sempre roda — até no tamanho padrão, uma linha pode não caber
 
   document.querySelectorAll('[data-font-up]').forEach(function (btn) {
     btn.addEventListener('click', function () {
@@ -114,5 +137,15 @@
       fontSize = Math.max(FONT_MIN, fontSize - FONT_STEP);
       applyFontSize(fontSize);
     });
+  });
+
+  // Reencolhe se a tela girar/mudar de tamanho (ex: rotacionar o celular)
+  let resizeTimer = null;
+  window.addEventListener('resize', function () {
+    clearTimeout(resizeTimer);
+    resizeTimer = setTimeout(function () {
+      document.querySelectorAll('.chord-sheet').forEach(function (el) { delete el.dataset.baseFontSize; });
+      fitChordSheets();
+    }, 200);
   });
 })();
