@@ -242,7 +242,15 @@ tbody tr:hover td { background: #fafafa; }
 /* ── Cifra (acordes) ── */
 .chord-sheet {
   font-family: 'Courier New', Courier, monospace;
-  font-size: 15px; line-height: 2; white-space: pre-wrap; word-break: break-word;
+  font-size: 15px; line-height: 2;
+  /* "pre" (não "pre-wrap") de propósito: acorde e letra se alinham por
+     coluna de caractere — se a linha quebrasse, o acorde desalinharia
+     da sílaba embaixo. Em vez de quebrar, rola só essa caixa de lado,
+     sem afetar a página toda. */
+  white-space: pre;
+  overflow-x: auto;
+  -webkit-overflow-scrolling: touch;
+  max-width: 100%;
 }
 .chord-sheet .chord { color: var(--accent-dk); font-weight: 700; }
 .chord-controls {
