@@ -1,7 +1,9 @@
 // Rolagem automática da tela — pra ler a cifra sem precisar tocar no
 // celular com a mão ocupada no instrumento. Velocidade lembrada no
-// navegador de cada pessoa. Só para quando clica em Pausar (não para
-// sozinha ao tocar na tela) ou ao chegar no fim do conteúdo.
+// navegador de cada pessoa. Só para de verdade quando clica em Pausar
+// (nunca sozinha ao tocar na tela) ou ao chegar no fim do conteúdo —
+// mas cede o controle pro dedo durante um toque (senão a rolagem
+// automática briga com o gesto de arrastar) e retoma sozinha ao soltar.
 (function () {
   const bar = document.getElementById('autoscroll-bar');
   if (!bar) return;
@@ -42,6 +44,7 @@
   let running = false;
   let rafId = null;
   let lastTime = null;
+  let yielding = false; // true durante um toque na tela — cede o controle pro dedo
 
   function updateSpeedLabel() {
     if (speedLabel) speedLabel.textContent = speed;
@@ -53,7 +56,7 @@
   }
 
   function step(timestamp) {
-    if (!running) return;
+    if (!running || yielding) return;
     if (lastTime !== null) {
       scrollEl.scrollTop += pxPerMs() * (timestamp - lastTime);
       const atBottom = scrollEl.scrollTop + scrollEl.clientHeight >= scrollEl.scrollHeight - 2;
@@ -92,4 +95,25 @@
     updateSpeedLabel();
     try { localStorage.setItem(SPEED_KEY, speed); } catch (e) { /* ok ignorar */ }
   });
+
+  // Escrever scrollTop a cada frame briga com o gesto nativo de arrastar
+  // o dedo (o toque "trava"). Em vez de parar a rolagem automática (só o
+  // botão Pausar deve fazer isso), cede o controle durante o toque e
+  // retoma sozinho de onde a pessoa soltou, sem precisar clicar em nada.
+  function onTouchStart() {
+    if (running) {
+      yielding = true;
+      if (rafId) cancelAnimationFrame(rafId);
+    }
+  }
+  function onTouchEnd() {
+    if (running && yielding) {
+      yielding = false;
+      lastTime = null; // evita um pulo grande — recomeça a contagem de tempo
+      rafId = requestAnimationFrame(step);
+    }
+  }
+  window.addEventListener('touchstart', onTouchStart, { passive: true });
+  window.addEventListener('touchend', onTouchEnd, { passive: true });
+  window.addEventListener('touchcancel', onTouchEnd, { passive: true });
 })();
