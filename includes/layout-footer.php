@@ -2,9 +2,19 @@
   </div><!-- .main -->
 </div><!-- .app -->
 
-<script src="/public/js/app.js"></script>
+<?php
+  // Cache-busting automático: acrescenta ?v=<data de modificação do arquivo>
+  // em scripts locais, pra nunca servir uma versão velha do cache do navegador
+  // depois de um deploy.
+  function asset_v(string $path): string {
+      $full = __DIR__ . '/..' . $path;
+      $v = @filemtime($full);
+      return $path . ($v ? '?v=' . $v : '');
+  }
+?>
+<script src="<?= asset_v('/public/js/app.js') ?>"></script>
 <?php if (isset($extraScriptSrc)): foreach ((array)$extraScriptSrc as $src): ?>
-  <script src="<?= htmlspecialchars($src) ?>"></script>
+  <script src="<?= htmlspecialchars(str_starts_with($src, '/') ? asset_v($src) : $src) ?>"></script>
 <?php endforeach; endif; ?>
 <?php if (isset($extraJs)): ?>
   <script><?= $extraJs ?></script>
