@@ -44,6 +44,9 @@ require_once __DIR__ . '/../../includes/layout.php';
       <span>Tom: <strong data-current-key><?= htmlspecialchars($res['key_tone'] ?: '—') ?></strong></span>
       <button type="button" data-transpose-up title="Subir um tom">+</button>
       <button type="button" data-transpose-reset style="width:auto;padding:0 10px;font-size:12px" title="Voltar ao tom original">Original</button>
+      <span style="width:1px;align-self:stretch;background:var(--border);margin:0 2px"></span>
+      <button type="button" data-font-down title="Diminuir a letra" style="font-size:13px">A−</button>
+      <button type="button" data-font-up title="Aumentar a letra" style="font-size:17px">A+</button>
     </div>
     <?= render_chord_chart($res['chord_sheet_text']) ?>
   </div>

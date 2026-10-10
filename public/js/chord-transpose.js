@@ -64,4 +64,39 @@
       applyTranspose(container, 0);
     });
   });
+
+  // ── Tamanho da letra da cifra (A-/A+), lembrado no navegador de cada pessoa ──
+  const FONT_KEY = 'nd_chord_font_size';
+  const FONT_MIN = 14, FONT_MAX = 30, FONT_STEP = 2, FONT_DEFAULT = 18;
+
+  function getSavedFontSize() {
+    try {
+      const v = parseInt(localStorage.getItem(FONT_KEY), 10);
+      if (!isNaN(v) && v >= FONT_MIN && v <= FONT_MAX) return v;
+    } catch (e) { /* storage bloqueado (modo privado etc.) — usa o padrão */ }
+    return FONT_DEFAULT;
+  }
+
+  function applyFontSize(size) {
+    document.querySelectorAll('.chord-sheet').forEach(function (el) {
+      el.style.fontSize = size + 'px';
+    });
+    try { localStorage.setItem(FONT_KEY, size); } catch (e) { /* ok ignorar */ }
+  }
+
+  let fontSize = getSavedFontSize();
+  if (fontSize !== FONT_DEFAULT) applyFontSize(fontSize);
+
+  document.querySelectorAll('[data-font-up]').forEach(function (btn) {
+    btn.addEventListener('click', function () {
+      fontSize = Math.min(FONT_MAX, fontSize + FONT_STEP);
+      applyFontSize(fontSize);
+    });
+  });
+  document.querySelectorAll('[data-font-down]').forEach(function (btn) {
+    btn.addEventListener('click', function () {
+      fontSize = Math.max(FONT_MIN, fontSize - FONT_STEP);
+      applyFontSize(fontSize);
+    });
+  });
 })();
