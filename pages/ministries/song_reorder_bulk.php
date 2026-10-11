@@ -20,7 +20,7 @@ $ministryId = $db->prepare("SELECT ministry_id FROM ministry_activities WHERE id
 $ministryId->execute([$activityId]);
 $ministryId = $ministryId->fetchColumn();
 
-if (!$ministryId || !auth_can_manage_ministry((int)$ministryId)) {
+if (!$ministryId || !auth_can_reorder_songs($db, $activityId, (int)$ministryId)) {
     http_response_code(403);
     echo json_encode(['ok' => false, 'error' => 'sem permissão']);
     exit;

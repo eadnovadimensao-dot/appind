@@ -26,7 +26,8 @@ require_once __DIR__ . '/../../includes/layout.php';
 
 $pageTitle = $act['title'];
 $isMusic   = (bool)($act['auto_scale_enabled'] ?? false);
-$canManage = auth_can_manage_ministry((int)$act['ministry_id']);
+$canManage  = auth_can_manage_ministry((int)$act['ministry_id']);
+$canReorder = auth_can_reorder_songs($db, $id, (int)$act['ministry_id']);
 $ministryRoles = $isMusic ? get_ministry_roles($db, (int)$act['ministry_id']) : [];
 
 // Escala
@@ -223,7 +224,7 @@ $canDress = auth_can_manage_dress((int)$act['ministry_id']) && (!empty($act['use
     <div id="repertoire-list" data-activity-id="<?= $id ?>">
     <?php foreach ($songs as $songIndex => $sg): ?>
       <div data-song-row data-song-id="<?= $sg['id'] ?>" style="display:flex;align-items:center;gap:10px;padding:10px 18px;border-bottom:1px solid var(--border)">
-        <?php if ($canManage): ?>
+        <?php if ($canReorder): ?>
           <span data-drag-handle title="Arrastar pra reordenar">⠿</span>
         <?php endif; ?>
         <div style="flex:1;min-width:0">
@@ -438,6 +439,6 @@ $canDress = auth_can_manage_dress((int)$act['ministry_id']) && (!empty($act['use
 <?php endif; ?>
 
 <?php
-if ($canManage) $extraScriptSrc = '/public/js/song-reorder.js';
+if ($canReorder) $extraScriptSrc = '/public/js/song-reorder.js';
 require_once __DIR__ . '/../../includes/layout-footer.php';
 ?>

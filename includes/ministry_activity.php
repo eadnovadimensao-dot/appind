@@ -5,6 +5,26 @@
 require_once __DIR__ . '/music_roles.php';
 
 /**
+ * Quem pode reordenar o repertório de uma atividade (só isso — não dá
+ * acesso a adicionar/remover música nem o resto da gestão): o líder do
+ * ministério (auth_can_manage_ministry) sempre, OU quem está escalado
+ * NESSA atividade específica com função de Ministro/Ministra — na hora
+ * do culto, é quem está conduzindo que pode precisar ajustar a ordem
+ * por uma mudança de programação de última hora.
+ */
+function auth_can_reorder_songs(PDO $db, int $activityId, int $ministryId): bool {
+    if (auth_can_manage_ministry($ministryId)) return true;
+    $memberId = auth_member_id();
+    if (!$memberId) return false;
+    $stmt = $db->prepare("
+        SELECT 1 FROM ministry_activity_members
+        WHERE activity_id = ? AND member_id = ? AND role LIKE '%inistr%'
+    ");
+    $stmt->execute([$activityId, $memberId]);
+    return (bool)$stmt->fetchColumn();
+}
+
+/**
  * Data-limite (Y-m-d H:i:s) pro token de confirmação de escala.
  * Ideal: 2 dias antes da atividade. Mas nunca no passado — se a atividade
  * foi criada em cima da hora, dá um mínimo de folga a partir de agora, e
