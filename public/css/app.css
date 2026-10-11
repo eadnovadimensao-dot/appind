@@ -299,8 +299,10 @@ tbody tr:hover td { background: #fafafa; }
 
 /* ── Arrastar pra reordenar repertório ── */
 [data-drag-handle] {
-  cursor: grab; touch-action: none; color: var(--text-muted); font-size: 18px;
-  padding: 4px 6px; flex-shrink: 0; user-select: none;
+  cursor: grab; touch-action: none; color: var(--text-muted); font-size: 24px;
+  flex-shrink: 0; user-select: none;
+  display: flex; align-items: center; justify-content: center;
+  width: 44px; height: 44px; margin: -12px; /* área de toque maior sem empurrar o layout */
 }
 [data-song-row].dragging {
   box-shadow: 0 6px 16px rgba(0,0,0,.15); background: white; border-radius: 8px;
