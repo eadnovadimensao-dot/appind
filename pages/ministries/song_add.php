@@ -13,7 +13,7 @@ if ($activityId && !empty($resourceIds)) {
     $ministryId->execute([$activityId]);
     $ministryId = $ministryId->fetchColumn();
 
-    if ($ministryId && auth_can_manage_ministry((int)$ministryId)) {
+    if ($ministryId && auth_can_manage_repertoire($db, $activityId, (int)$ministryId)) {
         // Só permite anexar músicas que realmente pertencem a esse ministério
         $placeholders = implode(',', array_fill(0, count($resourceIds), '?'));
         $valid = $db->prepare("SELECT id FROM ministry_resources WHERE ministry_id = ? AND type = 'song' AND id IN ($placeholders)");

@@ -5,14 +5,14 @@
 require_once __DIR__ . '/music_roles.php';
 
 /**
- * Quem pode reordenar o repertório de uma atividade (só isso — não dá
- * acesso a adicionar/remover música nem o resto da gestão): o líder do
- * ministério (auth_can_manage_ministry) sempre, OU quem está escalado
- * NESSA atividade específica com função de Ministro/Ministra — na hora
- * do culto, é quem está conduzindo que pode precisar ajustar a ordem
- * por uma mudança de programação de última hora.
+ * Quem pode gerenciar o REPERTÓRIO de uma atividade (reordenar,
+ * adicionar e remover música — não o resto da gestão, tipo escala ou
+ * vestimenta): o líder do ministério (auth_can_manage_ministry) sempre,
+ * OU quem está escalado NESSA atividade específica com função de
+ * Ministro/Ministra — na hora do culto, é quem está conduzindo que pode
+ * precisar ajustar o repertório por uma mudança de última hora.
  */
-function auth_can_reorder_songs(PDO $db, int $activityId, int $ministryId): bool {
+function auth_can_manage_repertoire(PDO $db, int $activityId, int $ministryId): bool {
     if (auth_can_manage_ministry($ministryId)) return true;
     $memberId = auth_member_id();
     if (!$memberId) return false;

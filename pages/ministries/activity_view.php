@@ -27,7 +27,7 @@ require_once __DIR__ . '/../../includes/layout.php';
 $pageTitle = $act['title'];
 $isMusic   = (bool)($act['auto_scale_enabled'] ?? false);
 $canManage  = auth_can_manage_ministry((int)$act['ministry_id']);
-$canReorder = auth_can_reorder_songs($db, $id, (int)$act['ministry_id']);
+$canManageSongs = auth_can_manage_repertoire($db, $id, (int)$act['ministry_id']);
 $ministryRoles = $isMusic ? get_ministry_roles($db, (int)$act['ministry_id']) : [];
 
 // Escala
@@ -224,7 +224,7 @@ $canDress = auth_can_manage_dress((int)$act['ministry_id']) && (!empty($act['use
     <div id="repertoire-list" data-activity-id="<?= $id ?>">
     <?php foreach ($songs as $songIndex => $sg): ?>
       <div data-song-row data-song-id="<?= $sg['id'] ?>" style="display:flex;align-items:center;gap:10px;padding:10px 18px;border-bottom:1px solid var(--border)">
-        <?php if ($canReorder): ?>
+        <?php if ($canManageSongs): ?>
           <span data-drag-handle title="Arrastar pra reordenar">⠿</span>
         <?php endif; ?>
         <div style="flex:1;min-width:0">
@@ -245,7 +245,7 @@ $canDress = auth_can_manage_dress((int)$act['ministry_id']) && (!empty($act['use
             <?php endif; ?>
           </div>
         </div>
-        <?php if ($canManage): ?>
+        <?php if ($canManageSongs): ?>
           <a href="/pages/ministries/song_delete.php?song_id=<?= $sg['id'] ?>&activity_id=<?= $id ?>"
              style="font-size:18px;color:var(--text-muted);text-decoration:none;line-height:1"
              data-confirm="Remover <?= htmlspecialchars($sg['title']) ?> do repertório?">×</a>
@@ -254,7 +254,7 @@ $canDress = auth_can_manage_dress((int)$act['ministry_id']) && (!empty($act['use
     <?php endforeach; ?>
     </div>
   <?php endif; ?>
-  <?php if ($canManage): ?>
+  <?php if ($canManageSongs): ?>
   <div style="padding:12px 18px;background:#fafafa">
     <?php if (empty($songCatalog)): ?>
       <p style="font-size:12px;color:var(--text-muted)">
@@ -439,6 +439,6 @@ $canDress = auth_can_manage_dress((int)$act['ministry_id']) && (!empty($act['use
 <?php endif; ?>
 
 <?php
-if ($canReorder) $extraScriptSrc = '/public/js/song-reorder.js';
+if ($canManageSongs) $extraScriptSrc = '/public/js/song-reorder.js';
 require_once __DIR__ . '/../../includes/layout-footer.php';
 ?>

@@ -13,7 +13,7 @@ if ($songId && $activityId) {
     $ministryId->execute([$activityId]);
     $ministryId = $ministryId->fetchColumn();
 
-    if ($ministryId && auth_can_manage_ministry((int)$ministryId)) {
+    if ($ministryId && auth_can_manage_repertoire($db, $activityId, (int)$ministryId)) {
         // Só apaga o arquivo do disco se for uma música "avulsa" antiga (sem resource_id) —
         // músicas do catálogo (resource_id preenchido) têm o arquivo compartilhado com o
         // catálogo em Materiais e outras atividades, então aqui só desvincula.
