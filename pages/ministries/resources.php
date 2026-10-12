@@ -269,14 +269,23 @@ Grande     é o Senhor</div>
     </div>
   </div>
 <?php else: ?>
+  <div style="margin-bottom:18px">
+    <input type="text" id="resource-search" class="form-control" placeholder="🔎 Buscar por título ou tema (ex: comunhão, entrega, gratidão…)">
+  </div>
+  <p id="resource-search-empty" style="display:none;color:var(--text-muted);font-size:13px;margin-bottom:16px">Nenhum material encontrado pra essa busca.</p>
   <?php foreach ($grouped as $category => $items): ?>
-    <div style="margin-bottom:24px">
+    <div class="resource-category" style="margin-bottom:24px">
       <p style="font-weight:500;font-size:14px;margin-bottom:10px"><?= htmlspecialchars($category) ?>
         <span style="color:var(--text-muted);font-weight:400">(<?= count($items) ?>)</span>
       </p>
       <div class="resource-grid">
         <?php foreach ($items as $r): ?>
-          <div class="resource-item">
+          <?php
+            $searchBlob = trim(implode(' ', array_filter([
+                $r['title'], $r['theme_main'], $r['theme_secondary'], $r['central_message'], $r['description'],
+            ])));
+          ?>
+          <div class="resource-item" data-search="<?= htmlspecialchars($searchBlob) ?>">
             <div style="display:flex;align-items:flex-start;gap:12px">
               <div style="font-size:22px;flex-shrink:0"><?= resource_icon($r['file_name'], $r['external_url']) ?></div>
               <div style="flex:1;min-width:0">
@@ -304,11 +313,14 @@ Grande     é o Senhor</div>
                   <div style="font-size:12px;color:var(--text-muted);margin-top:2px"><?= nl2br(htmlspecialchars($r['description'])) ?></div>
                 <?php endif; ?>
                 <?php if ($r['theme_main'] || $r['theme_secondary']): ?>
-                  <div style="font-size:11px;color:var(--text-muted);margin-top:4px">
+                  <div style="margin-top:4px;display:flex;align-items:center;gap:4px;flex-wrap:wrap">
                     🏷️
-                    <?php if ($r['theme_main']): ?><strong><?= htmlspecialchars($r['theme_main']) ?></strong><?php endif; ?>
-                    <?php if ($r['theme_main'] && $r['theme_secondary']): ?> · <?php endif; ?>
-                    <?= htmlspecialchars($r['theme_secondary'] ?? '') ?>
+                    <?php if ($r['theme_main']): ?>
+                      <button type="button" class="theme-chip theme-chip-main" data-theme-chip="<?= htmlspecialchars($r['theme_main']) ?>"><?= htmlspecialchars($r['theme_main']) ?></button>
+                    <?php endif; ?>
+                    <?php foreach (array_filter(array_map('trim', explode(',', $r['theme_secondary'] ?? ''))) as $t): ?>
+                      <button type="button" class="theme-chip" data-theme-chip="<?= htmlspecialchars($t) ?>"><?= htmlspecialchars($t) ?></button>
+                    <?php endforeach; ?>
                   </div>
                 <?php endif; ?>
                 <?php if ($r['central_message']): ?>
@@ -353,4 +365,6 @@ Grande     é o Senhor</div>
   <?php endforeach; ?>
 <?php endif; ?>
 
-<?php require_once __DIR__ . '/../../includes/layout-footer.php'; ?>
+<?php
+$extraScriptSrc = '/public/js/resource-search.js';
+require_once __DIR__ . '/../../includes/layout-footer.php'; ?>

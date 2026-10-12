@@ -363,6 +363,13 @@ tbody tr:hover td { background: #fafafa; }
   background: var(--card-bg); border-radius: var(--card-radius); box-shadow: var(--card-shadow);
   padding: 14px 16px; display: flex; flex-direction: column;
 }
+.theme-chip {
+  font-size: 11px; color: var(--text-muted); background: var(--content-bg); border: none;
+  border-radius: 20px; padding: 2px 9px; cursor: pointer; font-family: inherit;
+}
+.theme-chip:hover { background: var(--border); color: var(--text); }
+.theme-chip-main { font-weight: 600; color: var(--text); }
+.rs-hidden { display: none !important; }
 
 /* ── Arrastar pra reordenar repertório ── */
 [data-drag-handle] {
