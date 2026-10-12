@@ -71,6 +71,13 @@ try {
 } catch (\Throwable $e) {
     error_log('cron repertório: ' . $e->getMessage());
 }
+// 4a) Lembra o Ministro de Louvor escalado pro próximo domingo de montar o repertório
+try {
+    require_once __DIR__ . '/includes/ministry_activity.php';
+    queue_repertoire_builder_reminders_due($db);
+} catch (\Throwable $e) {
+    error_log('cron lembrete ministro repertório: ' . $e->getMessage());
+}
 // 4b) Cobra quem não respondeu a escala e avisa o líder depois que o prazo vence
 try {
     require_once __DIR__ . '/includes/ministry_activity.php';

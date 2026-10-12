@@ -907,6 +907,72 @@ function queue_repertoire_reminders_due(PDO $db): void {
     }
 }
 
+// ── Lembrete pro Ministro de Louvor montar o repertório do próximo culto ──
+
+const REPERTOIRE_BUILDER_REMINDER_HOUR          = 10; // manhã de segunda em diante
+const REPERTOIRE_BUILDER_REMINDER_FOLLOWUP_HOUR = 16; // reforço à tarde, se ainda estiver vazio
+
+/**
+ * Chamada pelo cron a cada minuto. Avisa quem está escalado como Ministro(a)
+ * de Louvor no próximo culto de domingo que a montagem do repertório é
+ * responsabilidade dele(a) — um lembrete a partir de ~10h, e um reforço a
+ * partir de ~16h se o repertório continuar vazio. Para de mandar assim que
+ * alguma música for adicionada.
+ */
+function queue_repertoire_builder_reminders_due(PDO $db): void {
+    if ((int)date('N') === 7) return; // não faz sentido lembrar no próprio domingo
+
+    $hour = (int)date('G');
+    if ($hour < REPERTOIRE_BUILDER_REMINDER_HOUR) return;
+
+    $nextSunday = date('Y-m-d', strtotime('next Sunday'));
+
+    $rows = $db->prepare("
+        SELECT mam.id AS mam_id, mam.repertoire_prompt_sent_at, mam.repertoire_prompt_followup_sent_at,
+               ma.id AS activity_id, ma.title, ma.activity_date, ma.time_start, ma.church_id,
+               mn.name AS ministry_name, m.name AS member_name, m.phone
+        FROM ministry_activity_members mam
+        JOIN ministry_activities ma ON ma.id = mam.activity_id
+        JOIN ministries mn ON mn.id = ma.ministry_id
+        JOIN members m ON m.id = mam.member_id
+        WHERE mn.is_music_ministry = 1
+          AND ma.activity_type = 'culto'
+          AND ma.status = 'scheduled'
+          AND ma.activity_date = ?
+          AND mam.role LIKE '%inistr%'
+          AND mam.status != 'refused'
+          AND m.phone IS NOT NULL AND m.phone != ''
+          AND NOT EXISTS (SELECT 1 FROM ministry_activity_songs WHERE activity_id = ma.id)
+    ");
+    $rows->execute([$nextSunday]);
+    $rows = $rows->fetchAll();
+
+    foreach ($rows as $r) {
+        $first     = explode(' ', trim($r['member_name']))[0];
+        $timeLabel = $r['time_start'] ? ' às ' . substr($r['time_start'], 0, 5) : '';
+        $link      = APP_URL . '/pages/ministries/activity_view.php?id=' . $r['activity_id'];
+
+        if (!$r['repertoire_prompt_sent_at']) {
+            // Reserva antes de enfileirar: duas execuções seguidas não duplicam o lembrete
+            $claim = $db->prepare("UPDATE ministry_activity_members SET repertoire_prompt_sent_at = NOW() WHERE id = ? AND repertoire_prompt_sent_at IS NULL");
+            $claim->execute([$r['mam_id']]);
+            if ($claim->rowCount() !== 1) continue;
+
+            $msg = "🎵 *Você é o Ministro(a) de Louvor do próximo culto*\n\nOlá, {$first}! Você está escalado(a) em *{$r['title']}* ({$r['ministry_name']}), "
+                 . date_pt($r['activity_date']) . $timeLabel . ", e a montagem do repertório é com você.\n\nAcesse quando puder:\n" . $link;
+            queue_whatsapp($r['phone'], $msg, (int)$r['church_id'], null, 0, (int)$r['activity_id'], 'repertoire_builder_reminder');
+        } elseif ($hour >= REPERTOIRE_BUILDER_REMINDER_FOLLOWUP_HOUR && !$r['repertoire_prompt_followup_sent_at']) {
+            $claim = $db->prepare("UPDATE ministry_activity_members SET repertoire_prompt_followup_sent_at = NOW() WHERE id = ? AND repertoire_prompt_followup_sent_at IS NULL");
+            $claim->execute([$r['mam_id']]);
+            if ($claim->rowCount() !== 1) continue;
+
+            $msg = "🎵 *Repertório ainda pendente*\n\nOlá, {$first}! O repertório de *{$r['title']}* ({$r['ministry_name']}), "
+                 . date_pt($r['activity_date']) . $timeLabel . ", ainda não foi montado. Dá uma olhada quando puder:\n\n" . $link;
+            queue_whatsapp($r['phone'], $msg, (int)$r['church_id'], null, 0, (int)$r['activity_id'], 'repertoire_builder_reminder');
+        }
+    }
+}
+
 // ── Cobrança de escalados que não responderam ──
 
 const SCALE_REMINDER_MAX          = 2;   // lembretes por pessoa e atividade
