@@ -10,15 +10,16 @@
   if (!AudioCtx) return;
 
   document.querySelectorAll('[data-metronome]').forEach(function (widget) {
-    const toggleBtn   = widget.querySelector('[data-metronome-toggle]');
-    const beatDot     = widget.querySelector('[data-metronome-beat]');
-    const bpmValue    = widget.querySelector('[data-metronome-bpm-value]');
-    const bpmUp       = widget.querySelector('[data-metronome-bpm-up]');
-    const bpmDown     = widget.querySelector('[data-metronome-bpm-down]');
-    const tapBtn      = widget.querySelector('[data-metronome-tap]');
-    const beatsInput  = widget.querySelector('[data-metronome-beats]');
-    const volumeInput = widget.querySelector('[data-metronome-volume]');
-    const countInBox  = widget.querySelector('[data-metronome-countin]');
+    const toggleBtn    = widget.querySelector('[data-metronome-toggle]');
+    const pulsesEl      = widget.querySelector('[data-metronome-pulses]');
+    const beatNumberEl  = widget.querySelector('[data-metronome-beat-number]');
+    const bpmValue      = widget.querySelector('[data-metronome-bpm-value]');
+    const bpmUp         = widget.querySelector('[data-metronome-bpm-up]');
+    const bpmDown       = widget.querySelector('[data-metronome-bpm-down]');
+    const tapBtn        = widget.querySelector('[data-metronome-tap]');
+    const beatsInput    = widget.querySelector('[data-metronome-beats]');
+    const volumeInput   = widget.querySelector('[data-metronome-volume]');
+    const countInBox    = widget.querySelector('[data-metronome-countin]');
     if (!toggleBtn) return;
 
     let bpm = parseInt(widget.dataset.bpm, 10) || 120;
@@ -29,6 +30,7 @@
 
     let beatsPerMeasure = beatsInput ? (parseInt(beatsInput.value, 10) || 4) : 4;
     let volume = volumeInput ? (parseInt(volumeInput.value, 10) / 100) * 0.6 : 0.35;
+    let pulseDots = [];
 
     let audioCtx = null;
     let isPlaying = false;
@@ -36,6 +38,21 @@
     let nextNoteTime = 0;
     let timerId = null;
     let countInRemaining = 0;
+
+    // Desenha um "pulso" (bolinha) por tempo do compasso — o primeiro
+    // sempre marcado como acento, pra mostrar visualmente onde cai o "1".
+    function buildPulses() {
+      if (!pulsesEl) return;
+      pulsesEl.innerHTML = '';
+      pulseDots = [];
+      for (let i = 0; i < beatsPerMeasure; i++) {
+        const dot = document.createElement('span');
+        dot.className = 'metronome-pulse' + (i === 0 ? ' accent' : '');
+        pulsesEl.appendChild(dot);
+        pulseDots.push(dot);
+      }
+    }
+    buildPulses();
 
     function scheduleNote(beatNumber, time, isCountIn) {
       const osc = audioCtx.createOscillator();
@@ -48,13 +65,15 @@
       osc.start(time);
       osc.stop(time + 0.05);
 
-      if (beatDot) {
-        const delayMs = Math.max(0, (time - audioCtx.currentTime) * 1000);
-        setTimeout(function () {
-          beatDot.classList.add('active');
-          setTimeout(function () { beatDot.classList.remove('active'); }, 90);
-        }, delayMs);
-      }
+      const delayMs = Math.max(0, (time - audioCtx.currentTime) * 1000);
+      setTimeout(function () {
+        if (beatNumberEl) beatNumberEl.textContent = (beatNumber + 1) + ' / ' + beatsPerMeasure;
+        const dot = pulseDots[beatNumber];
+        if (dot) {
+          dot.classList.add('active');
+          setTimeout(function () { dot.classList.remove('active'); }, 90);
+        }
+      }, delayMs);
     }
 
     function advanceNote() {
@@ -102,7 +121,8 @@
       toggleBtn.textContent = '▶';
       widget.classList.remove('playing');
       widget.classList.remove('counting-in');
-      if (beatDot) beatDot.classList.remove('active');
+      pulseDots.forEach(function (d) { d.classList.remove('active'); });
+      if (beatNumberEl) beatNumberEl.textContent = '';
     }
 
     toggleBtn.addEventListener('click', function () {
@@ -123,6 +143,8 @@
         const v = parseInt(beatsInput.value, 10);
         beatsPerMeasure = (v >= 1 && v <= 16) ? v : 4;
         beatsInput.value = beatsPerMeasure;
+        currentBeat = 0;
+        buildPulses();
       });
     }
 

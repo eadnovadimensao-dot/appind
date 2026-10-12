@@ -109,7 +109,8 @@ require_once __DIR__ . '/../../includes/layout.php';
   <div class="metronome" data-metronome data-bpm="<?= (int)($sg['bpm'] ?: 120) ?>">
     <div class="metronome-row">
       <button type="button" data-metronome-toggle title="Tocar/parar metrônomo">▶</button>
-      <span class="metronome-beat" data-metronome-beat></span>
+      <div class="metronome-pulses" data-metronome-pulses></div>
+      <span class="metronome-beat-number" data-metronome-beat-number></span>
       <div class="metronome-bpm">
         <button type="button" data-metronome-bpm-down>−</button>
         <span class="metronome-bpm-value" data-metronome-bpm-value><?= (int)($sg['bpm'] ?: 120) ?></span>
