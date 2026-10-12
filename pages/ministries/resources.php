@@ -219,6 +219,22 @@ Grande     é o Senhor</div>
         </details>
       </div>
     </div>
+    <div id="theme-group" style="display:none">
+      <div class="form-row">
+        <div class="form-group">
+          <label class="form-label">Tema principal <span style="font-weight:400;color:var(--text-muted)">(opcional)</span></label>
+          <input type="text" name="theme_main" class="form-control" placeholder="Ex: Igreja e unidade">
+        </div>
+        <div class="form-group">
+          <label class="form-label">Temas secundários <span style="font-weight:400;color:var(--text-muted)">(opcional, separados por vírgula)</span></label>
+          <input type="text" name="theme_secondary" class="form-control" placeholder="Ex: Comunhão, serviço, reino de Deus">
+        </div>
+      </div>
+      <div class="form-group">
+        <label class="form-label">Mensagem central <span style="font-weight:400;color:var(--text-muted)">(opcional)</span></label>
+        <textarea name="central_message" class="form-control" rows="2" placeholder="Ex: A igreja como um só corpo, chamado a expressar o amor de Deus e cumprir sua vontade."></textarea>
+      </div>
+    </div>
     <button type="submit" class="btn btn-primary">Salvar material</button>
   </form>
   <script>
@@ -228,6 +244,7 @@ Grande     é o Senhor</div>
       document.getElementById('materials-url-group').style.display = isSong ? 'block' : 'none';
       document.getElementById('capo-bpm-group').style.display = isSong ? 'flex' : 'none';
       document.getElementById('chord-sheet-group').style.display = isSong ? 'block' : 'none';
+      document.getElementById('theme-group').style.display = isSong ? 'block' : 'none';
       document.getElementById('external-url-label').textContent = isSong ? 'Link de referência (YouTube)' : 'ou link externo';
       document.getElementById('external-url-input').placeholder = isSong ? 'https://youtube.com/…' : 'https://…';
       document.getElementById('external-url-hint').textContent = isSong
@@ -284,6 +301,17 @@ Grande     é o Senhor</div>
               </div>
               <?php if ($r['description']): ?>
                 <div style="font-size:12px;color:var(--text-muted);margin-top:2px"><?= nl2br(htmlspecialchars($r['description'])) ?></div>
+              <?php endif; ?>
+              <?php if ($r['theme_main'] || $r['theme_secondary']): ?>
+                <div style="font-size:11px;color:var(--text-muted);margin-top:4px">
+                  🏷️
+                  <?php if ($r['theme_main']): ?><strong><?= htmlspecialchars($r['theme_main']) ?></strong><?php endif; ?>
+                  <?php if ($r['theme_main'] && $r['theme_secondary']): ?> · <?php endif; ?>
+                  <?= htmlspecialchars($r['theme_secondary'] ?? '') ?>
+                </div>
+              <?php endif; ?>
+              <?php if ($r['central_message']): ?>
+                <div style="font-size:11px;color:var(--text-muted);margin-top:2px;font-style:italic">"<?= htmlspecialchars($r['central_message']) ?>"</div>
               <?php endif; ?>
               <?php if ($capoLabel = capo_shape_label($r['key_tone'], $r['capo'])): ?>
                 <div style="font-size:12px;color:var(--text-muted);margin-top:2px">🎸 <?= htmlspecialchars($capoLabel) ?></div>

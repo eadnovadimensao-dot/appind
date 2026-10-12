@@ -32,6 +32,9 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     $capo         = ($type === 'song' && trim($_POST['capo'] ?? '') !== '') ? max(0, min(11, (int)$_POST['capo'])) : null;
     $bpm          = ($type === 'song' && trim($_POST['bpm'] ?? '') !== '') ? max(0, (int)$_POST['bpm']) : null;
     $timeSig      = ($type === 'song' && trim($_POST['time_signature'] ?? '') !== '') ? trim($_POST['time_signature']) : null;
+    $themeMain    = ($type === 'song') ? (trim($_POST['theme_main'] ?? '') ?: null) : null;
+    $themeSec     = ($type === 'song') ? (trim($_POST['theme_secondary'] ?? '') ?: null) : null;
+    $centralMsg   = ($type === 'song') ? (trim($_POST['central_message'] ?? '') ?: null) : null;
     $removeFile   = isset($_POST['remove_file']);
 
     if ($title === '') $errors[] = 'Dê um título pro material.';
@@ -91,11 +94,13 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 
         $db->prepare("
             UPDATE ministry_resources SET
-              type=?, title=?, key_tone=?, chord_sheet_text=?, capo=?, bpm=?, time_signature=?, category=?, description=?,
+              type=?, title=?, key_tone=?, chord_sheet_text=?, capo=?, bpm=?, time_signature=?,
+              theme_main=?, theme_secondary=?, central_message=?, category=?, description=?,
               file_path=?, file_name=?, file_size=?, external_url=?, materials_url=?
             WHERE id=?
         ")->execute([
-            $type, $title, $keyTone, $chordSheet, $capo, $bpm, $timeSig, $category, $description ?: null,
+            $type, $title, $keyTone, $chordSheet, $capo, $bpm, $timeSig,
+            $themeMain, $themeSec, $centralMsg, $category, $description ?: null,
             $filePath, $fileName, $fileSize, $externalUrl ?: null, $materialsUrl ?: null,
             $resId,
         ]);
@@ -105,6 +110,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     // Reexibe o formulário com o que a pessoa já tinha digitado
     $res = array_merge($res, ['type' => $type, 'title' => $title, 'key_tone' => $keyTone,
         'chord_sheet_text' => $chordSheet, 'capo' => $capo, 'bpm' => $bpm, 'time_signature' => $timeSig,
+        'theme_main' => $themeMain, 'theme_secondary' => $themeSec, 'central_message' => $centralMsg,
         'category' => $category, 'description' => $description, 'external_url' => $externalUrl,
         'materials_url' => $materialsUrl]);
 }
@@ -233,6 +239,23 @@ Grande     é o Senhor</div>
       </div>
     </div>
 
+    <div id="theme-group" style="<?= $res['type'] === 'song' ? '' : 'display:none' ?>">
+      <div class="form-row">
+        <div class="form-group">
+          <label class="form-label">Tema principal <span style="font-weight:400;color:var(--text-muted)">(opcional)</span></label>
+          <input type="text" name="theme_main" class="form-control" placeholder="Ex: Igreja e unidade" value="<?= htmlspecialchars($res['theme_main'] ?? '') ?>">
+        </div>
+        <div class="form-group">
+          <label class="form-label">Temas secundários <span style="font-weight:400;color:var(--text-muted)">(opcional, separados por vírgula)</span></label>
+          <input type="text" name="theme_secondary" class="form-control" placeholder="Ex: Comunhão, serviço, reino de Deus" value="<?= htmlspecialchars($res['theme_secondary'] ?? '') ?>">
+        </div>
+      </div>
+      <div class="form-group">
+        <label class="form-label">Mensagem central <span style="font-weight:400;color:var(--text-muted)">(opcional)</span></label>
+        <textarea name="central_message" class="form-control" rows="2" placeholder="Ex: A igreja como um só corpo, chamado a expressar o amor de Deus e cumprir sua vontade."><?= htmlspecialchars($res['central_message'] ?? '') ?></textarea>
+      </div>
+    </div>
+
     <div style="display:flex;gap:10px;margin-top:8px">
       <button type="submit" class="btn btn-primary">Salvar alterações</button>
       <a href="/pages/ministries/resources.php?ministry_id=<?= $res['ministry_id'] ?>" class="btn btn-secondary">Cancelar</a>
@@ -248,6 +271,7 @@ document.getElementById('resource-type').addEventListener('change', function() {
   document.getElementById('materials-url-group').style.display = isSong ? 'block' : 'none';
   document.getElementById('capo-bpm-group').style.display = isSong ? 'flex' : 'none';
   document.getElementById('chord-sheet-group').style.display = isSong ? 'block' : 'none';
+  document.getElementById('theme-group').style.display = isSong ? 'block' : 'none';
   document.getElementById('external-url-label').textContent = isSong ? 'Link de referência (YouTube)' : 'Link externo';
 });
 JS;

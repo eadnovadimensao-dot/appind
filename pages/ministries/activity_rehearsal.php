@@ -27,7 +27,8 @@ $songs = $db->prepare("
            COALESCE(r.external_url, mas.reference_link) AS reference_link,
            r.materials_url,
            COALESCE(r.file_path, mas.file_path) AS file_path,
-           r.chord_sheet_text, r.capo, r.bpm, r.time_signature
+           r.chord_sheet_text, r.capo, r.bpm, r.time_signature,
+           r.theme_main, r.theme_secondary, r.central_message
     FROM ministry_activity_songs mas
     LEFT JOIN ministry_resources r ON r.id = mas.resource_id
     WHERE mas.activity_id = ?
@@ -99,6 +100,19 @@ require_once __DIR__ . '/../../includes/layout.php';
       </div>
     </div>
   </div>
+
+  <?php if ($sg['theme_main'] || $sg['theme_secondary'] || $sg['central_message']): ?>
+    <div style="background:var(--content-bg);border-radius:8px;padding:10px 12px;margin-bottom:12px;font-size:12px">
+      <?php if ($sg['theme_main']): ?>
+        <div><strong>Tema:</strong> <?= htmlspecialchars($sg['theme_main']) ?><?= $sg['theme_secondary'] ? ' · ' . htmlspecialchars($sg['theme_secondary']) : '' ?></div>
+      <?php elseif ($sg['theme_secondary']): ?>
+        <div><strong>Temas:</strong> <?= htmlspecialchars($sg['theme_secondary']) ?></div>
+      <?php endif; ?>
+      <?php if ($sg['central_message']): ?>
+        <div style="margin-top:4px;color:var(--text-muted);font-style:italic">"<?= htmlspecialchars($sg['central_message']) ?>"</div>
+      <?php endif; ?>
+    </div>
+  <?php endif; ?>
 
   <?php if ($capoLabel = capo_shape_label($sg['key_tone'], $sg['capo'])): ?>
     <div style="font-size:12px;color:var(--text-muted);margin-bottom:12px">

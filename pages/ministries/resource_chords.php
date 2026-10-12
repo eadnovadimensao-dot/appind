@@ -37,6 +37,19 @@ require_once __DIR__ . '/../../includes/layout.php';
     <?php if ($res['capo']): ?><span class="badge badge-gray">Capo <?= (int)$res['capo'] ?></span><?php endif; ?>
     <?php if ($res['bpm']): ?><span class="badge badge-gray"><?= (int)$res['bpm'] ?> BPM</span><?php endif; ?>
   </div>
+  <?php if ($res['theme_main'] || $res['theme_secondary'] || $res['central_message']): ?>
+    <div style="background:var(--content-bg);border-radius:8px;padding:10px 12px;margin-bottom:14px;font-size:12px">
+      <?php if ($res['theme_main']): ?>
+        <div><strong>Tema:</strong> <?= htmlspecialchars($res['theme_main']) ?><?= $res['theme_secondary'] ? ' · ' . htmlspecialchars($res['theme_secondary']) : '' ?></div>
+      <?php elseif ($res['theme_secondary']): ?>
+        <div><strong>Temas:</strong> <?= htmlspecialchars($res['theme_secondary']) ?></div>
+      <?php endif; ?>
+      <?php if ($res['central_message']): ?>
+        <div style="margin-top:4px;color:var(--text-muted);font-style:italic">"<?= htmlspecialchars($res['central_message']) ?>"</div>
+      <?php endif; ?>
+    </div>
+  <?php endif; ?>
+
   <?php if ($capoLabel = capo_shape_label($res['key_tone'], $res['capo'])): ?>
     <div style="font-size:12px;color:var(--text-muted);margin-bottom:14px">
       🎸 <?= htmlspecialchars($capoLabel) ?> — selecione a casa no seletor de capotraste aqui embaixo pra ver.
