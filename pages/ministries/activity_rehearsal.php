@@ -49,7 +49,7 @@ $sg = $songs[$i];
 $modeLabel      = $act['activity_type'] === 'culto' ? 'Modo Culto' : 'Modo Ensaio';
 $pageTitle      = $modeLabel . ' · ' . $act['title'];
 $activePage     = 'ministries';
-$extraScriptSrc = ['/public/js/chord-transpose.js', '/public/js/autoscroll.js'];
+$extraScriptSrc = ['/public/js/chord-transpose.js', '/public/js/autoscroll.js', '/public/js/metronome.js'];
 require_once __DIR__ . '/../../includes/layout.php';
 ?>
 
@@ -105,6 +105,17 @@ require_once __DIR__ . '/../../includes/layout.php';
       🎸 <?= htmlspecialchars($capoLabel) ?> — selecione a casa no seletor de capotraste aqui embaixo pra ver.
     </div>
   <?php endif; ?>
+
+  <div class="metronome" data-metronome data-bpm="<?= (int)($sg['bpm'] ?: 120) ?>">
+    <button type="button" data-metronome-toggle title="Tocar/parar metrônomo">▶</button>
+    <span class="metronome-beat" data-metronome-beat></span>
+    <div class="metronome-bpm">
+      <button type="button" data-metronome-bpm-down>−</button>
+      <span class="metronome-bpm-value" data-metronome-bpm-value><?= (int)($sg['bpm'] ?: 120) ?></span>
+      <button type="button" data-metronome-bpm-up>+</button>
+    </div>
+    <span class="metronome-label">BPM<?= $sg['bpm'] ? '' : ' (ajuste — essa música ainda não tem BPM salvo)' ?></span>
+  </div>
 
   <?php if (!$sg['reference_link'] && !$sg['file_path'] && !$sg['materials_url'] && !$sg['chord_sheet_text']): ?>
     <p style="font-size:13px;color:var(--text-muted)">Sem material cadastrado pra essa música.</p>

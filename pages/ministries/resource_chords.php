@@ -21,7 +21,7 @@ if (!$res['chord_sheet_text']) { header('Location: /pages/ministries/resources.p
 
 $pageTitle  = 'Cifra · ' . $res['title'];
 $activePage = 'ministries';
-$extraScriptSrc = ['/public/js/chord-transpose.js', '/public/js/autoscroll.js'];
+$extraScriptSrc = ['/public/js/chord-transpose.js', '/public/js/autoscroll.js', '/public/js/metronome.js'];
 require_once __DIR__ . '/../../includes/layout.php';
 ?>
 
@@ -42,6 +42,18 @@ require_once __DIR__ . '/../../includes/layout.php';
       🎸 <?= htmlspecialchars($capoLabel) ?> — selecione a casa no seletor de capotraste aqui embaixo pra ver.
     </div>
   <?php endif; ?>
+
+  <div class="metronome" data-metronome data-bpm="<?= (int)($res['bpm'] ?: 120) ?>">
+    <button type="button" data-metronome-toggle title="Tocar/parar metrônomo">▶</button>
+    <span class="metronome-beat" data-metronome-beat></span>
+    <div class="metronome-bpm">
+      <button type="button" data-metronome-bpm-down>−</button>
+      <span class="metronome-bpm-value" data-metronome-bpm-value><?= (int)($res['bpm'] ?: 120) ?></span>
+      <button type="button" data-metronome-bpm-up>+</button>
+    </div>
+    <span class="metronome-label">BPM<?= $res['bpm'] ? '' : ' (ajuste — essa música ainda não tem BPM salvo)' ?></span>
+  </div>
+
   <div data-chord-sheet data-offset="0">
     <div class="chord-controls">
       <button type="button" data-transpose-down title="Baixar um tom">−</button>
