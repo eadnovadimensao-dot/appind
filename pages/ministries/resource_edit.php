@@ -1,6 +1,7 @@
 <?php
 require_once __DIR__ . "/../../config/database.php";
 require_once __DIR__ . "/../../includes/auth.php";
+require_once __DIR__ . "/../../includes/chords.php";
 auth_check();
 
 $db    = db();
@@ -30,6 +31,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     $chordSheet   = trim($_POST['chord_sheet_text'] ?? '') ?: null;
     $capo         = ($type === 'song' && trim($_POST['capo'] ?? '') !== '') ? max(0, min(11, (int)$_POST['capo'])) : null;
     $bpm          = ($type === 'song' && trim($_POST['bpm'] ?? '') !== '') ? max(0, (int)$_POST['bpm']) : null;
+    $timeSig      = ($type === 'song' && trim($_POST['time_signature'] ?? '') !== '') ? trim($_POST['time_signature']) : null;
     $removeFile   = isset($_POST['remove_file']);
 
     if ($title === '') $errors[] = 'Dê um título pro material.';
@@ -89,11 +91,11 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 
         $db->prepare("
             UPDATE ministry_resources SET
-              type=?, title=?, key_tone=?, chord_sheet_text=?, capo=?, bpm=?, category=?, description=?,
+              type=?, title=?, key_tone=?, chord_sheet_text=?, capo=?, bpm=?, time_signature=?, category=?, description=?,
               file_path=?, file_name=?, file_size=?, external_url=?, materials_url=?
             WHERE id=?
         ")->execute([
-            $type, $title, $keyTone, $chordSheet, $capo, $bpm, $category, $description ?: null,
+            $type, $title, $keyTone, $chordSheet, $capo, $bpm, $timeSig, $category, $description ?: null,
             $filePath, $fileName, $fileSize, $externalUrl ?: null, $materialsUrl ?: null,
             $resId,
         ]);
@@ -102,7 +104,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     }
     // Reexibe o formulário com o que a pessoa já tinha digitado
     $res = array_merge($res, ['type' => $type, 'title' => $title, 'key_tone' => $keyTone,
-        'chord_sheet_text' => $chordSheet, 'capo' => $capo, 'bpm' => $bpm,
+        'chord_sheet_text' => $chordSheet, 'capo' => $capo, 'bpm' => $bpm, 'time_signature' => $timeSig,
         'category' => $category, 'description' => $description, 'external_url' => $externalUrl,
         'materials_url' => $materialsUrl]);
 }
@@ -152,6 +154,16 @@ require_once __DIR__ . '/../../includes/layout.php';
       <div class="form-group">
         <label class="form-label">BPM <span style="font-weight:400;color:var(--text-muted)">(andamento, opcional)</span></label>
         <input type="number" name="bpm" class="form-control" min="0" placeholder="Ex: 120" value="<?= htmlspecialchars($res['bpm'] ?? '') ?>">
+      </div>
+      <div class="form-group">
+        <label class="form-label">Divisão rítmica <span style="font-weight:400;color:var(--text-muted)">(compasso, opcional)</span></label>
+        <select name="time_signature" class="form-control">
+          <option value="">—</option>
+          <?php foreach (TIME_SIGNATURE_OPTIONS as $ts): ?>
+            <option value="<?= $ts ?>" <?= ($res['time_signature'] ?? '') === $ts ? 'selected' : '' ?>><?= $ts ?></option>
+          <?php endforeach; ?>
+        </select>
+        <div style="font-size:11px;color:var(--text-muted);margin-top:4px">O metrônomo já abre configurado com esse compasso.</div>
       </div>
     </div>
     <div class="form-row">

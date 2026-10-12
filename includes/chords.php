@@ -56,6 +56,34 @@ function capo_shape_label(?string $keyTone, ?int $capo): ?string {
 }
 
 /**
+ * Quantos tempos tem um compasso como "6/8" ou "3/4" — pega o numerador,
+ * que é como o metrônomo deve contar (acento no 1º tempo de cada grupo).
+ */
+function time_signature_beats(?string $timeSignature): int {
+    if ($timeSignature && preg_match('/^(\d+)/', $timeSignature, $m)) {
+        $beats = (int)$m[1];
+        if ($beats >= 1 && $beats <= 16) return $beats;
+    }
+    return 4;
+}
+
+const TIME_SIGNATURE_OPTIONS = ['4/4', '3/4', '2/4', '6/8', '12/8'];
+
+/**
+ * <option>s do seletor de compasso do metrônomo — valor é a quantidade
+ * de tempos (o que o JS usa pra acentuar o 1º tempo de cada grupo).
+ */
+function render_metronome_beats_options(?string $current): string {
+    $current = $current ?: '4/4';
+    $html = '';
+    foreach (TIME_SIGNATURE_OPTIONS as $ts) {
+        $sel = $ts === $current ? ' selected' : '';
+        $html .= '<option value="' . time_signature_beats($ts) . '"' . $sel . '>' . $ts . '</option>';
+    }
+    return $html;
+}
+
+/**
  * <option>s do seletor de capotraste (0 a 11), pra usar em qualquer
  * música — não depende de nenhuma sugestão cadastrada.
  */

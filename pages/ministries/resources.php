@@ -154,6 +154,16 @@ function resource_size(?int $bytes): string {
         <label class="form-label">BPM <span style="font-weight:400;color:var(--text-muted)">(andamento, opcional)</span></label>
         <input type="number" name="bpm" class="form-control" min="0" placeholder="Ex: 120">
       </div>
+      <div class="form-group">
+        <label class="form-label">Divisão rítmica <span style="font-weight:400;color:var(--text-muted)">(compasso, opcional)</span></label>
+        <select name="time_signature" class="form-control">
+          <option value="">—</option>
+          <?php foreach (TIME_SIGNATURE_OPTIONS as $ts): ?>
+            <option value="<?= $ts ?>"><?= $ts ?></option>
+          <?php endforeach; ?>
+        </select>
+        <div style="font-size:11px;color:var(--text-muted);margin-top:4px">O metrônomo já abre configurado com esse compasso.</div>
+      </div>
     </div>
     <div class="form-row">
       <div class="form-group">
@@ -264,6 +274,9 @@ Grande     é o Senhor</div>
                 <?php endif; ?>
                 <?php if ($r['bpm']): ?>
                   <span class="badge badge-gray" style="font-size:10px"><?= (int)$r['bpm'] ?> BPM</span>
+                <?php endif; ?>
+                <?php if ($r['time_signature']): ?>
+                  <span class="badge badge-gray" style="font-size:10px"><?= htmlspecialchars($r['time_signature']) ?></span>
                 <?php endif; ?>
                 <?php if ($r['type'] === 'song' && ($titleCounts[mb_strtolower(trim($r['title']))] ?? 0) > 1): ?>
                   <span class="badge badge-amber" style="font-size:10px" title="Existe mais de uma música com esse título nesse ministério">⚠️ duplicada</span>

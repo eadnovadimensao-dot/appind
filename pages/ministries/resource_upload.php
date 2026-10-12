@@ -24,6 +24,7 @@ $materialsUrl = trim($_POST['materials_url'] ?? ''); // Materiais (Drive — mul
 $chordSheet   = trim($_POST['chord_sheet_text'] ?? '') ?: null;
 $capo         = ($type === 'song' && trim($_POST['capo'] ?? '') !== '') ? max(0, min(11, (int)$_POST['capo'])) : null;
 $bpm          = ($type === 'song' && trim($_POST['bpm'] ?? '') !== '') ? max(0, (int)$_POST['bpm']) : null;
+$timeSig      = ($type === 'song' && trim($_POST['time_signature'] ?? '') !== '') ? trim($_POST['time_signature']) : null;
 
 if ($title === '') {
     header('Location: /pages/ministries/resources.php?ministry_id=' . $ministryId . '&error=titulo');
@@ -79,9 +80,9 @@ if ($type === 'song') {
 
 $ins = $db->prepare("
     INSERT INTO ministry_resources
-      (ministry_id, church_id, category, type, title, key_tone, chord_sheet_text, capo, bpm,
+      (ministry_id, church_id, category, type, title, key_tone, chord_sheet_text, capo, bpm, time_signature,
        description, file_path, file_name, file_size, external_url, materials_url, created_by)
-    VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)
+    VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)
 ");
 $ins->execute([
     $ministryId,
@@ -93,6 +94,7 @@ $ins->execute([
     $chordSheet,
     $capo,
     $bpm,
+    $timeSig,
     $description ?: null,
     $filePath,
     $fileName,

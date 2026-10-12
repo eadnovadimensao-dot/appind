@@ -44,14 +44,31 @@ require_once __DIR__ . '/../../includes/layout.php';
   <?php endif; ?>
 
   <div class="metronome" data-metronome data-bpm="<?= (int)($res['bpm'] ?: 120) ?>">
-    <button type="button" data-metronome-toggle title="Tocar/parar metrônomo">▶</button>
-    <span class="metronome-beat" data-metronome-beat></span>
-    <div class="metronome-bpm">
-      <button type="button" data-metronome-bpm-down>−</button>
-      <span class="metronome-bpm-value" data-metronome-bpm-value><?= (int)($res['bpm'] ?: 120) ?></span>
-      <button type="button" data-metronome-bpm-up>+</button>
+    <div class="metronome-row">
+      <button type="button" data-metronome-toggle title="Tocar/parar metrônomo">▶</button>
+      <span class="metronome-beat" data-metronome-beat></span>
+      <div class="metronome-bpm">
+        <button type="button" data-metronome-bpm-down>−</button>
+        <span class="metronome-bpm-value" data-metronome-bpm-value><?= (int)($res['bpm'] ?: 120) ?></span>
+        <button type="button" data-metronome-bpm-up>+</button>
+      </div>
+      <span class="metronome-label">BPM<?= $res['bpm'] ? '' : ' (ajuste)' ?></span>
+      <button type="button" class="metronome-tap" data-metronome-tap>Tap</button>
     </div>
-    <span class="metronome-label">BPM<?= $res['bpm'] ? '' : ' (ajuste — essa música ainda não tem BPM salvo)' ?></span>
+    <div class="metronome-row metronome-row-secondary">
+      <label class="metronome-field">
+        Compasso
+        <select data-metronome-beats><?= render_metronome_beats_options($res['time_signature']) ?></select>
+      </label>
+      <label class="metronome-field metronome-volume">
+        Volume
+        <input type="range" min="0" max="100" value="60" data-metronome-volume>
+      </label>
+      <label class="metronome-field metronome-checkbox">
+        <input type="checkbox" data-metronome-countin checked>
+        Entrada
+      </label>
+    </div>
   </div>
 
   <div data-chord-sheet data-offset="0">
