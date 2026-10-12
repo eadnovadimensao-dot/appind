@@ -40,7 +40,10 @@ $activePage = 'ministries';
 require_once __DIR__ . '/../../includes/layout.php';
 
 $resources = $db->prepare("
-    SELECT r.*, m.name AS created_by_name
+    SELECT r.*, m.name AS created_by_name,
+           (SELECT COUNT(DISTINCT mas.activity_id) FROM ministry_activity_songs mas
+            JOIN ministry_activities ma ON ma.id = mas.activity_id
+            WHERE mas.resource_id = r.id AND ma.activity_type = 'culto') AS culto_use_count
     FROM ministry_resources r
     LEFT JOIN members m ON m.id = r.created_by
     WHERE r.ministry_id = ?
@@ -234,6 +237,12 @@ Grande     é o Senhor</div>
         <label class="form-label">Mensagem central <span style="font-weight:400;color:var(--text-muted)">(opcional)</span></label>
         <textarea name="central_message" class="form-control" rows="2" placeholder="Ex: A igreja como um só corpo, chamado a expressar o amor de Deus e cumprir sua vontade."></textarea>
       </div>
+      <div class="form-group">
+        <label style="display:flex;align-items:center;gap:8px;font-size:13px;cursor:pointer">
+          <input type="checkbox" name="known_repertoire" value="1">
+          Já faz parte do repertório há tempo <span style="font-weight:400;color:var(--text-muted)">(não marcar como "✨ Nova" mesmo sem histórico de uso no sistema)</span>
+        </label>
+      </div>
     </div>
     <button type="submit" class="btn btn-primary">Salvar material</button>
   </form>
@@ -289,7 +298,12 @@ Grande     é o Senhor</div>
             <div style="display:flex;align-items:flex-start;gap:12px">
               <div style="font-size:22px;flex-shrink:0"><?= resource_icon($r['file_name'], $r['external_url']) ?></div>
               <div style="flex:1;min-width:0">
-                <div style="font-size:13px;font-weight:500"><?= htmlspecialchars($r['title']) ?></div>
+                <div style="font-size:13px;font-weight:500">
+                  <?= htmlspecialchars($r['title']) ?>
+                  <?php if ($r['type'] === 'song' && !$r['known_repertoire'] && (int)$r['culto_use_count'] < SONG_NEW_USE_THRESHOLD): ?>
+                    <span class="badge badge-green" style="font-size:10px" title="Ainda não foi usada em <?= SONG_NEW_USE_THRESHOLD ?> cultos">✨ Nova</span>
+                  <?php endif; ?>
+                </div>
                 <?php if ($r['key_tone'] || $r['capo'] || $r['bpm'] || $r['time_signature'] || ($r['type'] === 'song' && ($titleCounts[mb_strtolower(trim($r['title']))] ?? 0) > 1)): ?>
                   <div style="margin-top:4px;display:flex;gap:6px;flex-wrap:wrap">
                     <?php if ($r['key_tone']): ?>

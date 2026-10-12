@@ -70,6 +70,17 @@ function time_signature_beats(?string $timeSignature): int {
 const TIME_SIGNATURE_OPTIONS = ['4/4', '3/4', '2/4', '6/8', '12/8'];
 
 /**
+ * Uma música é "nova" até ter aparecido no repertório de SONG_NEW_USE_THRESHOLD
+ * cultos distintos — conta só culto (não o ensaio-espelho, que duplicaria a
+ * contagem já que o repertório é compartilhado entre os dois). Soma sozinho
+ * conforme a música vai sendo escalada — exceto se marcada como
+ * `known_repertoire`, pra músicas que já são tocadas há tempo mas só estão
+ * sendo cadastradas agora no catálogo (sem isso, a contagem começaria do
+ * zero e mostraria "nova" indevidamente).
+ */
+const SONG_NEW_USE_THRESHOLD = 3;
+
+/**
  * <option>s do seletor de compasso do metrônomo — valor é a quantidade
  * de tempos (o que o JS usa pra acentuar o 1º tempo de cada grupo).
  */

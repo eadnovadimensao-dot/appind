@@ -35,6 +35,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     $themeMain    = ($type === 'song') ? (trim($_POST['theme_main'] ?? '') ?: null) : null;
     $themeSec     = ($type === 'song') ? (trim($_POST['theme_secondary'] ?? '') ?: null) : null;
     $centralMsg   = ($type === 'song') ? (trim($_POST['central_message'] ?? '') ?: null) : null;
+    $knownRepertoire = ($type === 'song' && isset($_POST['known_repertoire'])) ? 1 : 0;
     $removeFile   = isset($_POST['remove_file']);
 
     if ($title === '') $errors[] = 'Dê um título pro material.';
@@ -95,12 +96,12 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         $db->prepare("
             UPDATE ministry_resources SET
               type=?, title=?, key_tone=?, chord_sheet_text=?, capo=?, bpm=?, time_signature=?,
-              theme_main=?, theme_secondary=?, central_message=?, category=?, description=?,
+              theme_main=?, theme_secondary=?, central_message=?, known_repertoire=?, category=?, description=?,
               file_path=?, file_name=?, file_size=?, external_url=?, materials_url=?
             WHERE id=?
         ")->execute([
             $type, $title, $keyTone, $chordSheet, $capo, $bpm, $timeSig,
-            $themeMain, $themeSec, $centralMsg, $category, $description ?: null,
+            $themeMain, $themeSec, $centralMsg, $knownRepertoire, $category, $description ?: null,
             $filePath, $fileName, $fileSize, $externalUrl ?: null, $materialsUrl ?: null,
             $resId,
         ]);
@@ -111,6 +112,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     $res = array_merge($res, ['type' => $type, 'title' => $title, 'key_tone' => $keyTone,
         'chord_sheet_text' => $chordSheet, 'capo' => $capo, 'bpm' => $bpm, 'time_signature' => $timeSig,
         'theme_main' => $themeMain, 'theme_secondary' => $themeSec, 'central_message' => $centralMsg,
+        'known_repertoire' => $knownRepertoire,
         'category' => $category, 'description' => $description, 'external_url' => $externalUrl,
         'materials_url' => $materialsUrl]);
 }
@@ -253,6 +255,12 @@ Grande     é o Senhor</div>
       <div class="form-group">
         <label class="form-label">Mensagem central <span style="font-weight:400;color:var(--text-muted)">(opcional)</span></label>
         <textarea name="central_message" class="form-control" rows="2" placeholder="Ex: A igreja como um só corpo, chamado a expressar o amor de Deus e cumprir sua vontade."><?= htmlspecialchars($res['central_message'] ?? '') ?></textarea>
+      </div>
+      <div class="form-group">
+        <label style="display:flex;align-items:center;gap:8px;font-size:13px;cursor:pointer">
+          <input type="checkbox" name="known_repertoire" value="1" <?= !empty($res['known_repertoire']) ? 'checked' : '' ?>>
+          Já faz parte do repertório há tempo <span style="font-weight:400;color:var(--text-muted)">(não marcar como "✨ Nova" mesmo sem histórico de uso no sistema)</span>
+        </label>
       </div>
     </div>
 

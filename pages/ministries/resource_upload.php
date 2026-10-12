@@ -28,6 +28,7 @@ $timeSig      = ($type === 'song' && trim($_POST['time_signature'] ?? '') !== ''
 $themeMain    = ($type === 'song') ? (trim($_POST['theme_main'] ?? '') ?: null) : null;
 $themeSec     = ($type === 'song') ? (trim($_POST['theme_secondary'] ?? '') ?: null) : null;
 $centralMsg   = ($type === 'song') ? (trim($_POST['central_message'] ?? '') ?: null) : null;
+$knownRepertoire = ($type === 'song' && isset($_POST['known_repertoire'])) ? 1 : 0;
 
 if ($title === '') {
     header('Location: /pages/ministries/resources.php?ministry_id=' . $ministryId . '&error=titulo');
@@ -84,9 +85,9 @@ if ($type === 'song') {
 $ins = $db->prepare("
     INSERT INTO ministry_resources
       (ministry_id, church_id, category, type, title, key_tone, chord_sheet_text, capo, bpm, time_signature,
-       theme_main, theme_secondary, central_message,
+       theme_main, theme_secondary, central_message, known_repertoire,
        description, file_path, file_name, file_size, external_url, materials_url, created_by)
-    VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)
+    VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)
 ");
 $ins->execute([
     $ministryId,
@@ -102,6 +103,7 @@ $ins->execute([
     $themeMain,
     $themeSec,
     $centralMsg,
+    $knownRepertoire,
     $description ?: null,
     $filePath,
     $fileName,

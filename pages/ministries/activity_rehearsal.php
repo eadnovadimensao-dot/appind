@@ -28,7 +28,10 @@ $songs = $db->prepare("
            r.materials_url,
            COALESCE(r.file_path, mas.file_path) AS file_path,
            r.chord_sheet_text, r.capo, r.bpm, r.time_signature,
-           r.theme_main, r.theme_secondary, r.central_message
+           r.theme_main, r.theme_secondary, r.central_message, r.known_repertoire,
+           (SELECT COUNT(DISTINCT mas2.activity_id) FROM ministry_activity_songs mas2
+            JOIN ministry_activities ma2 ON ma2.id = mas2.activity_id
+            WHERE mas2.resource_id = mas.resource_id AND ma2.activity_type = 'culto') AS culto_use_count
     FROM ministry_activity_songs mas
     LEFT JOIN ministry_resources r ON r.id = mas.resource_id
     WHERE mas.activity_id = ?
@@ -86,7 +89,12 @@ require_once __DIR__ . '/../../includes/layout.php';
   <div style="display:flex;align-items:baseline;gap:10px;margin-bottom:12px">
     <span style="font-size:15px;color:var(--text-muted);font-weight:500"><?= $current ?>.</span>
     <div>
-      <div style="font-size:21px;font-weight:600"><?= htmlspecialchars($sg['title']) ?></div>
+      <div style="font-size:21px;font-weight:600">
+        <?= htmlspecialchars($sg['title']) ?>
+        <?php if ($sg['resource_id'] && !$sg['known_repertoire'] && (int)$sg['culto_use_count'] < SONG_NEW_USE_THRESHOLD): ?>
+          <span class="badge badge-green" style="font-size:11px;vertical-align:middle" title="Ainda não foi usada em <?= SONG_NEW_USE_THRESHOLD ?> cultos">✨ Nova</span>
+        <?php endif; ?>
+      </div>
       <div style="display:flex;gap:6px;flex-wrap:wrap;margin-top:4px">
         <?php if ($sg['key_tone']): ?>
           <span class="badge badge-gray">Tom: <?= htmlspecialchars($sg['key_tone']) ?></span>

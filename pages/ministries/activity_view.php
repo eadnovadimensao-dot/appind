@@ -3,6 +3,7 @@ require_once __DIR__ . "/../../config/database.php";
 require_once __DIR__ . "/../../includes/auth.php";
 require_once __DIR__ . "/../../includes/music_roles.php";
 require_once __DIR__ . "/../../includes/ministry_activity.php";
+require_once __DIR__ . "/../../includes/chords.php";
 auth_check();
 $db       = db();
 $churchId = current_church_id();
@@ -66,7 +67,11 @@ $songs = $db->prepare("
            COALESCE(r.key_tone, mas.key_tone) AS key_tone,
            COALESCE(r.external_url, mas.reference_link) AS reference_link,
            r.materials_url,
-           COALESCE(r.file_path, mas.file_path) AS file_path
+           COALESCE(r.file_path, mas.file_path) AS file_path,
+           r.known_repertoire,
+           (SELECT COUNT(DISTINCT mas2.activity_id) FROM ministry_activity_songs mas2
+            JOIN ministry_activities ma2 ON ma2.id = mas2.activity_id
+            WHERE mas2.resource_id = mas.resource_id AND ma2.activity_type = 'culto') AS culto_use_count
     FROM ministry_activity_songs mas
     LEFT JOIN ministry_resources r ON r.id = mas.resource_id
     WHERE mas.activity_id = ?
@@ -77,7 +82,10 @@ $songs = $songs->fetchAll();
 
 // Catálogo de músicas do ministério que ainda não estão nessa atividade
 $songCatalog = $db->prepare("
-    SELECT id, title, key_tone, external_url, materials_url, file_path
+    SELECT id, title, key_tone, external_url, materials_url, file_path, known_repertoire,
+           (SELECT COUNT(DISTINCT mas2.activity_id) FROM ministry_activity_songs mas2
+            JOIN ministry_activities ma2 ON ma2.id = mas2.activity_id
+            WHERE mas2.resource_id = ministry_resources.id AND ma2.activity_type = 'culto') AS culto_use_count
     FROM ministry_resources
     WHERE ministry_id = ? AND type = 'song'
       AND id NOT IN (SELECT resource_id FROM ministry_activity_songs WHERE activity_id = ? AND resource_id IS NOT NULL)
@@ -230,6 +238,9 @@ $canDress = auth_can_manage_dress((int)$act['ministry_id']) && (!empty($act['use
         <div style="flex:1;min-width:0">
           <span data-song-number style="font-size:11px;color:var(--text-muted);margin-right:4px"><?= $songIndex + 1 ?>.</span>
           <span style="font-size:13px;font-weight:500"><?= htmlspecialchars($sg['title']) ?></span>
+          <?php if ($sg['resource_id'] && !$sg['known_repertoire'] && (int)$sg['culto_use_count'] < SONG_NEW_USE_THRESHOLD): ?>
+            <span class="badge badge-green" style="font-size:10px" title="Ainda não foi usada em <?= SONG_NEW_USE_THRESHOLD ?> cultos">✨ Nova</span>
+          <?php endif; ?>
           <?php if ($sg['key_tone']): ?>
             <span class="badge badge-gray" style="font-size:10px;margin-left:6px">Tom: <?= htmlspecialchars($sg['key_tone']) ?></span>
           <?php endif; ?>
@@ -270,6 +281,7 @@ $canDress = auth_can_manage_dress((int)$act['ministry_id']) && (!empty($act['use
             <label style="display:flex;align-items:center;gap:5px;border:1px solid var(--border);border-radius:20px;padding:5px 12px;font-size:12px;cursor:pointer;background:white">
               <input type="checkbox" name="resource_ids[]" value="<?= $sg['id'] ?>">
               <?= htmlspecialchars($sg['title']) ?>
+              <?php if (!$sg['known_repertoire'] && (int)$sg['culto_use_count'] < SONG_NEW_USE_THRESHOLD): ?> ✨<?php endif; ?>
               <?= $sg['key_tone'] ? ' · ' . htmlspecialchars($sg['key_tone']) : '' ?>
             </label>
           <?php endforeach; ?>
