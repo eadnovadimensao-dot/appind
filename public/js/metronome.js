@@ -17,6 +17,7 @@
     const bpmUp         = widget.querySelector('[data-metronome-bpm-up]');
     const bpmDown       = widget.querySelector('[data-metronome-bpm-down]');
     const tapBtn        = widget.querySelector('[data-metronome-tap]');
+    const doubleBtn     = widget.querySelector('[data-metronome-double]');
     const beatsInput    = widget.querySelector('[data-metronome-beats]');
     const volumeInput   = widget.querySelector('[data-metronome-volume]');
     const countInBox    = widget.querySelector('[data-metronome-countin]');
@@ -30,6 +31,7 @@
 
     let beatsPerMeasure = beatsInput ? (parseInt(beatsInput.value, 10) || 4) : 4;
     let volume = volumeInput ? (parseInt(volumeInput.value, 10) / 100) * 0.6 : 0.35;
+    let doubleTime = false;
     let pulseDots = [];
 
     let audioCtx = null;
@@ -77,7 +79,7 @@
     }
 
     function advanceNote() {
-      nextNoteTime += 60.0 / bpm;
+      nextNoteTime += 60.0 / (doubleTime ? bpm * 2 : bpm);
       currentBeat = (currentBeat + 1) % beatsPerMeasure;
     }
 
@@ -152,6 +154,16 @@
     if (volumeInput) {
       volumeInput.addEventListener('input', function () {
         volume = (parseInt(volumeInput.value, 10) / 100) * 0.6;
+      });
+    }
+
+    // Dobra o tempo (clica 2x mais rápido que o BPM salvo) — útil em música
+    // muito lenta, onde um clique mais espaçado é difícil de sentir o groove.
+    // Não altera o BPM salvo nem a contagem de tempos, só a velocidade do clique.
+    if (doubleBtn) {
+      doubleBtn.addEventListener('click', function () {
+        doubleTime = !doubleTime;
+        doubleBtn.classList.toggle('active', doubleTime);
       });
     }
 

@@ -338,10 +338,12 @@ tbody tr:hover td { background: #fafafa; }
 }
 .metronome-bpm-value { font-size: 16px; font-weight: 700; min-width: 34px; text-align: center; }
 .metronome-label { font-size: 11px; color: var(--text-muted); }
-.metronome-tap {
-  margin-left: auto; padding: 8px 14px; border-radius: 8px; border: 1px solid var(--border);
+.metronome-tap, .metronome-double {
+  padding: 8px 14px; border-radius: 8px; border: 1px solid var(--border);
   background: white; font-size: 13px; font-weight: 600; cursor: pointer; color: var(--text);
 }
+.metronome-double { margin-left: auto; }
+.metronome-double.active { background: var(--accent); border-color: var(--accent); color: white; }
 .metronome-field {
   display: flex; align-items: center; gap: 6px; font-size: 11px; color: var(--text-muted);
 }

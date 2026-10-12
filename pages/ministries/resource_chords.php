@@ -54,6 +54,7 @@ require_once __DIR__ . '/../../includes/layout.php';
         <button type="button" data-metronome-bpm-up>+</button>
       </div>
       <span class="metronome-label">BPM<?= $res['bpm'] ? '' : ' (ajuste)' ?></span>
+      <button type="button" class="metronome-double" data-metronome-double title="Dobrar o tempo do clique (útil em músicas muito lentas)">2x</button>
       <button type="button" class="metronome-tap" data-metronome-tap>Tap</button>
     </div>
     <div class="metronome-row metronome-row-secondary">
