@@ -280,24 +280,26 @@ Grande     é o Senhor</div>
             <div style="display:flex;align-items:flex-start;gap:12px">
               <div style="font-size:22px;flex-shrink:0"><?= resource_icon($r['file_name'], $r['external_url']) ?></div>
               <div style="flex:1;min-width:0">
-                <div style="font-size:13px;font-weight:500">
-                  <?= htmlspecialchars($r['title']) ?>
-                  <?php if ($r['key_tone']): ?>
-                    <span class="badge badge-gray" style="font-size:10px;margin-left:6px">Tom: <?= htmlspecialchars($r['key_tone']) ?></span>
-                  <?php endif; ?>
-                  <?php if ($r['capo']): ?>
-                    <span class="badge badge-gray" style="font-size:10px">Capo <?= (int)$r['capo'] ?></span>
-                  <?php endif; ?>
-                  <?php if ($r['bpm']): ?>
-                    <span class="badge badge-gray" style="font-size:10px"><?= (int)$r['bpm'] ?> BPM</span>
-                  <?php endif; ?>
-                  <?php if ($r['time_signature']): ?>
-                    <span class="badge badge-gray" style="font-size:10px"><?= htmlspecialchars($r['time_signature']) ?></span>
-                  <?php endif; ?>
-                  <?php if ($r['type'] === 'song' && ($titleCounts[mb_strtolower(trim($r['title']))] ?? 0) > 1): ?>
-                    <span class="badge badge-amber" style="font-size:10px" title="Existe mais de uma música com esse título nesse ministério">⚠️ duplicada</span>
-                  <?php endif; ?>
-                </div>
+                <div style="font-size:13px;font-weight:500"><?= htmlspecialchars($r['title']) ?></div>
+                <?php if ($r['key_tone'] || $r['capo'] || $r['bpm'] || $r['time_signature'] || ($r['type'] === 'song' && ($titleCounts[mb_strtolower(trim($r['title']))] ?? 0) > 1)): ?>
+                  <div style="margin-top:4px;display:flex;gap:6px;flex-wrap:wrap">
+                    <?php if ($r['key_tone']): ?>
+                      <span class="badge badge-gray" style="font-size:10px">Tom: <?= htmlspecialchars($r['key_tone']) ?></span>
+                    <?php endif; ?>
+                    <?php if ($r['capo']): ?>
+                      <span class="badge badge-gray" style="font-size:10px">Capo <?= (int)$r['capo'] ?></span>
+                    <?php endif; ?>
+                    <?php if ($r['bpm']): ?>
+                      <span class="badge badge-gray" style="font-size:10px"><?= (int)$r['bpm'] ?> BPM</span>
+                    <?php endif; ?>
+                    <?php if ($r['time_signature']): ?>
+                      <span class="badge badge-gray" style="font-size:10px"><?= htmlspecialchars($r['time_signature']) ?></span>
+                    <?php endif; ?>
+                    <?php if ($r['type'] === 'song' && ($titleCounts[mb_strtolower(trim($r['title']))] ?? 0) > 1): ?>
+                      <span class="badge badge-amber" style="font-size:10px" title="Existe mais de uma música com esse título nesse ministério">⚠️ duplicada</span>
+                    <?php endif; ?>
+                  </div>
+                <?php endif; ?>
                 <?php if ($r['description']): ?>
                   <div style="font-size:12px;color:var(--text-muted);margin-top:2px"><?= nl2br(htmlspecialchars($r['description'])) ?></div>
                 <?php endif; ?>
