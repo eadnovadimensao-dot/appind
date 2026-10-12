@@ -312,9 +312,6 @@ Grande     é o Senhor</div>
                 <?php if ($r['central_message']): ?>
                   <div style="font-size:11px;color:var(--text-muted);margin-top:2px;font-style:italic">"<?= htmlspecialchars($r['central_message']) ?>"</div>
                 <?php endif; ?>
-                <?php if ($capoLabel = capo_shape_label($r['key_tone'], $r['capo'])): ?>
-                  <div style="font-size:12px;color:var(--text-muted);margin-top:2px">🎸 <?= htmlspecialchars($capoLabel) ?></div>
-                <?php endif; ?>
                 <div style="font-size:11px;color:var(--text-muted);margin-top:4px">
                   <?= htmlspecialchars($r['created_by_name'] ?? 'Alguém') ?> ·
                   <?= date('d/m/Y', strtotime($r['created_at'])) ?>
