@@ -270,86 +270,86 @@ Grande     é o Senhor</div>
   </div>
 <?php else: ?>
   <?php foreach ($grouped as $category => $items): ?>
-    <div class="card" style="padding:0;margin-bottom:16px">
-      <div style="padding:14px 18px;border-bottom:1px solid var(--border)">
-        <p style="font-weight:500;font-size:14px"><?= htmlspecialchars($category) ?>
-          <span style="color:var(--text-muted);font-weight:400">(<?= count($items) ?>)</span>
-        </p>
-      </div>
-      <?php foreach ($items as $r): ?>
-        <div style="padding:12px 18px;border-bottom:1px solid var(--border)">
-          <div style="display:flex;align-items:flex-start;gap:12px">
-            <div style="font-size:22px;flex-shrink:0"><?= resource_icon($r['file_name'], $r['external_url']) ?></div>
-            <div style="flex:1;min-width:0">
-              <div style="font-size:13px;font-weight:500">
-                <?= htmlspecialchars($r['title']) ?>
-                <?php if ($r['key_tone']): ?>
-                  <span class="badge badge-gray" style="font-size:10px;margin-left:6px">Tom: <?= htmlspecialchars($r['key_tone']) ?></span>
-                <?php endif; ?>
-                <?php if ($r['capo']): ?>
-                  <span class="badge badge-gray" style="font-size:10px">Capo <?= (int)$r['capo'] ?></span>
-                <?php endif; ?>
-                <?php if ($r['bpm']): ?>
-                  <span class="badge badge-gray" style="font-size:10px"><?= (int)$r['bpm'] ?> BPM</span>
-                <?php endif; ?>
-                <?php if ($r['time_signature']): ?>
-                  <span class="badge badge-gray" style="font-size:10px"><?= htmlspecialchars($r['time_signature']) ?></span>
-                <?php endif; ?>
-                <?php if ($r['type'] === 'song' && ($titleCounts[mb_strtolower(trim($r['title']))] ?? 0) > 1): ?>
-                  <span class="badge badge-amber" style="font-size:10px" title="Existe mais de uma música com esse título nesse ministério">⚠️ duplicada</span>
-                <?php endif; ?>
-              </div>
-              <?php if ($r['description']): ?>
-                <div style="font-size:12px;color:var(--text-muted);margin-top:2px"><?= nl2br(htmlspecialchars($r['description'])) ?></div>
-              <?php endif; ?>
-              <?php if ($r['theme_main'] || $r['theme_secondary']): ?>
-                <div style="font-size:11px;color:var(--text-muted);margin-top:4px">
-                  🏷️
-                  <?php if ($r['theme_main']): ?><strong><?= htmlspecialchars($r['theme_main']) ?></strong><?php endif; ?>
-                  <?php if ($r['theme_main'] && $r['theme_secondary']): ?> · <?php endif; ?>
-                  <?= htmlspecialchars($r['theme_secondary'] ?? '') ?>
+    <div style="margin-bottom:24px">
+      <p style="font-weight:500;font-size:14px;margin-bottom:10px"><?= htmlspecialchars($category) ?>
+        <span style="color:var(--text-muted);font-weight:400">(<?= count($items) ?>)</span>
+      </p>
+      <div class="resource-grid">
+        <?php foreach ($items as $r): ?>
+          <div class="resource-item">
+            <div style="display:flex;align-items:flex-start;gap:12px">
+              <div style="font-size:22px;flex-shrink:0"><?= resource_icon($r['file_name'], $r['external_url']) ?></div>
+              <div style="flex:1;min-width:0">
+                <div style="font-size:13px;font-weight:500">
+                  <?= htmlspecialchars($r['title']) ?>
+                  <?php if ($r['key_tone']): ?>
+                    <span class="badge badge-gray" style="font-size:10px;margin-left:6px">Tom: <?= htmlspecialchars($r['key_tone']) ?></span>
+                  <?php endif; ?>
+                  <?php if ($r['capo']): ?>
+                    <span class="badge badge-gray" style="font-size:10px">Capo <?= (int)$r['capo'] ?></span>
+                  <?php endif; ?>
+                  <?php if ($r['bpm']): ?>
+                    <span class="badge badge-gray" style="font-size:10px"><?= (int)$r['bpm'] ?> BPM</span>
+                  <?php endif; ?>
+                  <?php if ($r['time_signature']): ?>
+                    <span class="badge badge-gray" style="font-size:10px"><?= htmlspecialchars($r['time_signature']) ?></span>
+                  <?php endif; ?>
+                  <?php if ($r['type'] === 'song' && ($titleCounts[mb_strtolower(trim($r['title']))] ?? 0) > 1): ?>
+                    <span class="badge badge-amber" style="font-size:10px" title="Existe mais de uma música com esse título nesse ministério">⚠️ duplicada</span>
+                  <?php endif; ?>
                 </div>
-              <?php endif; ?>
-              <?php if ($r['central_message']): ?>
-                <div style="font-size:11px;color:var(--text-muted);margin-top:2px;font-style:italic">"<?= htmlspecialchars($r['central_message']) ?>"</div>
-              <?php endif; ?>
-              <?php if ($capoLabel = capo_shape_label($r['key_tone'], $r['capo'])): ?>
-                <div style="font-size:12px;color:var(--text-muted);margin-top:2px">🎸 <?= htmlspecialchars($capoLabel) ?></div>
-              <?php endif; ?>
-              <div style="font-size:11px;color:var(--text-muted);margin-top:4px">
-                <?= htmlspecialchars($r['created_by_name'] ?? 'Alguém') ?> ·
-                <?= date('d/m/Y', strtotime($r['created_at'])) ?>
-                <?= $r['file_size'] ? ' · ' . resource_size($r['file_size']) : '' ?>
+                <?php if ($r['description']): ?>
+                  <div style="font-size:12px;color:var(--text-muted);margin-top:2px"><?= nl2br(htmlspecialchars($r['description'])) ?></div>
+                <?php endif; ?>
+                <?php if ($r['theme_main'] || $r['theme_secondary']): ?>
+                  <div style="font-size:11px;color:var(--text-muted);margin-top:4px">
+                    🏷️
+                    <?php if ($r['theme_main']): ?><strong><?= htmlspecialchars($r['theme_main']) ?></strong><?php endif; ?>
+                    <?php if ($r['theme_main'] && $r['theme_secondary']): ?> · <?php endif; ?>
+                    <?= htmlspecialchars($r['theme_secondary'] ?? '') ?>
+                  </div>
+                <?php endif; ?>
+                <?php if ($r['central_message']): ?>
+                  <div style="font-size:11px;color:var(--text-muted);margin-top:2px;font-style:italic">"<?= htmlspecialchars($r['central_message']) ?>"</div>
+                <?php endif; ?>
+                <?php if ($capoLabel = capo_shape_label($r['key_tone'], $r['capo'])): ?>
+                  <div style="font-size:12px;color:var(--text-muted);margin-top:2px">🎸 <?= htmlspecialchars($capoLabel) ?></div>
+                <?php endif; ?>
+                <div style="font-size:11px;color:var(--text-muted);margin-top:4px">
+                  <?= htmlspecialchars($r['created_by_name'] ?? 'Alguém') ?> ·
+                  <?= date('d/m/Y', strtotime($r['created_at'])) ?>
+                  <?= $r['file_size'] ? ' · ' . resource_size($r['file_size']) : '' ?>
+                </div>
               </div>
             </div>
+            <div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap;margin-top:10px;margin-left:34px">
+              <?php if ($r['chord_sheet_text']): ?>
+                <a href="/pages/ministries/resource_chords.php?id=<?= $r['id'] ?>"
+                   class="btn btn-primary" style="font-size:12px;padding:5px 12px">📝 Ver cifra</a>
+              <?php endif; ?>
+              <?php if ($r['external_url']): ?>
+                <a href="<?= htmlspecialchars($r['external_url']) ?>" target="_blank" rel="noopener"
+                   class="btn btn-secondary" style="font-size:12px;padding:5px 12px"><?= $r['type'] === 'song' ? '▶ Referência' : '🔗 Abrir' ?></a>
+              <?php endif; ?>
+              <?php if ($r['materials_url']): ?>
+                <a href="<?= htmlspecialchars($r['materials_url']) ?>" target="_blank" rel="noopener"
+                   class="btn btn-secondary" style="font-size:12px;padding:5px 12px">📁 Materiais</a>
+              <?php endif; ?>
+              <?php if ($r['file_path']): ?>
+                <a href="<?= htmlspecialchars($r['file_path']) ?>" target="_blank" rel="noopener"
+                   class="btn btn-secondary" style="font-size:12px;padding:5px 12px">⬇ Baixar</a>
+              <?php endif; ?>
+              <?php if ($canManage): ?>
+                <a href="/pages/ministries/resource_edit.php?id=<?= $r['id'] ?>"
+                   title="Editar" style="font-size:14px;color:var(--text-muted);text-decoration:none">✎</a>
+                <a href="/pages/ministries/resource_delete.php?id=<?= $r['id'] ?>"
+                   style="font-size:16px;color:var(--text-muted);text-decoration:none"
+                   data-confirm="Remover <?= htmlspecialchars($r['title']) ?>?">×</a>
+              <?php endif; ?>
+            </div>
           </div>
-          <div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap;margin-top:10px;margin-left:34px">
-            <?php if ($r['chord_sheet_text']): ?>
-              <a href="/pages/ministries/resource_chords.php?id=<?= $r['id'] ?>"
-                 class="btn btn-primary" style="font-size:12px;padding:5px 12px">📝 Ver cifra</a>
-            <?php endif; ?>
-            <?php if ($r['external_url']): ?>
-              <a href="<?= htmlspecialchars($r['external_url']) ?>" target="_blank" rel="noopener"
-                 class="btn btn-secondary" style="font-size:12px;padding:5px 12px"><?= $r['type'] === 'song' ? '▶ Referência' : '🔗 Abrir' ?></a>
-            <?php endif; ?>
-            <?php if ($r['materials_url']): ?>
-              <a href="<?= htmlspecialchars($r['materials_url']) ?>" target="_blank" rel="noopener"
-                 class="btn btn-secondary" style="font-size:12px;padding:5px 12px">📁 Materiais</a>
-            <?php endif; ?>
-            <?php if ($r['file_path']): ?>
-              <a href="<?= htmlspecialchars($r['file_path']) ?>" target="_blank" rel="noopener"
-                 class="btn btn-secondary" style="font-size:12px;padding:5px 12px">⬇ Baixar</a>
-            <?php endif; ?>
-            <?php if ($canManage): ?>
-              <a href="/pages/ministries/resource_edit.php?id=<?= $r['id'] ?>"
-                 title="Editar" style="font-size:14px;color:var(--text-muted);text-decoration:none">✎</a>
-              <a href="/pages/ministries/resource_delete.php?id=<?= $r['id'] ?>"
-                 style="font-size:16px;color:var(--text-muted);text-decoration:none"
-                 data-confirm="Remover <?= htmlspecialchars($r['title']) ?>?">×</a>
-            <?php endif; ?>
-          </div>
-        </div>
-      <?php endforeach; ?>
+        <?php endforeach; ?>
+      </div>
     </div>
   <?php endforeach; ?>
 <?php endif; ?>
