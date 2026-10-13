@@ -426,10 +426,18 @@ function create_ministry_activity(
         }
 
         foreach ($scaledIds as $mid) {
-            notify_scale_invitation(
-                $db, $mn, $activityId, $title, $date, $timeStart,
-                (int)$mid, trim($roles[$mid] ?? ''), $churchId, $createdBy, $webPush, $whatsappDelayMinutes
-            );
+            // Try/catch por pessoa: se notificar UM escalado falhar por algum motivo,
+            // não pode travar o convite de todo o resto do lote (bug real encontrado:
+            // antes, uma falha aqui silenciosamente impedia TODOS os convites de WhatsApp
+            // da escala inteira, mesmo a atividade e os outros canais tendo sido criados).
+            try {
+                notify_scale_invitation(
+                    $db, $mn, $activityId, $title, $date, $timeStart,
+                    (int)$mid, trim($roles[$mid] ?? ''), $churchId, $createdBy, $webPush, $whatsappDelayMinutes
+                );
+            } catch (\Throwable $e) {
+                error_log("notify_scale_invitation falhou (activity_id={$activityId}, member_id={$mid}): " . $e->getMessage());
+            }
         }
 
         // Disparar todos os pushes enfileirados e limpar inscrições expiradas
@@ -928,8 +936,8 @@ function queue_repertoire_builder_reminders_due(PDO $db): void {
     $nextSunday = date('Y-m-d', strtotime('next Sunday'));
 
     $rows = $db->prepare("
-        SELECT mam.id AS mam_id, mam.repertoire_prompt_sent_at, mam.repertoire_prompt_followup_sent_at,
-               ma.id AS activity_id, ma.title, ma.activity_date, ma.time_start, ma.church_id,
+        SELECT mam.activity_id, mam.member_id, mam.repertoire_prompt_sent_at, mam.repertoire_prompt_followup_sent_at,
+               ma.title, ma.activity_date, ma.time_start, ma.church_id,
                mn.name AS ministry_name, m.name AS member_name, m.phone
         FROM ministry_activity_members mam
         JOIN ministry_activities ma ON ma.id = mam.activity_id
@@ -954,16 +962,16 @@ function queue_repertoire_builder_reminders_due(PDO $db): void {
 
         if (!$r['repertoire_prompt_sent_at']) {
             // Reserva antes de enfileirar: duas execuções seguidas não duplicam o lembrete
-            $claim = $db->prepare("UPDATE ministry_activity_members SET repertoire_prompt_sent_at = NOW() WHERE id = ? AND repertoire_prompt_sent_at IS NULL");
-            $claim->execute([$r['mam_id']]);
+            $claim = $db->prepare("UPDATE ministry_activity_members SET repertoire_prompt_sent_at = NOW() WHERE activity_id = ? AND member_id = ? AND repertoire_prompt_sent_at IS NULL");
+            $claim->execute([$r['activity_id'], $r['member_id']]);
             if ($claim->rowCount() !== 1) continue;
 
             $msg = "🎵 *Você é o Ministro(a) de Louvor do próximo culto*\n\nOlá, {$first}! Você está escalado(a) em *{$r['title']}* ({$r['ministry_name']}), "
                  . date_pt($r['activity_date']) . $timeLabel . ", e a montagem do repertório é com você.\n\nAcesse quando puder:\n" . $link;
             queue_whatsapp($r['phone'], $msg, (int)$r['church_id'], null, 0, (int)$r['activity_id'], 'repertoire_builder_reminder');
         } elseif ($hour >= REPERTOIRE_BUILDER_REMINDER_FOLLOWUP_HOUR && !$r['repertoire_prompt_followup_sent_at']) {
-            $claim = $db->prepare("UPDATE ministry_activity_members SET repertoire_prompt_followup_sent_at = NOW() WHERE id = ? AND repertoire_prompt_followup_sent_at IS NULL");
-            $claim->execute([$r['mam_id']]);
+            $claim = $db->prepare("UPDATE ministry_activity_members SET repertoire_prompt_followup_sent_at = NOW() WHERE activity_id = ? AND member_id = ? AND repertoire_prompt_followup_sent_at IS NULL");
+            $claim->execute([$r['activity_id'], $r['member_id']]);
             if ($claim->rowCount() !== 1) continue;
 
             $msg = "🎵 *Repertório ainda pendente*\n\nOlá, {$first}! O repertório de *{$r['title']}* ({$r['ministry_name']}), "
