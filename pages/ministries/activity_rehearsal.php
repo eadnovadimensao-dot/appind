@@ -85,42 +85,8 @@ require_once __DIR__ . '/../../includes/layout.php';
 </div>
 <?php endif; ?>
 
-<div class="card" style="margin-bottom:16px;position:relative">
-  <details class="metronome-toggle">
-    <summary title="Metrônomo">🎼</summary>
-    <div class="metronome-panel">
-      <div class="metronome" data-metronome data-bpm="<?= (int)($sg['bpm'] ?: 120) ?>">
-        <div class="metronome-row">
-          <button type="button" data-metronome-toggle title="Tocar/parar metrônomo">▶</button>
-          <div class="metronome-pulses" data-metronome-pulses></div>
-          <span class="metronome-beat-number" data-metronome-beat-number></span>
-          <div class="metronome-bpm">
-            <button type="button" data-metronome-bpm-down>−</button>
-            <span class="metronome-bpm-value" data-metronome-bpm-value><?= (int)($sg['bpm'] ?: 120) ?></span>
-            <button type="button" data-metronome-bpm-up>+</button>
-          </div>
-          <span class="metronome-label">BPM<?= $sg['bpm'] ? '' : ' (ajuste)' ?></span>
-          <button type="button" class="metronome-double" data-metronome-double title="Dobrar o tempo do clique (útil em músicas muito lentas)">2x</button>
-          <button type="button" class="metronome-tap" data-metronome-tap>Tap</button>
-        </div>
-        <div class="metronome-row metronome-row-secondary">
-          <label class="metronome-field">
-            Compasso
-            <select data-metronome-beats><?= render_metronome_beats_options($sg['time_signature']) ?></select>
-          </label>
-          <label class="metronome-field metronome-volume">
-            Volume
-            <input type="range" min="0" max="100" value="60" data-metronome-volume>
-          </label>
-          <label class="metronome-field metronome-checkbox">
-            <input type="checkbox" data-metronome-countin checked>
-            Entrada
-          </label>
-        </div>
-      </div>
-    </div>
-  </details>
-  <div style="display:flex;align-items:baseline;gap:10px;margin-bottom:12px;padding-right:40px">
+<div class="card" style="margin-bottom:16px">
+  <div style="display:flex;align-items:baseline;gap:10px;margin-bottom:12px">
     <span style="font-size:15px;color:var(--text-muted);font-weight:500"><?= $current ?>.</span>
     <div>
       <div style="font-size:21px;font-weight:600">
@@ -143,42 +109,51 @@ require_once __DIR__ . '/../../includes/layout.php';
     </div>
   </div>
 
-  <?php if ($sg['theme_main'] || $sg['theme_secondary'] || $sg['central_message']): ?>
-    <div style="background:var(--content-bg);border-radius:8px;padding:10px 12px;margin-bottom:12px;font-size:12px">
-      <?php if ($sg['theme_main']): ?>
-        <div><strong>Tema:</strong> <?= htmlspecialchars($sg['theme_main']) ?><?= $sg['theme_secondary'] ? ' · ' . htmlspecialchars($sg['theme_secondary']) : '' ?></div>
-      <?php elseif ($sg['theme_secondary']): ?>
-        <div><strong>Temas:</strong> <?= htmlspecialchars($sg['theme_secondary']) ?></div>
-      <?php endif; ?>
-      <?php if ($sg['central_message']): ?>
-        <div style="margin-top:4px;color:var(--text-muted);font-style:italic">"<?= htmlspecialchars($sg['central_message']) ?>"</div>
-      <?php endif; ?>
-    </div>
-  <?php endif; ?>
-
   <?php if ($capoLabel = capo_shape_label($sg['key_tone'], $sg['capo'])): ?>
     <div style="font-size:12px;color:var(--text-muted);margin-bottom:12px">
       🎸 <?= htmlspecialchars($capoLabel) ?> — selecione a casa no seletor de capotraste aqui embaixo pra ver.
     </div>
   <?php endif; ?>
 
-  <?php if (!$sg['reference_link'] && !$sg['file_path'] && !$sg['materials_url'] && !$sg['chord_sheet_text']): ?>
+  <div class="metronome" data-metronome data-bpm="<?= (int)($sg['bpm'] ?: 120) ?>">
+    <div class="metronome-row">
+      <button type="button" data-metronome-toggle title="Tocar/parar metrônomo">▶</button>
+      <div class="metronome-pulses" data-metronome-pulses></div>
+      <span class="metronome-beat-number" data-metronome-beat-number></span>
+      <div class="metronome-bpm">
+        <button type="button" data-metronome-bpm-down>−</button>
+        <span class="metronome-bpm-value" data-metronome-bpm-value><?= (int)($sg['bpm'] ?: 120) ?></span>
+        <button type="button" data-metronome-bpm-up>+</button>
+      </div>
+      <span class="metronome-label">BPM<?= $sg['bpm'] ? '' : ' (ajuste)' ?></span>
+      <button type="button" class="metronome-double" data-metronome-double title="Dobrar o tempo do clique (útil em músicas muito lentas)">2x</button>
+      <button type="button" class="metronome-tap" data-metronome-tap>Tap</button>
+    </div>
+    <div class="metronome-row metronome-row-secondary">
+      <label class="metronome-field">
+        Compasso
+        <select data-metronome-beats><?= render_metronome_beats_options($sg['time_signature']) ?></select>
+      </label>
+      <label class="metronome-field metronome-volume">
+        Volume
+        <input type="range" min="0" max="100" value="60" data-metronome-volume>
+      </label>
+      <label class="metronome-field metronome-checkbox">
+        <input type="checkbox" data-metronome-countin checked>
+        Entrada
+      </label>
+    </div>
+  </div>
+
+  <?php if (!$sg['file_path'] && !$sg['chord_sheet_text']): ?>
     <p style="font-size:13px;color:var(--text-muted)">Sem material cadastrado pra essa música.</p>
   <?php else: ?>
-    <div style="display:flex;flex-direction:column;gap:8px;margin-bottom:<?= $sg['chord_sheet_text'] ? '16px' : '0' ?>">
-      <?php if ($sg['reference_link']): ?>
-        <a href="<?= htmlspecialchars($sg['reference_link']) ?>" target="_blank" rel="noopener"
-           class="btn btn-primary" style="justify-content:center;padding:12px;font-size:14px">▶ Ouvir referência</a>
-      <?php endif; ?>
-      <?php if ($sg['file_path']): ?>
+    <?php if ($sg['file_path']): ?>
+      <div style="margin-bottom:<?= $sg['chord_sheet_text'] ? '16px' : '0' ?>">
         <a href="<?= htmlspecialchars($sg['file_path']) ?>" target="_blank" rel="noopener"
-           class="btn btn-secondary" style="justify-content:center;padding:12px;font-size:14px">📄 Ver cifra/partitura</a>
-      <?php endif; ?>
-      <?php if ($sg['materials_url']): ?>
-        <a href="<?= htmlspecialchars($sg['materials_url']) ?>" target="_blank" rel="noopener"
-           class="btn btn-secondary" style="justify-content:center;padding:12px;font-size:14px">📁 Abrir materiais (Drive)</a>
-      <?php endif; ?>
-    </div>
+           class="btn btn-secondary" style="justify-content:center;padding:12px;font-size:14px;width:100%">📄 Ver cifra/partitura</a>
+      </div>
+    <?php endif; ?>
     <?php if ($sg['chord_sheet_text']): ?>
       <div data-chord-sheet data-offset="0" style="border-top:1px solid var(--border);padding-top:14px">
         <div class="chord-controls">

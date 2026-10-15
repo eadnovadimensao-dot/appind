@@ -36,43 +36,7 @@ require_once __DIR__ . '/../../includes/layout.php';
 </div>
 
 <div class="card">
-  <div style="position:relative;padding-right:44px">
-    <h1 style="font-size:18px;font-weight:600;margin-bottom:4px"><?= htmlspecialchars($res['title']) ?></h1>
-    <details class="metronome-toggle">
-      <summary title="Metrônomo">🎼</summary>
-      <div class="metronome-panel">
-        <div class="metronome" data-metronome data-bpm="<?= (int)($res['bpm'] ?: 120) ?>">
-          <div class="metronome-row">
-            <button type="button" data-metronome-toggle title="Tocar/parar metrônomo">▶</button>
-            <div class="metronome-pulses" data-metronome-pulses></div>
-            <span class="metronome-beat-number" data-metronome-beat-number></span>
-            <div class="metronome-bpm">
-              <button type="button" data-metronome-bpm-down>−</button>
-              <span class="metronome-bpm-value" data-metronome-bpm-value><?= (int)($res['bpm'] ?: 120) ?></span>
-              <button type="button" data-metronome-bpm-up>+</button>
-            </div>
-            <span class="metronome-label">BPM<?= $res['bpm'] ? '' : ' (ajuste)' ?></span>
-            <button type="button" class="metronome-double" data-metronome-double title="Dobrar o tempo do clique (útil em músicas muito lentas)">2x</button>
-            <button type="button" class="metronome-tap" data-metronome-tap>Tap</button>
-          </div>
-          <div class="metronome-row metronome-row-secondary">
-            <label class="metronome-field">
-              Compasso
-              <select data-metronome-beats><?= render_metronome_beats_options($res['time_signature']) ?></select>
-            </label>
-            <label class="metronome-field metronome-volume">
-              Volume
-              <input type="range" min="0" max="100" value="60" data-metronome-volume>
-            </label>
-            <label class="metronome-field metronome-checkbox">
-              <input type="checkbox" data-metronome-countin checked>
-              Entrada
-            </label>
-          </div>
-        </div>
-      </div>
-    </details>
-  </div>
+  <h1 style="font-size:18px;font-weight:600;margin-bottom:4px"><?= htmlspecialchars($res['title']) ?></h1>
   <div style="font-size:12px;color:var(--text-muted);margin-bottom:16px;display:flex;gap:8px;flex-wrap:wrap">
     <?php if ($res['capo']): ?><span class="badge badge-gray">Capo <?= (int)$res['capo'] ?></span><?php endif; ?>
     <?php if ($res['bpm']): ?><span class="badge badge-gray"><?= (int)$res['bpm'] ?> BPM</span><?php endif; ?>
@@ -96,16 +60,48 @@ require_once __DIR__ . '/../../includes/layout.php';
     </div>
   <?php endif; ?>
 
-  <?php if ($voices): ?>
-    <div class="voice-players">
-      <?php foreach ($voices as $v): ?>
-        <div class="voice-player">
-          <span class="voice-player-name"><?= htmlspecialchars($v['voice_name']) ?></span>
-          <audio controls preload="none" src="<?= htmlspecialchars($v['file_path']) ?>"></audio>
+  <div class="metronome-voices-row">
+    <div class="metronome" data-metronome data-bpm="<?= (int)($res['bpm'] ?: 120) ?>">
+      <div class="metronome-row">
+        <button type="button" data-metronome-toggle title="Tocar/parar metrônomo">▶</button>
+        <div class="metronome-pulses" data-metronome-pulses></div>
+        <span class="metronome-beat-number" data-metronome-beat-number></span>
+        <div class="metronome-bpm">
+          <button type="button" data-metronome-bpm-down>−</button>
+          <span class="metronome-bpm-value" data-metronome-bpm-value><?= (int)($res['bpm'] ?: 120) ?></span>
+          <button type="button" data-metronome-bpm-up>+</button>
         </div>
-      <?php endforeach; ?>
+        <span class="metronome-label">BPM<?= $res['bpm'] ? '' : ' (ajuste)' ?></span>
+        <button type="button" class="metronome-double" data-metronome-double title="Dobrar o tempo do clique (útil em músicas muito lentas)">2x</button>
+        <button type="button" class="metronome-tap" data-metronome-tap>Tap</button>
+      </div>
+      <div class="metronome-row metronome-row-secondary">
+        <label class="metronome-field">
+          Compasso
+          <select data-metronome-beats><?= render_metronome_beats_options($res['time_signature']) ?></select>
+        </label>
+        <label class="metronome-field metronome-volume">
+          Volume
+          <input type="range" min="0" max="100" value="60" data-metronome-volume>
+        </label>
+        <label class="metronome-field metronome-checkbox">
+          <input type="checkbox" data-metronome-countin checked>
+          Entrada
+        </label>
+      </div>
     </div>
-  <?php endif; ?>
+
+    <?php if ($voices): ?>
+      <div class="voice-players">
+        <?php foreach ($voices as $v): ?>
+          <div class="voice-player">
+            <span class="voice-player-name"><?= htmlspecialchars($v['voice_name']) ?></span>
+            <audio controls preload="none" src="<?= htmlspecialchars($v['file_path']) ?>"></audio>
+          </div>
+        <?php endforeach; ?>
+      </div>
+    <?php endif; ?>
+  </div>
 
   <div data-chord-sheet data-offset="0">
     <div class="chord-controls">

@@ -297,22 +297,12 @@ tbody tr:hover td { background: #fafafa; }
 .autoscroll-speed { font-size: 11px; color: var(--text-muted); min-width: 16px; text-align: center; }
 .autoscroll-spacer { height: 72px; }
 
-/* ── Ícone de metrônomo no canto do card, abre um painel flutuante ── */
-.metronome-toggle { position: absolute; top: 0; right: 0; }
-.metronome-toggle summary {
-  width: 38px; height: 38px; border-radius: 10px; background: var(--content-bg);
-  display: flex; align-items: center; justify-content: center; font-size: 19px;
-  cursor: pointer; list-style: none; user-select: none;
+/* ── Metrônomo e vozes lado a lado (empilha no mobile) ── */
+.metronome-voices-row {
+  display: flex; gap: 14px; align-items: flex-start; flex-wrap: wrap; margin-bottom: 16px;
 }
-.metronome-toggle summary::-webkit-details-marker { display: none; }
-.metronome-toggle[open] summary { background: var(--accent); }
-.metronome-panel {
-  position: absolute; top: 44px; right: 0; z-index: 20;
-  width: 320px; max-width: calc(100vw - 32px);
-  background: var(--card-bg); border: 1px solid var(--border); border-radius: 10px;
-  box-shadow: 0 8px 24px rgba(0,0,0,.14); padding: 12px;
-}
-.metronome-panel .metronome { margin-bottom: 0; }
+.metronome-voices-row .metronome { flex: 1; min-width: 260px; margin-bottom: 0; }
+.metronome-voices-row .voice-players { flex: 1; min-width: 260px; margin-bottom: 0; }
 
 /* ── Metrônomo ── */
 .metronome {
