@@ -297,6 +297,18 @@ tbody tr:hover td { background: #fafafa; }
 .autoscroll-speed { font-size: 11px; color: var(--text-muted); min-width: 16px; text-align: center; }
 .autoscroll-spacer { height: 72px; }
 
+/* ── Seção recolhível (metrônomo, vozes) — fechada por padrão, discreta ── */
+.collapsible-section { margin-bottom: 14px; }
+.collapsible-section summary {
+  cursor: pointer; font-size: 13px; font-weight: 600; color: var(--text);
+  list-style: none; display: flex; align-items: center; gap: 6px;
+  padding: 8px 2px; user-select: none;
+}
+.collapsible-section summary::-webkit-details-marker { display: none; }
+.collapsible-section summary::after { content: '▸'; margin-left: auto; color: var(--text-muted); font-size: 11px; }
+.collapsible-section[open] summary::after { content: '▾'; }
+.collapsible-section > :not(summary) { margin-top: 6px; }
+
 /* ── Metrônomo ── */
 .metronome {
   display: flex; flex-direction: column; gap: 10px;

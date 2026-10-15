@@ -128,35 +128,38 @@ require_once __DIR__ . '/../../includes/layout.php';
     </div>
   <?php endif; ?>
 
-  <div class="metronome" data-metronome data-bpm="<?= (int)($sg['bpm'] ?: 120) ?>">
-    <div class="metronome-row">
-      <button type="button" data-metronome-toggle title="Tocar/parar metrônomo">▶</button>
-      <div class="metronome-pulses" data-metronome-pulses></div>
-      <span class="metronome-beat-number" data-metronome-beat-number></span>
-      <div class="metronome-bpm">
-        <button type="button" data-metronome-bpm-down>−</button>
-        <span class="metronome-bpm-value" data-metronome-bpm-value><?= (int)($sg['bpm'] ?: 120) ?></span>
-        <button type="button" data-metronome-bpm-up>+</button>
+  <details class="collapsible-section">
+    <summary>🎼 Metrônomo</summary>
+    <div class="metronome" data-metronome data-bpm="<?= (int)($sg['bpm'] ?: 120) ?>">
+      <div class="metronome-row">
+        <button type="button" data-metronome-toggle title="Tocar/parar metrônomo">▶</button>
+        <div class="metronome-pulses" data-metronome-pulses></div>
+        <span class="metronome-beat-number" data-metronome-beat-number></span>
+        <div class="metronome-bpm">
+          <button type="button" data-metronome-bpm-down>−</button>
+          <span class="metronome-bpm-value" data-metronome-bpm-value><?= (int)($sg['bpm'] ?: 120) ?></span>
+          <button type="button" data-metronome-bpm-up>+</button>
+        </div>
+        <span class="metronome-label">BPM<?= $sg['bpm'] ? '' : ' (ajuste)' ?></span>
+        <button type="button" class="metronome-double" data-metronome-double title="Dobrar o tempo do clique (útil em músicas muito lentas)">2x</button>
+        <button type="button" class="metronome-tap" data-metronome-tap>Tap</button>
       </div>
-      <span class="metronome-label">BPM<?= $sg['bpm'] ? '' : ' (ajuste)' ?></span>
-      <button type="button" class="metronome-double" data-metronome-double title="Dobrar o tempo do clique (útil em músicas muito lentas)">2x</button>
-      <button type="button" class="metronome-tap" data-metronome-tap>Tap</button>
+      <div class="metronome-row metronome-row-secondary">
+        <label class="metronome-field">
+          Compasso
+          <select data-metronome-beats><?= render_metronome_beats_options($sg['time_signature']) ?></select>
+        </label>
+        <label class="metronome-field metronome-volume">
+          Volume
+          <input type="range" min="0" max="100" value="60" data-metronome-volume>
+        </label>
+        <label class="metronome-field metronome-checkbox">
+          <input type="checkbox" data-metronome-countin checked>
+          Entrada
+        </label>
+      </div>
     </div>
-    <div class="metronome-row metronome-row-secondary">
-      <label class="metronome-field">
-        Compasso
-        <select data-metronome-beats><?= render_metronome_beats_options($sg['time_signature']) ?></select>
-      </label>
-      <label class="metronome-field metronome-volume">
-        Volume
-        <input type="range" min="0" max="100" value="60" data-metronome-volume>
-      </label>
-      <label class="metronome-field metronome-checkbox">
-        <input type="checkbox" data-metronome-countin checked>
-        Entrada
-      </label>
-    </div>
-  </div>
+  </details>
 
   <?php if (!$sg['reference_link'] && !$sg['file_path'] && !$sg['materials_url'] && !$sg['chord_sheet_text']): ?>
     <p style="font-size:13px;color:var(--text-muted)">Sem material cadastrado pra essa música.</p>
