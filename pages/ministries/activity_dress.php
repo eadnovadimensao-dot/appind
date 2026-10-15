@@ -7,10 +7,15 @@ auth_check();
 $db = db();
 $id = (int)($_POST['id'] ?? 0);
 
-$stmt = $db->prepare("SELECT ministry_id FROM ministry_activities WHERE id = ? AND church_id = ?");
+$stmt = $db->prepare("SELECT ministry_id, activity_type FROM ministry_activities WHERE id = ? AND church_id = ?");
 $stmt->execute([$id, current_church_id()]);
-$ministryId = $stmt->fetchColumn();
-if (!$ministryId || $_SERVER['REQUEST_METHOD'] !== 'POST') { header('Location: /pages/ministries/index.php'); exit; }
+$act = $stmt->fetch();
+if (!$act || $_SERVER['REQUEST_METHOD'] !== 'POST') { header('Location: /pages/ministries/index.php'); exit; }
+$ministryId = $act['ministry_id'];
+
+// Vestimenta só existe pra culto — ver activity_view.php pro porquê (confusão
+// real: cor cadastrada no ensaio-espelho em vez do culto)
+if ($act['activity_type'] !== 'culto') { header('Location: /pages/ministries/activity_view.php?id=' . $id); exit; }
 
 if (!auth_can_manage_dress((int)$ministryId)) {
     http_response_code(403);

@@ -199,7 +199,11 @@ $at = $actTypeLabels[$act['activity_type']] ?? null;
 $dressPalette = dress_palette();
 $dressColors  = dress_colors_parse($act['dress_colors'] ?? '');
 $dressNote    = trim((string)($act['dress_note'] ?? ''));
-$canDress = auth_can_manage_dress((int)$act['ministry_id']) && (!empty($act['uses_dress_code']) || $dressColors || $dressNote);
+// Vestimenta só faz sentido em culto — em ensaio ninguém coordena roupa,
+// e deixar aberto nos dois já causou confusão (cor cadastrada no evento
+// errado, culto ficando sem nada).
+$canDress = $act['activity_type'] === 'culto'
+    && auth_can_manage_dress((int)$act['ministry_id']) && (!empty($act['uses_dress_code']) || $dressColors || $dressNote);
 ?>
 
 <?php if (!empty($songs) || !empty($songCatalog)): ?>
@@ -395,7 +399,7 @@ $canDress = auth_can_manage_dress((int)$act['ministry_id']) && (!empty($act['use
   <?php endif; ?>
 </div>
 
-<?php if (!empty($act['uses_dress_code']) || $dressColors || $dressNote): ?>
+<?php if ($act['activity_type'] === 'culto' && (!empty($act['uses_dress_code']) || $dressColors || $dressNote)): ?>
 <!-- Vestimenta -->
 <div class="card" style="padding:0;margin-top:16px">
   <div style="padding:14px 18px;border-bottom:1px solid var(--border);display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:8px">
