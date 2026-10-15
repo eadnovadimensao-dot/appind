@@ -10,12 +10,17 @@
 
   // O layout do app geralmente rola dentro de um container interno
   // (.page), não na janela do navegador — mas isso pode variar por
-  // navegador/dispositivo. Comparar scrollHeight/clientHeight pra
-  // adivinhar qual é costumava funcionar, mas é um teste indireto que
-  // pode dar falso negativo dependendo de zoom/viewport do aparelho
-  // (foi o que quebrou a rolagem geral depois de funcionar um tempo).
-  // Mais confiável: testar de verdade — empurra 2px e vê se o elemento
-  // mexeu mesmo, desfaz o teste, e usa o primeiro que responder.
+  // navegador/dispositivo. Importante: NUNCA testar empurrando o
+  // scrollTop de verdade pra ver o que se move — o CSS tem
+  // "html { scroll-behavior: smooth }", então mexer no scroll do
+  // <html>/<body> (document.scrollingElement/documentElement) dispara
+  // uma animação suave que briga com o "desfaz o teste" logo em
+  // seguida, piscando a tela e cancelando o toque no meio do caminho.
+  // Em vez disso, só lê (sem escrever nada): exige que o elemento
+  // realmente tenha overflow:auto/scroll configurado E conteúdo
+  // sobrando — sem esse primeiro filtro, documentElement/body podem
+  // dar falso positivo de scrollHeight > clientHeight por causa de
+  // barra de endereço dinâmica/zoom, mesmo não sendo quem rola de fato.
   function pickScrollElement() {
     const candidates = [
       document.querySelector('.page'),
@@ -25,11 +30,10 @@
     ].filter(Boolean);
     for (let i = 0; i < candidates.length; i++) {
       const el = candidates[i];
-      const before = el.scrollTop;
-      el.scrollTop = before + 2;
-      const moved = el.scrollTop !== before;
-      el.scrollTop = before; // desfaz o teste, não é pra rolar de verdade ainda
-      if (moved) return el;
+      const style = getComputedStyle(el);
+      const isScrollable = el === document.scrollingElement
+        || style.overflowY === 'auto' || style.overflowY === 'scroll';
+      if (isScrollable && el.scrollHeight > el.clientHeight + 10) return el;
     }
     return candidates[0] || document.documentElement;
   }
