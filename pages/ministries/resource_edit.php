@@ -271,6 +271,52 @@ Grande     é o Senhor</div>
   </form>
 </div>
 
+<?php if ($res['type'] === 'song'): ?>
+<?php
+  $voices = $db->prepare("SELECT * FROM ministry_resource_voices WHERE resource_id = ? ORDER BY position, id");
+  $voices->execute([$resId]);
+  $voices = $voices->fetchAll();
+  $voiceSuggestions = ['Soprano', 'Contralto', 'Meio-soprano', 'Tenor', 'Barítono', 'Baixo', 'Base/Click'];
+?>
+<div class="card" style="margin-top:16px">
+  <p class="card-title">Vozes <span style="font-weight:400;color:var(--text-muted)">— áudio-guia por naipe, opcional. Aparece só na tela de cifra, não no Modo Ensaio/Culto.</span></p>
+
+  <?php if ($voices): ?>
+    <div style="display:flex;flex-direction:column;gap:10px;margin-bottom:16px">
+      <?php foreach ($voices as $v): ?>
+        <div style="display:flex;align-items:center;gap:10px;flex-wrap:wrap;padding:8px 12px;border:1px solid var(--border);border-radius:8px">
+          <span style="font-size:13px;font-weight:500;min-width:110px"><?= htmlspecialchars($v['voice_name']) ?></span>
+          <audio controls preload="none" src="<?= htmlspecialchars($v['file_path']) ?>" style="flex:1;min-width:200px;height:36px"></audio>
+          <a href="/pages/ministries/resource_voice_delete.php?id=<?= $v['id'] ?>"
+             style="font-size:16px;color:var(--text-muted);text-decoration:none"
+             data-confirm="Remover a voz <?= htmlspecialchars($v['voice_name']) ?>?">×</a>
+        </div>
+      <?php endforeach; ?>
+    </div>
+  <?php endif; ?>
+
+  <form method="POST" action="/pages/ministries/resource_voice_add.php" enctype="multipart/form-data">
+    <input type="hidden" name="resource_id" value="<?= $resId ?>">
+    <div class="form-row">
+      <div class="form-group">
+        <label class="form-label">Voz</label>
+        <input type="text" name="voice_name" class="form-control" list="voice-suggestions" placeholder="Ex: Soprano">
+        <datalist id="voice-suggestions">
+          <?php foreach ($voiceSuggestions as $vs): ?>
+            <option value="<?= htmlspecialchars($vs) ?>">
+          <?php endforeach; ?>
+        </datalist>
+      </div>
+      <div class="form-group">
+        <label class="form-label">Arquivo de áudio</label>
+        <input type="file" name="voice_file" class="form-control" accept="audio/*">
+      </div>
+    </div>
+    <button type="submit" class="btn btn-secondary">+ Adicionar voz</button>
+  </form>
+</div>
+<?php endif; ?>
+
 <?php
 $extraJs = <<<JS
 document.getElementById('resource-type').addEventListener('change', function() {

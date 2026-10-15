@@ -19,6 +19,10 @@ if (!$res || current_church_id() != $res['church_id']) { header('Location: /page
 if (!auth_member_in_ministry((int)$res['ministry_id'])) { header('Location: /dashboard.php?no_access=1'); exit; }
 if (!$res['chord_sheet_text']) { header('Location: /pages/ministries/resources.php?ministry_id=' . $res['ministry_id']); exit; }
 
+$voices = $db->prepare("SELECT voice_name, file_path FROM ministry_resource_voices WHERE resource_id = ? ORDER BY position, id");
+$voices->execute([$resId]);
+$voices = $voices->fetchAll();
+
 $pageTitle  = 'Cifra · ' . $res['title'];
 $activePage = 'ministries';
 $extraScriptSrc = ['/public/js/chord-transpose.js', '/public/js/autoscroll.js', '/public/js/metronome.js'];
@@ -85,6 +89,17 @@ require_once __DIR__ . '/../../includes/layout.php';
       </label>
     </div>
   </div>
+
+  <?php if ($voices): ?>
+    <div class="voice-players">
+      <?php foreach ($voices as $v): ?>
+        <div class="voice-player">
+          <span class="voice-player-name"><?= htmlspecialchars($v['voice_name']) ?></span>
+          <audio controls preload="none" src="<?= htmlspecialchars($v['file_path']) ?>"></audio>
+        </div>
+      <?php endforeach; ?>
+    </div>
+  <?php endif; ?>
 
   <div data-chord-sheet data-offset="0">
     <div class="chord-controls">

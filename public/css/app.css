@@ -371,6 +371,15 @@ tbody tr:hover td { background: #fafafa; }
 .theme-chip-main { font-weight: 600; color: var(--text); }
 .rs-hidden { display: none !important; }
 
+/* ── Players de voz (soprano/contralto/etc.) na tela de cifra ── */
+.voice-players {
+  display: flex; flex-direction: column; gap: 8px;
+  background: var(--content-bg); border-radius: 10px; padding: 10px 14px; margin-bottom: 16px;
+}
+.voice-player { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; }
+.voice-player-name { font-size: 12px; font-weight: 600; color: var(--text); min-width: 90px; }
+.voice-player audio { flex: 1; min-width: 200px; height: 36px; }
+
 /* ── Arrastar pra reordenar repertório ── */
 [data-drag-handle] {
   cursor: grab; touch-action: none; color: var(--text-muted); font-size: 24px;
