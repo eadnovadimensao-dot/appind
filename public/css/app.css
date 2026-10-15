@@ -293,7 +293,7 @@ tbody tr:hover td { background: #fafafa; }
 .autoscroll-bar button:hover { background: var(--content-bg); }
 .autoscroll-bar #autoscroll-toggle { flex: 1; max-width: 220px; }
 .autoscroll-bar #autoscroll-toggle.active { background: var(--accent); border-color: var(--accent); color: white; }
-.autoscroll-bar #autoscroll-slower, .autoscroll-bar #autoscroll-faster { width: 42px; padding: 10px 0; }
+.autoscroll-bar #autoscroll-slower, .autoscroll-bar #autoscroll-faster { width: 42px; padding: 10px 0; font-size: 20px; line-height: 1; }
 .autoscroll-speed { font-size: 11px; color: var(--text-muted); min-width: 16px; text-align: center; }
 .autoscroll-spacer { height: 72px; }
 

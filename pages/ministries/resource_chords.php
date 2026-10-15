@@ -109,9 +109,9 @@ require_once __DIR__ . '/../../includes/layout.php';
 
 <div class="autoscroll-spacer"></div>
 <div class="autoscroll-bar" id="autoscroll-bar">
-  <button type="button" id="autoscroll-slower" title="Mais devagar">🐢</button>
+  <button type="button" id="autoscroll-slower" title="Mais devagar">−</button>
   <span class="autoscroll-speed" id="autoscroll-speed-label">4</span>
-  <button type="button" id="autoscroll-faster" title="Mais rápido">🐇</button>
+  <button type="button" id="autoscroll-faster" title="Mais rápido">+</button>
   <button type="button" id="autoscroll-toggle">▶ Rolar sozinho</button>
 </div>
 

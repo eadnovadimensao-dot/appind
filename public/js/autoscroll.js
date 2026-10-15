@@ -57,6 +57,12 @@
   let rafId = null;
   let lastTime = null;
   let yielding = false; // true durante um toque na tela — cede o controle pro dedo
+  // scrollTop só guarda número inteiro de pixels — em velocidades baixas o
+  // incremento por frame é menor que 1px, então somar direto em scrollTop
+  // perde a fração toda hora e a rolagem trava (nunca chega a mudar o
+  // inteiro). Guarda a posição exata aqui à parte, só arredonda na hora
+  // de aplicar no elemento.
+  let scrollPos = 0;
 
   function updateSpeedLabel() {
     if (speedLabel) speedLabel.textContent = speed;
@@ -70,7 +76,8 @@
   function step(timestamp) {
     if (!running || yielding) return;
     if (lastTime !== null) {
-      scrollEl.scrollTop += pxPerMs() * (timestamp - lastTime);
+      scrollPos += pxPerMs() * (timestamp - lastTime);
+      scrollEl.scrollTop = scrollPos;
       const atBottom = scrollEl.scrollTop + scrollEl.clientHeight >= scrollEl.scrollHeight - 2;
       if (atBottom) { stop(); return; }
     }
@@ -82,6 +89,7 @@
     scrollEl = pickScrollElement(); // reavalia na hora, layout pode ter mudado
     running = true;
     lastTime = null;
+    scrollPos = scrollEl.scrollTop; // começa de onde a tela já está agora
     toggleBtn.textContent = '⏸ Pausar';
     toggleBtn.classList.add('active');
     rafId = requestAnimationFrame(step);
@@ -122,6 +130,7 @@
     if (running && yielding) {
       yielding = false;
       lastTime = null; // evita um pulo grande — recomeça a contagem de tempo
+      scrollPos = scrollEl.scrollTop; // a pessoa pode ter arrastado durante o toque
       rafId = requestAnimationFrame(step);
     }
   }
