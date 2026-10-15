@@ -10,9 +10,12 @@
 
   // O layout do app geralmente rola dentro de um container interno
   // (.page), não na janela do navegador — mas isso pode variar por
-  // navegador/dispositivo. Em vez de presumir qual é, checa na hora
-  // (toda vez que clica em "Rolar sozinho") qual dos candidatos
-  // realmente tem conteúdo sobrando pra rolar.
+  // navegador/dispositivo. Comparar scrollHeight/clientHeight pra
+  // adivinhar qual é costumava funcionar, mas é um teste indireto que
+  // pode dar falso negativo dependendo de zoom/viewport do aparelho
+  // (foi o que quebrou a rolagem geral depois de funcionar um tempo).
+  // Mais confiável: testar de verdade — empurra 2px e vê se o elemento
+  // mexeu mesmo, desfaz o teste, e usa o primeiro que responder.
   function pickScrollElement() {
     const candidates = [
       document.querySelector('.page'),
@@ -21,7 +24,12 @@
       document.body,
     ].filter(Boolean);
     for (let i = 0; i < candidates.length; i++) {
-      if (candidates[i].scrollHeight > candidates[i].clientHeight + 10) return candidates[i];
+      const el = candidates[i];
+      const before = el.scrollTop;
+      el.scrollTop = before + 2;
+      const moved = el.scrollTop !== before;
+      el.scrollTop = before; // desfaz o teste, não é pra rolar de verdade ainda
+      if (moved) return el;
     }
     return candidates[0] || document.documentElement;
   }
