@@ -186,7 +186,11 @@ foreach ($batch as $i => $item) {
     }
 }
 
-// Limpeza: some com registros antigos já processados (mantém a tabela enxuta)
-$db->exec("DELETE FROM whatsapp_queue WHERE status IN ('sent','failed','expired') AND created_at < DATE_SUB(NOW(), INTERVAL 7 DAY)");
+// Limpeza: some com registros antigos já processados (mantém a tabela enxuta).
+// Usa COALESCE(sent_at, created_at), não só created_at — uma mensagem pode ter
+// sido CRIADA semanas antes (agendada pra data futura via not_before) e só
+// enviada agora; se olhasse só created_at, ela já nasceria "velha" e sumiria
+// da fila quase na hora de ser enviada, sem dar pra auditar depois.
+$db->exec("DELETE FROM whatsapp_queue WHERE status IN ('sent','failed','expired') AND COALESCE(sent_at, created_at) < DATE_SUB(NOW(), INTERVAL 7 DAY)");
 
 echo "Processed: " . count($batch) . " | sent: $sent | failed: $failed\n";
