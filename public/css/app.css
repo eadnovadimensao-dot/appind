@@ -386,7 +386,9 @@ tbody tr:hover td { background: #fafafa; }
 .autoscroll-bar .metronome-float {
   position: static; width: auto; height: auto; border-radius: 8px;
   flex-direction: row; gap: 6px; padding: 10px 12px; box-shadow: none;
+  background: var(--red); color: white; border-color: var(--red);
 }
+.autoscroll-bar .metronome-float:hover { background: var(--red); }
 .autoscroll-bar .metronome-float.visible { display: flex; }
 
 /* ── Grid de materiais/repertório — 1 coluna no mobile, várias no desktop ── */
