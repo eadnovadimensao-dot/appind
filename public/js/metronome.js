@@ -41,15 +41,21 @@
     let timerId = null;
     let countInRemaining = 0;
 
-    // Botão flutuante fixo na tela — some quando parado, aparece tocando.
-    // No Modo Culto, se a banda sai do click, dá pra parar com um toque sem
-    // rolar a tela até o topo da música e perder o lugar da letra/cifra.
+    // Botão de parar dentro da barra de rolagem (já fixa na tela) — some
+    // quando parado, aparece tocando. No Modo Culto, se a banda sai do
+    // click, dá pra parar com um toque sem rolar a tela até o topo da
+    // música e perder o lugar da letra/cifra.
     const floatBtn = document.createElement('button');
     floatBtn.type = 'button';
     floatBtn.className = 'metronome-float';
     floatBtn.setAttribute('aria-label', 'Parar metrônomo');
     floatBtn.innerHTML = '<span class="metronome-float-beat"></span><span class="metronome-float-icon">⏸</span>';
-    document.body.appendChild(floatBtn);
+    const autoscrollBar = document.getElementById('autoscroll-bar');
+    if (autoscrollBar) {
+      autoscrollBar.insertBefore(floatBtn, autoscrollBar.firstChild);
+    } else {
+      document.body.appendChild(floatBtn); // sem barra de rolagem na página — mantém flutuante
+    }
     const floatBeatEl = floatBtn.querySelector('.metronome-float-beat');
     floatBtn.addEventListener('click', function () { stop(); });
 
