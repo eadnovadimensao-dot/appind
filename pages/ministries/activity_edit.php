@@ -10,7 +10,7 @@ $id       = (int)($_GET['id'] ?? 0);
 $errors   = [];
 
 $stmt = $db->prepare("
-    SELECT ma.*, mn.name AS ministry_name
+    SELECT ma.*, mn.name AS ministry_name, mn.is_music_ministry
     FROM ministry_activities ma
     JOIN ministries mn ON mn.id = ma.ministry_id
     WHERE ma.id = ? AND ma.church_id = ?
@@ -30,6 +30,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     $timeEnd      = trim($_POST['time_end']      ?? '') ?: null;
     $location     = trim($_POST['location']      ?? '');
     $activityType = ($_POST['activity_type'] ?? 'culto') === 'ensaio' ? 'ensaio' : 'culto';
+    $serviceTheme = ($activityType === 'culto') ? (trim($_POST['service_theme'] ?? '') ?: null) : null;
 
     if ($title === '') $errors[] = 'Título é obrigatório.';
     if ($date  === '') $errors[] = 'Data é obrigatória.';
@@ -40,7 +41,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         $db->prepare("
             UPDATE ministry_activities
             SET title=:title, description=:description, activity_type=:activity_type,
-                activity_date=:date, time_start=:time_start, time_end=:time_end, location=:location
+                activity_date=:date, time_start=:time_start, time_end=:time_end, location=:location,
+                service_theme=:service_theme
             WHERE id=:id AND church_id=:church_id
         ")->execute([
             ':title'         => $title,
@@ -50,6 +52,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             ':time_start'    => $timeStart,
             ':time_end'      => $timeEnd,
             ':location'      => $location ?: null,
+            ':service_theme' => $serviceTheme,
             ':id'            => $id,
             ':church_id'     => $churchId,
         ]);
@@ -156,10 +159,18 @@ require_once __DIR__ . '/../../includes/layout.php';
                value="<?= htmlspecialchars($_POST['time_end'] ?? ($act['time_end'] ? substr($act['time_end'],0,5) : '')) ?>">
       </div>
     </div>
-    <div class="form-group" style="margin-bottom:0">
+    <div class="form-group" style="margin-bottom:<?= $act['is_music_ministry'] ? '16px' : '0' ?>">
       <label class="form-label">Descrição / Observações</label>
       <textarea name="description" class="form-control" rows="2"><?= htmlspecialchars($_POST['description'] ?? $act['description'] ?? '') ?></textarea>
     </div>
+    <?php if ($act['is_music_ministry']): ?>
+      <div class="form-group" id="service-theme-group" style="margin-bottom:0;<?= ($_POST['activity_type'] ?? $act['activity_type']) === 'culto' ? '' : 'display:none' ?>">
+        <label class="form-label">Tema do culto <span style="font-weight:400;color:var(--text-muted)">(opcional)</span></label>
+        <input type="text" name="service_theme" class="form-control" placeholder="Ex: Família, Gratidão, Fé…"
+               value="<?= htmlspecialchars($_POST['service_theme'] ?? $act['service_theme'] ?? '') ?>">
+        <div style="font-size:11px;color:var(--text-muted);margin-top:4px">Ajuda a destacar, na hora de montar o repertório, quais músicas do catálogo combinam com o tema.</div>
+      </div>
+    <?php endif; ?>
   </div>
 
   <div style="display:flex;gap:10px">
@@ -168,4 +179,14 @@ require_once __DIR__ . '/../../includes/layout.php';
   </div>
 </form>
 
+<?php if ($act['is_music_ministry']): ?>
+<?php
+$extraJs = <<<JS
+document.querySelector('select[name="activity_type"]').addEventListener('change', function() {
+  const group = document.getElementById('service-theme-group');
+  if (group) group.style.display = this.value === 'culto' ? 'block' : 'none';
+});
+JS;
+?>
+<?php endif; ?>
 <?php require_once __DIR__ . '/../../includes/layout-footer.php'; ?>

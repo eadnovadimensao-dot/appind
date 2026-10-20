@@ -10,7 +10,7 @@ $churchId = current_church_id();
 $id       = (int)($_GET['id'] ?? 0);
 
 $stmt = $db->prepare("
-    SELECT ma.*, mn.name AS ministry_name, mn.id AS ministry_id, mn.auto_scale_enabled, mn.uses_dress_code
+    SELECT ma.*, mn.name AS ministry_name, mn.id AS ministry_id, mn.auto_scale_enabled, mn.uses_dress_code, mn.is_music_ministry
     FROM ministry_activities ma
     JOIN ministries mn ON mn.id = ma.ministry_id
     WHERE ma.id = ? AND ma.church_id = ?
@@ -68,7 +68,7 @@ $songs = $db->prepare("
            COALESCE(r.external_url, mas.reference_link) AS reference_link,
            r.materials_url,
            COALESCE(r.file_path, mas.file_path) AS file_path,
-           r.known_repertoire,
+           r.known_repertoire, r.energy, r.theme_main, r.theme_secondary,
            (SELECT COUNT(DISTINCT mas2.activity_id) FROM ministry_activity_songs mas2
             JOIN ministry_activities ma2 ON ma2.id = mas2.activity_id
             WHERE mas2.resource_id = mas.resource_id AND ma2.activity_type = 'culto') AS culto_use_count
@@ -82,7 +82,7 @@ $songs = $songs->fetchAll();
 
 // Catálogo de músicas do ministério que ainda não estão nessa atividade
 $songCatalog = $db->prepare("
-    SELECT id, title, key_tone, external_url, materials_url, file_path, known_repertoire,
+    SELECT id, title, key_tone, external_url, materials_url, file_path, known_repertoire, energy, theme_main, theme_secondary,
            (SELECT COUNT(DISTINCT mas2.activity_id) FROM ministry_activity_songs mas2
             JOIN ministry_activities ma2 ON ma2.id = mas2.activity_id
             WHERE mas2.resource_id = ministry_resources.id AND ma2.activity_type = 'culto') AS culto_use_count
@@ -204,6 +204,29 @@ $dressNote    = trim((string)($act['dress_note'] ?? ''));
 // errado, culto ficando sem nada).
 $canDress = $act['activity_type'] === 'culto'
     && auth_can_manage_dress((int)$act['ministry_id']) && (!empty($act['uses_dress_code']) || $dressColors || $dressNote);
+
+// Checklist do roteiro comum de culto: 1-2ª agitadas, 3-4ª lentas, 5ª oferta
+// (livre), 6ª pré-palavra e 7ª pós-palavra ligadas ao tema. Só mostra o que
+// já dá pra checar com as músicas que tem até agora — não é bloqueio, é guia.
+$repertoireChecklist = [];
+if ($act['activity_type'] === 'culto' && $act['is_music_ministry'] && count($songs) >= 2) {
+    $matches = fn($sg) => song_matches_theme($act['service_theme'] ?? null, $sg['theme_main'] ?? null, $sg['theme_secondary'] ?? null);
+    $n = count($songs);
+
+    $agitadas = 0;
+    for ($i = 0; $i < min(2, $n); $i++) if (($songs[$i]['energy'] ?? null) === 'agitada') $agitadas++;
+    $repertoireChecklist[] = [$agitadas === min(2, $n), "$agitadas/" . min(2, $n) . " agitada(s) na abertura"];
+
+    if ($n >= 3) {
+        $lentas = 0;
+        for ($i = 2; $i < min(4, $n); $i++) if (($songs[$i]['energy'] ?? null) === 'lenta') $lentas++;
+        $repertoireChecklist[] = [$lentas === min(2, $n - 2), "$lentas/" . min(2, $n - 2) . " lenta(s) no meio"];
+    }
+    if (!empty($act['service_theme'])) {
+        if ($n >= 6) $repertoireChecklist[] = [$matches($songs[5]), '6ª (pré-palavra) ligada ao tema'];
+        if ($n >= 7) $repertoireChecklist[] = [$matches($songs[6]), '7ª (pós-palavra) ligada ao tema'];
+    }
+}
 ?>
 
 <?php if (!empty($songs) || !empty($songCatalog)): ?>
@@ -230,6 +253,18 @@ $canDress = $act['activity_type'] === 'culto'
       📤 enviado em <?= date('d/m H:i', strtotime($act['songs_sent_at'])) ?>
     </div>
   <?php endif; ?>
+  <?php if (!empty($act['service_theme'])): ?>
+    <div style="padding:8px 18px;font-size:12px;color:var(--text-muted);border-bottom:1px solid var(--border)">
+      🎯 Tema do culto: <strong style="color:var(--text)"><?= htmlspecialchars($act['service_theme']) ?></strong>
+    </div>
+  <?php endif; ?>
+  <?php if (!empty($repertoireChecklist)): ?>
+    <div style="padding:8px 18px;border-bottom:1px solid var(--border);display:flex;gap:6px;flex-wrap:wrap">
+      <?php foreach ($repertoireChecklist as [$ok, $label]): ?>
+        <span class="badge <?= $ok ? 'badge-green' : 'badge-amber' ?>" style="font-size:10px"><?= $ok ? '✅' : '⚠️' ?> <?= htmlspecialchars($label) ?></span>
+      <?php endforeach; ?>
+    </div>
+  <?php endif; ?>
   <?php if (empty($songs)): ?>
     <div class="empty-state" style="padding:24px">Nenhuma música adicionada.</div>
   <?php else: ?>
@@ -247,6 +282,10 @@ $canDress = $act['activity_type'] === 'culto'
           <?php endif; ?>
           <?php if ($sg['key_tone']): ?>
             <span class="badge badge-gray" style="font-size:10px;margin-left:6px">Tom: <?= htmlspecialchars($sg['key_tone']) ?></span>
+          <?php endif; ?>
+          <?= energy_badge($sg['energy'] ?? null) ?>
+          <?php if (song_matches_theme($act['service_theme'] ?? null, $sg['theme_main'] ?? null, $sg['theme_secondary'] ?? null)): ?>
+            <span class="badge badge-amber" style="font-size:10px" title="Combina com o tema do culto">🎯 Tema</span>
           <?php endif; ?>
           <div style="font-size:12px;margin-top:2px;display:flex;gap:12px;flex-wrap:wrap">
             <?php if ($sg['reference_link']): ?>
@@ -286,6 +325,8 @@ $canDress = $act['activity_type'] === 'culto'
               <input type="checkbox" name="resource_ids[]" value="<?= $sg['id'] ?>">
               <?= htmlspecialchars($sg['title']) ?>
               <?php if (!$sg['known_repertoire'] && (int)$sg['culto_use_count'] < SONG_NEW_USE_THRESHOLD): ?> ✨<?php endif; ?>
+              <?php if ($sg['energy'] === 'agitada'): ?> 🔥<?php elseif ($sg['energy'] === 'lenta'): ?> 🕊️<?php endif; ?>
+              <?php if (song_matches_theme($act['service_theme'] ?? null, $sg['theme_main'] ?? null, $sg['theme_secondary'] ?? null)): ?> 🎯<?php endif; ?>
               <?= $sg['key_tone'] ? ' · ' . htmlspecialchars($sg['key_tone']) : '' ?>
             </label>
           <?php endforeach; ?>

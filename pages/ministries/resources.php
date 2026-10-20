@@ -155,7 +155,7 @@ function resource_size(?int $bytes): string {
       </div>
       <div class="form-group">
         <label class="form-label">BPM <span style="font-weight:400;color:var(--text-muted)">(andamento, opcional)</span></label>
-        <input type="number" name="bpm" class="form-control" min="0" placeholder="Ex: 120">
+        <input type="number" name="bpm" class="form-control" id="bpm-input" min="0" placeholder="Ex: 120">
       </div>
       <div class="form-group">
         <label class="form-label">Divisão rítmica <span style="font-weight:400;color:var(--text-muted)">(compasso, opcional)</span></label>
@@ -166,6 +166,16 @@ function resource_size(?int $bytes): string {
           <?php endforeach; ?>
         </select>
         <div style="font-size:11px;color:var(--text-muted);margin-top:4px">O metrônomo já abre configurado com esse compasso.</div>
+      </div>
+      <div class="form-group">
+        <label class="form-label">Energia <span style="font-weight:400;color:var(--text-muted)">(opcional)</span></label>
+        <select name="energy" class="form-control" id="energy-select">
+          <option value="">—</option>
+          <?php foreach (ENERGY_OPTIONS as $k => $label): ?>
+            <option value="<?= $k ?>"><?= $label ?></option>
+          <?php endforeach; ?>
+        </select>
+        <div style="font-size:11px;color:var(--text-muted);margin-top:4px">Sugerido pelo BPM; ajuste se não bater com a sensação da música.</div>
       </div>
     </div>
     <div class="form-row">
@@ -263,6 +273,23 @@ Grande     é o Senhor</div>
       if (isSong && catField.value === 'Geral') catField.value = 'Repertório';
       if (!isSong && catField.value === 'Repertório') catField.value = 'Geral';
     });
+
+    // Sugere Energia pelo BPM, sem sobrescrever se a pessoa já escolheu na mão
+    (function () {
+      const bpmInput = document.getElementById('bpm-input');
+      const energySelect = document.getElementById('energy-select');
+      if (!bpmInput || !energySelect) return;
+      let touched = false;
+      energySelect.addEventListener('change', function () { touched = true; });
+      bpmInput.addEventListener('input', function () {
+        if (touched) return;
+        const bpm = parseInt(bpmInput.value, 10);
+        if (!bpm) { energySelect.value = ''; return; }
+        if (bpm >= 100) energySelect.value = 'agitada';
+        else if (bpm <= 80) energySelect.value = 'lenta';
+        else energySelect.value = '';
+      });
+    })();
   </script>
 </div>
 <?php endif; ?>
@@ -318,6 +345,7 @@ Grande     é o Senhor</div>
                     <?php if ($r['time_signature']): ?>
                       <span class="badge badge-gray" style="font-size:10px"><?= htmlspecialchars($r['time_signature']) ?></span>
                     <?php endif; ?>
+                    <?= energy_badge($r['energy'] ?? null) ?>
                     <?php if ($r['type'] === 'song' && ($titleCounts[mb_strtolower(trim($r['title']))] ?? 0) > 1): ?>
                       <span class="badge badge-amber" style="font-size:10px" title="Existe mais de uma música com esse título nesse ministério">⚠️ duplicada</span>
                     <?php endif; ?>

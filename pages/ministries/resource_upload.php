@@ -1,6 +1,7 @@
 <?php
 require_once __DIR__ . "/../../config/database.php";
 require_once __DIR__ . "/../../includes/auth.php";
+require_once __DIR__ . "/../../includes/chords.php";
 auth_check();
 
 $db         = db();
@@ -25,6 +26,7 @@ $chordSheet   = trim($_POST['chord_sheet_text'] ?? '') ?: null;
 $capo         = ($type === 'song' && trim($_POST['capo'] ?? '') !== '') ? max(0, min(11, (int)$_POST['capo'])) : null;
 $bpm          = ($type === 'song' && trim($_POST['bpm'] ?? '') !== '') ? max(0, (int)$_POST['bpm']) : null;
 $timeSig      = ($type === 'song' && trim($_POST['time_signature'] ?? '') !== '') ? trim($_POST['time_signature']) : null;
+$energy       = ($type === 'song' && isset(ENERGY_OPTIONS[$_POST['energy'] ?? ''])) ? $_POST['energy'] : null;
 $themeMain    = ($type === 'song') ? (trim($_POST['theme_main'] ?? '') ?: null) : null;
 $themeSec     = ($type === 'song') ? (trim($_POST['theme_secondary'] ?? '') ?: null) : null;
 $centralMsg   = ($type === 'song') ? (trim($_POST['central_message'] ?? '') ?: null) : null;
@@ -84,10 +86,10 @@ if ($type === 'song') {
 
 $ins = $db->prepare("
     INSERT INTO ministry_resources
-      (ministry_id, church_id, category, type, title, key_tone, chord_sheet_text, capo, bpm, time_signature,
+      (ministry_id, church_id, category, type, title, key_tone, chord_sheet_text, capo, bpm, time_signature, energy,
        theme_main, theme_secondary, central_message, known_repertoire,
        description, file_path, file_name, file_size, external_url, materials_url, created_by)
-    VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)
+    VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)
 ");
 $ins->execute([
     $ministryId,
@@ -100,6 +102,7 @@ $ins->execute([
     $capo,
     $bpm,
     $timeSig,
+    $energy,
     $themeMain,
     $themeSec,
     $centralMsg,

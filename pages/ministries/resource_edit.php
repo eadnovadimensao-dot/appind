@@ -32,6 +32,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     $capo         = ($type === 'song' && trim($_POST['capo'] ?? '') !== '') ? max(0, min(11, (int)$_POST['capo'])) : null;
     $bpm          = ($type === 'song' && trim($_POST['bpm'] ?? '') !== '') ? max(0, (int)$_POST['bpm']) : null;
     $timeSig      = ($type === 'song' && trim($_POST['time_signature'] ?? '') !== '') ? trim($_POST['time_signature']) : null;
+    $energy       = ($type === 'song' && isset(ENERGY_OPTIONS[$_POST['energy'] ?? ''])) ? $_POST['energy'] : null;
     $themeMain    = ($type === 'song') ? (trim($_POST['theme_main'] ?? '') ?: null) : null;
     $themeSec     = ($type === 'song') ? (trim($_POST['theme_secondary'] ?? '') ?: null) : null;
     $centralMsg   = ($type === 'song') ? (trim($_POST['central_message'] ?? '') ?: null) : null;
@@ -95,12 +96,12 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 
         $db->prepare("
             UPDATE ministry_resources SET
-              type=?, title=?, key_tone=?, chord_sheet_text=?, capo=?, bpm=?, time_signature=?,
+              type=?, title=?, key_tone=?, chord_sheet_text=?, capo=?, bpm=?, time_signature=?, energy=?,
               theme_main=?, theme_secondary=?, central_message=?, known_repertoire=?, category=?, description=?,
               file_path=?, file_name=?, file_size=?, external_url=?, materials_url=?
             WHERE id=?
         ")->execute([
-            $type, $title, $keyTone, $chordSheet, $capo, $bpm, $timeSig,
+            $type, $title, $keyTone, $chordSheet, $capo, $bpm, $timeSig, $energy,
             $themeMain, $themeSec, $centralMsg, $knownRepertoire, $category, $description ?: null,
             $filePath, $fileName, $fileSize, $externalUrl ?: null, $materialsUrl ?: null,
             $resId,
@@ -110,7 +111,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     }
     // Reexibe o formulário com o que a pessoa já tinha digitado
     $res = array_merge($res, ['type' => $type, 'title' => $title, 'key_tone' => $keyTone,
-        'chord_sheet_text' => $chordSheet, 'capo' => $capo, 'bpm' => $bpm, 'time_signature' => $timeSig,
+        'chord_sheet_text' => $chordSheet, 'capo' => $capo, 'bpm' => $bpm, 'time_signature' => $timeSig, 'energy' => $energy,
         'theme_main' => $themeMain, 'theme_secondary' => $themeSec, 'central_message' => $centralMsg,
         'known_repertoire' => $knownRepertoire,
         'category' => $category, 'description' => $description, 'external_url' => $externalUrl,
@@ -161,7 +162,7 @@ require_once __DIR__ . '/../../includes/layout.php';
       </div>
       <div class="form-group">
         <label class="form-label">BPM <span style="font-weight:400;color:var(--text-muted)">(andamento, opcional)</span></label>
-        <input type="number" name="bpm" class="form-control" min="0" placeholder="Ex: 120" value="<?= htmlspecialchars($res['bpm'] ?? '') ?>">
+        <input type="number" name="bpm" class="form-control" id="bpm-input" min="0" placeholder="Ex: 120" value="<?= htmlspecialchars($res['bpm'] ?? '') ?>">
       </div>
       <div class="form-group">
         <label class="form-label">Divisão rítmica <span style="font-weight:400;color:var(--text-muted)">(compasso, opcional)</span></label>
@@ -172,6 +173,16 @@ require_once __DIR__ . '/../../includes/layout.php';
           <?php endforeach; ?>
         </select>
         <div style="font-size:11px;color:var(--text-muted);margin-top:4px">O metrônomo já abre configurado com esse compasso.</div>
+      </div>
+      <div class="form-group">
+        <label class="form-label">Energia <span style="font-weight:400;color:var(--text-muted)">(opcional)</span></label>
+        <select name="energy" class="form-control" id="energy-select">
+          <option value="">—</option>
+          <?php foreach (ENERGY_OPTIONS as $k => $label): ?>
+            <option value="<?= $k ?>" <?= ($res['energy'] ?? '') === $k ? 'selected' : '' ?>><?= $label ?></option>
+          <?php endforeach; ?>
+        </select>
+        <div style="font-size:11px;color:var(--text-muted);margin-top:4px">Sugerido pelo BPM; ajuste se não bater com a sensação da música.</div>
       </div>
     </div>
     <div class="form-row">
@@ -328,6 +339,22 @@ document.getElementById('resource-type').addEventListener('change', function() {
   document.getElementById('theme-group').style.display = isSong ? 'block' : 'none';
   document.getElementById('external-url-label').textContent = isSong ? 'Link de referência (YouTube)' : 'Link externo';
 });
+
+(function () {
+  const bpmInput = document.getElementById('bpm-input');
+  const energySelect = document.getElementById('energy-select');
+  if (!bpmInput || !energySelect) return;
+  let touched = energySelect.value !== ''; // já tinha energia salva — não sobrescreve ao editar o BPM
+  energySelect.addEventListener('change', function () { touched = true; });
+  bpmInput.addEventListener('input', function () {
+    if (touched) return;
+    const bpm = parseInt(bpmInput.value, 10);
+    if (!bpm) { energySelect.value = ''; return; }
+    if (bpm >= 100) energySelect.value = 'agitada';
+    else if (bpm <= 80) energySelect.value = 'lenta';
+    else energySelect.value = '';
+  });
+})();
 JS;
 require_once __DIR__ . '/../../includes/layout-footer.php';
 ?>

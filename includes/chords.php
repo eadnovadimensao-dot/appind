@@ -81,6 +81,42 @@ const TIME_SIGNATURE_OPTIONS = ['4/4', '3/4', '2/4', '6/8', '12/8'];
 const SONG_NEW_USE_THRESHOLD = 3;
 
 /**
+ * Energia da música (agitada/lenta) — pra ajudar a montar repertório rápido
+ * seguindo o roteiro comum de culto (abertura agitada, meio lento, oferta
+ * livre, pré/pós-palavra ligado ao tema). Cadastrado manualmente (o BPM
+ * sozinho engana às vezes), mas pré-sugerido a partir do BPM na hora de
+ * cadastrar — a pessoa confirma ou corrige num clique.
+ */
+const ENERGY_OPTIONS = ['agitada' => '🔥 Agitada', 'lenta' => '🕊️ Lenta'];
+const ENERGY_BPM_AGITADA_MIN = 100; // BPM >= isso sugere agitada
+const ENERGY_BPM_LENTA_MAX   = 80;  // BPM <= isso sugere lenta — entre os dois, sem sugestão
+
+function suggest_energy_from_bpm(?int $bpm): ?string {
+    if (!$bpm) return null;
+    if ($bpm >= ENERGY_BPM_AGITADA_MIN) return 'agitada';
+    if ($bpm <= ENERGY_BPM_LENTA_MAX) return 'lenta';
+    return null;
+}
+
+function energy_badge(?string $energy): string {
+    if (!isset(ENERGY_OPTIONS[$energy])) return '';
+    return '<span class="badge badge-gray" style="font-size:10px">' . ENERGY_OPTIONS[$energy] . '</span>';
+}
+
+/** O tema do culto bate com o tema da música (comparação sem acento/caixa)? */
+function song_matches_theme(?string $serviceTheme, ?string $themeMain, ?string $themeSecondary): bool {
+    $serviceTheme = trim((string)$serviceTheme);
+    if ($serviceTheme === '') return false;
+    $needle = chart_normalize($serviceTheme);
+    $haystack = chart_normalize(trim((string)$themeMain) . ' ' . trim((string)$themeSecondary));
+    if ($haystack === ' ' || $haystack === '') return false;
+    foreach (preg_split('/[,\s]+/', $needle) as $word) {
+        if (mb_strlen($word) >= 4 && str_contains($haystack, $word)) return true;
+    }
+    return false;
+}
+
+/**
  * <option>s do seletor de compasso do metrônomo — valor é a quantidade
  * de tempos (o que o JS usa pra acentuar o 1º tempo de cada grupo).
  */
