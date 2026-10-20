@@ -362,6 +362,24 @@ tbody tr:hover td { background: #fafafa; }
 .metronome-checkbox { cursor: pointer; }
 .metronome-checkbox input { cursor: pointer; }
 
+/* ── Botão flutuante do metrônomo — some quando parado, some em cima da
+   barra de rolagem automática, pra parar o click sem rolar a tela até a
+   música (útil ao vivo, se a banda sai do click no meio da apresentação) ── */
+.metronome-float {
+  display: none; position: fixed; right: 16px; bottom: 88px; z-index: 50;
+  width: 58px; height: 58px; border-radius: 50%; border: none;
+  background: var(--red); color: white; cursor: pointer;
+  flex-direction: column; align-items: center; justify-content: center; gap: 3px;
+  box-shadow: 0 4px 16px rgba(0,0,0,.28);
+}
+.metronome-float.visible { display: flex; }
+.metronome-float-icon { font-size: 19px; line-height: 1; }
+.metronome-float-beat {
+  width: 9px; height: 9px; border-radius: 50%; background: rgba(255,255,255,.45);
+  transition: background-color .05s, transform .05s;
+}
+.metronome-float-beat.active { background: white; transform: scale(1.3); }
+
 /* ── Grid de materiais/repertório — 1 coluna no mobile, várias no desktop ── */
 .resource-grid {
   display: grid; grid-template-columns: repeat(auto-fit, minmax(360px, 1fr)); gap: 14px;

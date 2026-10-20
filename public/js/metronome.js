@@ -41,6 +41,18 @@
     let timerId = null;
     let countInRemaining = 0;
 
+    // Botão flutuante fixo na tela — some quando parado, aparece tocando.
+    // No Modo Culto, se a banda sai do click, dá pra parar com um toque sem
+    // rolar a tela até o topo da música e perder o lugar da letra/cifra.
+    const floatBtn = document.createElement('button');
+    floatBtn.type = 'button';
+    floatBtn.className = 'metronome-float';
+    floatBtn.setAttribute('aria-label', 'Parar metrônomo');
+    floatBtn.innerHTML = '<span class="metronome-float-beat"></span><span class="metronome-float-icon">⏸</span>';
+    document.body.appendChild(floatBtn);
+    const floatBeatEl = floatBtn.querySelector('.metronome-float-beat');
+    floatBtn.addEventListener('click', function () { stop(); });
+
     // Desenha um "pulso" (bolinha) por tempo do compasso — o primeiro
     // sempre marcado como acento, pra mostrar visualmente onde cai o "1".
     function buildPulses() {
@@ -75,6 +87,8 @@
           dot.classList.add('active');
           setTimeout(function () { dot.classList.remove('active'); }, 90);
         }
+        floatBeatEl.classList.add('active');
+        setTimeout(function () { floatBeatEl.classList.remove('active'); }, 90);
       }, delayMs);
     }
 
@@ -115,6 +129,7 @@
       scheduler();
       toggleBtn.textContent = '⏸';
       widget.classList.add('playing');
+      floatBtn.classList.add('visible');
     }
 
     function stop() {
@@ -125,6 +140,7 @@
       widget.classList.remove('counting-in');
       pulseDots.forEach(function (d) { d.classList.remove('active'); });
       if (beatNumberEl) beatNumberEl.textContent = '';
+      floatBtn.classList.remove('visible');
     }
 
     toggleBtn.addEventListener('click', function () {
