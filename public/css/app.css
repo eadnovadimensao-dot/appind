@@ -35,6 +35,29 @@
   --t:    0.22s var(--ease);
 }
 
+/* ── Modo escuro — só nas telas de Modo Ensaio/Culto e cifra isolada
+   (ambiente de palco escuro; o resto do app é usado em escritório/admin,
+   não precisa). Troca as variáveis principais; o resto do app herda. ── */
+:root[data-theme="dark"] {
+  color-scheme: dark;
+  --content-bg: #16191d;
+  --card-bg:    #20242a;
+  --card-shadow: 0 1px 3px rgba(0,0,0,.35), 0 1px 2px rgba(0,0,0,.25);
+  --text:       #e8eaed;
+  --text-muted: #9aa0a6;
+  --border:     #343a40;
+}
+[data-theme="dark"] .form-control,
+[data-theme="dark"] .chord-controls button,
+[data-theme="dark"] .autoscroll-bar,
+[data-theme="dark"] .autoscroll-bar button,
+[data-theme="dark"] .metronome-bpm button,
+[data-theme="dark"] .metronome-tap,
+[data-theme="dark"] .metronome-double {
+  background: var(--card-bg);
+}
+[data-theme="dark"] .form-control { color: var(--text); }
+
 html { scroll-behavior: smooth; }
 
 body {
@@ -253,6 +276,7 @@ tbody tr:hover td { background: #fafafa; }
   max-width: 100%;
 }
 .chord-sheet .chord { color: var(--accent-dk); font-weight: 700; }
+[data-theme="dark"] .chord-sheet .chord { color: #34D399; } /* verde escuro fica ilegível no fundo escuro */
 .chord-controls {
   display: flex; align-items: center; gap: 10px; margin-bottom: 14px; flex-wrap: wrap;
 }
@@ -379,6 +403,13 @@ tbody tr:hover td { background: #fafafa; }
   transition: background-color .05s, transform .05s;
 }
 .metronome-float-beat.active { background: white; transform: scale(1.3); }
+
+/* ── Botão de alternar modo escuro (Modo Ensaio/Culto e cifra isolada) ── */
+.theme-toggle-btn {
+  width: 36px; height: 36px; border-radius: 10px; border: 1px solid var(--border);
+  background: var(--content-bg); color: var(--text); font-size: 16px; cursor: pointer;
+  display: flex; align-items: center; justify-content: center; flex-shrink: 0;
+}
 
 /* Quando a página já tem a barra de rolagem fixa, o botão de parar o
    metrônomo entra nela em vez de flutuar separado — mesmo visual dos

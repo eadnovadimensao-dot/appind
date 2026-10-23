@@ -25,14 +25,15 @@ $voices = $voices->fetchAll();
 
 $pageTitle  = 'Cifra · ' . $res['title'];
 $activePage = 'ministries';
-$extraScriptSrc = ['/public/js/chord-transpose.js', '/public/js/autoscroll.js', '/public/js/metronome.js'];
+$extraScriptSrc = ['/public/js/chord-transpose.js', '/public/js/autoscroll.js', '/public/js/metronome.js', '/public/js/theme-toggle.js'];
 require_once __DIR__ . '/../../includes/layout.php';
 ?>
 
-<div style="margin-bottom:16px">
+<div style="margin-bottom:16px;display:flex;justify-content:space-between;align-items:center;gap:10px">
   <a href="/pages/ministries/resources.php?ministry_id=<?= $res['ministry_id'] ?>" style="font-size:13px;color:var(--text-muted);text-decoration:none">
     ← Materiais · <?= htmlspecialchars($res['ministry_name']) ?>
   </a>
+  <button type="button" id="theme-toggle" class="theme-toggle-btn" title="Modo escuro">🌙</button>
 </div>
 
 <div class="card">

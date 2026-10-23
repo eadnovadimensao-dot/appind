@@ -53,21 +53,24 @@ $sg = $songs[$i];
 $modeLabel      = $act['activity_type'] === 'culto' ? 'Modo Culto' : 'Modo Ensaio';
 $pageTitle      = $modeLabel . ' · ' . $act['title'];
 $activePage     = 'ministries';
-$extraScriptSrc = ['/public/js/chord-transpose.js', '/public/js/autoscroll.js', '/public/js/metronome.js'];
+$extraScriptSrc = ['/public/js/chord-transpose.js', '/public/js/autoscroll.js', '/public/js/metronome.js', '/public/js/theme-toggle.js'];
 require_once __DIR__ . '/../../includes/layout.php';
 ?>
 
-<div style="margin-bottom:16px">
-  <a href="/pages/ministries/activity_view.php?id=<?= $id ?>" style="font-size:13px;color:var(--text-muted);text-decoration:none">
-    ← <?= htmlspecialchars($act['title']) ?>
-  </a>
-  <h1 style="font-size:20px;font-weight:600;margin-top:6px">🎤 <?= $modeLabel ?></h1>
-  <p style="font-size:13px;color:var(--text-muted);margin-top:2px">
-    <?= htmlspecialchars($act['ministry_name']) ?> ·
-    <?= date('d/m/Y', strtotime($act['activity_date'])) ?>
-    <?= $act['time_start'] ? ' às ' . substr($act['time_start'], 0, 5) : '' ?>
-    · Música <?= $current ?> de <?= $total ?>
-  </p>
+<div style="margin-bottom:16px;display:flex;justify-content:space-between;align-items:flex-start;gap:10px">
+  <div>
+    <a href="/pages/ministries/activity_view.php?id=<?= $id ?>" style="font-size:13px;color:var(--text-muted);text-decoration:none">
+      ← <?= htmlspecialchars($act['title']) ?>
+    </a>
+    <h1 style="font-size:20px;font-weight:600;margin-top:6px">🎤 <?= $modeLabel ?></h1>
+    <p style="font-size:13px;color:var(--text-muted);margin-top:2px">
+      <?= htmlspecialchars($act['ministry_name']) ?> ·
+      <?= date('d/m/Y', strtotime($act['activity_date'])) ?>
+      <?= $act['time_start'] ? ' às ' . substr($act['time_start'], 0, 5) : '' ?>
+      · Música <?= $current ?> de <?= $total ?>
+    </p>
+  </div>
+  <button type="button" id="theme-toggle" class="theme-toggle-btn" title="Modo escuro">🌙</button>
 </div>
 
 <?php if ($total > 1): ?>
