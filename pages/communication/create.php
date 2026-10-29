@@ -1,6 +1,7 @@
 <?php
 require_once __DIR__ . '/../../config/database.php';
 require_once __DIR__ . '/../../includes/auth.php';
+require_once __DIR__ . '/../../includes/announcements.php';
 auth_check();
 
 $db       = db();
@@ -84,137 +85,6 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 
         header('Location: /pages/communication/index.php?sent=1');
         exit;
-    }
-}
-
-// Funções auxiliares
-function getRecipients(PDO $db, int $churchId, string $targetType, ?int $targetId): array {
-    // Sempre só a igreja selecionada: "todos", célula e ministério nunca alcançam outra igreja
-    $sql    = "SELECT m.id, m.name, m.email, m.phone FROM members m WHERE m.status = 'active' AND m.church_id = ?";
-    $params = [$churchId];
-
-    if ($targetType === 'cell') {
-        $sql .= " AND m.cell_id = ?";
-        $params[] = $targetId;
-    } elseif ($targetType === 'ministry') {
-        $sql .= " AND m.id IN (SELECT member_id FROM member_ministries WHERE ministry_id = ?)";
-        $params[] = $targetId;
-    } elseif ($targetType !== 'all') {
-        return [];
-    }
-
-    $stmt = $db->prepare($sql);
-    $stmt->execute($params);
-    return $stmt->fetchAll();
-}
-
-function sendEmails(PDO $db, int $announcementId, array $recipients, string $title, string $content): void {
-    $autoload = __DIR__ . '/../../vendor/autoload.php';
-    if (!file_exists($autoload)) return;
-    require_once $autoload;
-
-    $churchName = setting('church_name', 'Igreja Manager');
-    $smtpHost   = setting('smtp_host',   'localhost');
-    $smtpPort   = (int)setting('smtp_port', '587');
-    $smtpUser   = setting('smtp_user',   '');
-    $smtpPass   = setting('smtp_pass',   '');
-    $smtpFrom   = setting('church_email') ?: $smtpUser;
-
-    $sl = $db->prepare("INSERT IGNORE INTO announcement_sends (announcement_id, member_id, channel) VALUES (?,?,'email')");
-
-    foreach ($recipients as $r) {
-        if (empty($r['email'])) continue;
-        try {
-            $mail = new \PHPMailer\PHPMailer\PHPMailer(true);
-            $mail->isSMTP();
-            $mail->Host       = $smtpHost;
-            $mail->Port       = $smtpPort;
-            $mail->SMTPAuth   = !empty($smtpUser);
-            $mail->Username   = $smtpUser;
-            $mail->Password   = $smtpPass;
-            $mail->SMTPSecure = $smtpPort == 465
-                ? \PHPMailer\PHPMailer\PHPMailer::ENCRYPTION_SMTPS
-                : \PHPMailer\PHPMailer\PHPMailer::ENCRYPTION_STARTTLS;
-            $mail->CharSet    = 'UTF-8';
-            $mail->setFrom($smtpFrom, $churchName);
-            $mail->addAddress($r['email'], $r['name']);
-            $mail->Subject    = $title;
-            $mail->Body       = "Olá, {$r['name']}!\n\n{$content}\n\n— {$churchName}";
-            $mail->send();
-            $sl->execute([$announcementId, $r['id']]);
-        } catch (\Exception $e) {
-            // Log silencioso — não interrompe o fluxo
-        }
-    }
-}
-
-function sendPushNotifications(PDO $db, int $announcementId, array $recipients, string $title, string $content): void {
-    $vapidPublic  = setting('vapid_public_key');
-    $vapidPrivate = setting('vapid_private_key');
-    $vapidSubject = setting('vapid_subject', 'mailto:admin@igrejanovadimensao.com.br');
-
-    if (!$vapidPublic || !$vapidPrivate) return;
-
-    // Verificar se web-push está instalado
-    $autoload = __DIR__ . '/../../vendor/autoload.php';
-    if (!file_exists($autoload)) return;
-    require_once $autoload;
-
-    $webPush = new \Minishlink\WebPush\WebPush([
-        'VAPID' => [
-            'subject'    => $vapidSubject,
-            'publicKey'  => $vapidPublic,
-            'privateKey' => $vapidPrivate,
-        ],
-    ]);
-
-    $recipientIds = array_column($recipients, 'id');
-    if (empty($recipientIds)) return;
-
-    $placeholders = implode(',', array_fill(0, count($recipientIds), '?'));
-    $subs = $db->prepare("SELECT * FROM push_subscriptions WHERE member_id IN ($placeholders)");
-    $subs->execute($recipientIds);
-    $subscriptions = $subs->fetchAll();
-
-    $sl = $db->prepare("INSERT IGNORE INTO announcement_sends (announcement_id, member_id, channel) VALUES (?,?,'push')");
-
-    $payload = json_encode([
-        'title' => $title,
-        'body'  => mb_substr(strip_tags($content), 0, 120),
-        'url'   => '/pages/communication/index.php',
-        'tag'   => 'announcement-' . $announcementId,
-    ]);
-
-    foreach ($subscriptions as $sub) {
-        $subscription = \Minishlink\WebPush\Subscription::create([
-            'endpoint'        => $sub['endpoint'],
-            'keys'            => ['p256dh' => $sub['p256dh'], 'auth' => $sub['auth_key']],
-            'contentEncoding' => 'aesgcm',
-        ]);
-        $webPush->queueNotification($subscription, $payload);
-        $sl->execute([$announcementId, $sub['member_id']]);
-    }
-
-    // Enviar todas as notificações
-    foreach ($webPush->flush() as $report) {
-        if ($report->isSubscriptionExpired()) {
-            // Remover subscription expirada
-            $db->prepare("DELETE FROM push_subscriptions WHERE endpoint=?")
-               ->execute([$report->getRequest()->getUri()->__toString()]);
-        }
-    }
-}
-
-function sendWhatsappAnnouncement(PDO $db, int $announcementId, array $recipients, string $title, string $content, int $churchId): void {
-    $churchName = setting('church_name', 'Igreja', $churchId);
-    $message    = "*{$churchName}*\n\n*{$title}*\n\n{$content}";
-
-    $sl = $db->prepare("INSERT IGNORE INTO announcement_sends (announcement_id, member_id, channel) VALUES (?,?,'whatsapp')");
-
-    foreach ($recipients as $r) {
-        if (empty($r['phone'])) continue;
-        queue_whatsapp($r['phone'], $message, $churchId);
-        $sl->execute([$announcementId, $r['id']]);
     }
 }
 
@@ -326,15 +196,11 @@ require_once __DIR__ . '/../../includes/layout.php';
   <div id="whatsapp-preview" style="display:none;margin-bottom:16px">
     <div class="card">
       <p class="card-title">💬 Preview da mensagem WhatsApp</p>
-      <div style="background:#FEF3C7;border:1px solid #FCD34D;border-radius:8px;padding:10px 14px;margin-bottom:12px;font-size:12px;color:#854F0B">
-        ⚠️ Ao clicar em "Enviar agora", essa mensagem entra numa fila e é enviada de verdade,
-        aos poucos, pra todo mundo do destinatário selecionado que tem telefone cadastrado.
+      <div style="background:#ECF8F1;border:1px solid #BFE3CC;border-radius:8px;padding:10px 14px;margin-bottom:12px;font-size:12px;color:#1E5631">
+        ✅ Isso é só um preview. O envio é automático: ao clicar em "Enviar agora" (ou "Salvar rascunho" e depois "Enviar"),
+        a mensagem acima vai direto pra todo mundo do destinatário selecionado que tem telefone cadastrado. Não precisa copiar nem mandar manualmente.
       </div>
       <div style="background:#ECF8F1;border-radius:8px;padding:14px;font-size:13px;line-height:1.8;font-family:monospace;white-space:pre-wrap" id="wa-preview-text"></div>
-      <button type="button" onclick="copyWhatsapp()"
-              class="btn btn-secondary" style="margin-top:12px;font-size:12px">
-        📋 Copiar mensagem
-      </button>
     </div>
   </div>
 
@@ -386,15 +252,6 @@ function updateWaPreview() {
   const content = document.querySelector('[name=content]').value || '';
   const text    = '*$churchName*\\n\\n*' + title + '*\\n\\n' + content;
   document.getElementById('wa-preview-text').textContent = text;
-}
-
-function copyWhatsapp() {
-  const text = document.getElementById('wa-preview-text').textContent;
-  navigator.clipboard.writeText(text).then(() => {
-    const btn = event.target;
-    btn.textContent = '✓ Copiado!';
-    setTimeout(() => btn.textContent = '📋 Copiar mensagem', 2000);
-  });
 }
 
 // Listeners para atualizar preview
