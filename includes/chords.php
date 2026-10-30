@@ -142,11 +142,21 @@ function render_capo_picker_options(): string {
     return $html;
 }
 
+/**
+ * Remove caracteres Unicode invisíveis que colam junto do texto (zero-width
+ * space/joiner, BOM) — vêm de copiar de PDF/WhatsApp/Google Docs e, por não
+ * aparecerem na tela, impedem silenciosamente o reconhecimento de "[Seção]"
+ * ou de linha-só-de-acorde quando colam logo no início da linha.
+ */
+function chart_strip_invisible(string $text): string {
+    return str_replace(["\xE2\x80\x8B", "\xE2\x80\x8C", "\xE2\x80\x8D", "\xEF\xBB\xBF"], '', $text);
+}
+
 function render_chord_sheet(string $text): string {
     // Sem nl2br() aqui — o CSS do .chord-sheet usa white-space:pre-wrap,
     // que já preserva as quebras de linha originais. Usar os dois juntos
     // duplicava as quebras (uma do <br>, outra do \n preservado).
-    $escaped = htmlspecialchars($text);
+    $escaped = htmlspecialchars(chart_strip_invisible($text));
     return preg_replace('/\[([^\[\]]+)\]/', '<span class="chord">$1</span>', $escaped);
 }
 
@@ -195,7 +205,7 @@ function chart_section_color(string $title): string {
  * "nota:" pode aparecer mais de uma vez na mesma seção (vira várias linhas).
  */
 function parse_chord_chart(string $text): array {
-    $lines = preg_split('/\r\n|\r|\n/', $text);
+    $lines = preg_split('/\r\n|\r|\n/', chart_strip_invisible($text));
     $sections = [];
     $curIdx = -1;
 
