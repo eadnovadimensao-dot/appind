@@ -341,23 +341,31 @@ $actTypeLabels = [
             <?php if ($m['joined_at']): ?>
               <div style="font-size:11px;color:var(--text-muted)">desde <?= date('d/m/Y', strtotime($m['joined_at'])) ?></div>
             <?php endif; ?>
+            <?php
+              $mCurrentRoles = role_names_from_string($m['role'] ?? '');
+              $mHasNaipeRole = !empty(array_intersect($mCurrentRoles, $naipeRoleNames));
+            ?>
             <?php if ($canManage): ?>
             <div class="role-view" id="role-view-<?= $m['id'] ?>" style="font-size:11px;color:var(--text-muted);margin-top:2px;cursor:pointer"
                  onclick="document.getElementById('role-view-<?= $m['id'] ?>').style.display='none';document.getElementById('role-edit-<?= $m['id'] ?>').style.display='flex'">
-              🎵 <?= $m['role'] ? htmlspecialchars($m['role']) : 'Definir função…' ?><?= (in_array($m['role'], $naipeRoleNames) && $m['naipe']) ? ' (' . htmlspecialchars($m['naipe']) . ')' : '' ?> ✎
+              🎵 <?= $m['role'] ? htmlspecialchars($m['role']) : 'Definir função…' ?><?= ($mHasNaipeRole && $m['naipe']) ? ' (' . htmlspecialchars($m['naipe']) . ')' : '' ?> ✎
             </div>
-            <form method="POST" action="/pages/ministries/update_member_role.php" id="role-edit-<?= $m['id'] ?>" style="display:none;gap:4px;flex-wrap:wrap;margin-top:4px">
+            <form method="POST" action="/pages/ministries/update_member_role.php" id="role-edit-<?= $m['id'] ?>" style="display:none;gap:4px;flex-wrap:wrap;align-items:center;margin-top:4px">
               <input type="hidden" name="ministry_id" value="<?= $id ?>">
               <input type="hidden" name="member_id" value="<?= $m['id'] ?>">
               <?php if ($isMusic): ?>
-                <select name="role" class="form-control role-select" data-member-id="<?= $m['id'] ?>" style="font-size:12px;padding:4px 8px">
-                  <option value="">Selecione…</option>
+                <div class="roles-checkbox-group" data-member-id="<?= $m['id'] ?>" style="display:flex;gap:8px;flex-wrap:wrap">
                   <?php foreach ($ministryRoles as $r): ?>
-                    <option value="<?= htmlspecialchars($r['name']) ?>" <?= ($m['role'] ?? '')===$r['name'] ? 'selected' : '' ?>><?= htmlspecialchars($r['name']) ?></option>
+                    <label style="display:flex;align-items:center;gap:3px;font-size:11px;color:var(--text-muted);cursor:pointer">
+                      <input type="checkbox" name="roles[]" value="<?= htmlspecialchars($r['name']) ?>"
+                             class="role-checkbox" data-naipe="<?= $r['use_naipe'] ? '1' : '0' ?>"
+                             <?= in_array($r['name'], $mCurrentRoles, true) ? 'checked' : '' ?>>
+                      <?= htmlspecialchars($r['name']) ?>
+                    </label>
                   <?php endforeach; ?>
-                </select>
+                </div>
                 <select name="naipe" class="form-control naipe-select" id="naipe-<?= $m['id'] ?>"
-                        style="font-size:12px;padding:4px 8px;display:<?= in_array($m['role']??'', $naipeRoleNames)?'inline-block':'none' ?>">
+                        style="font-size:12px;padding:4px 8px;display:<?= $mHasNaipeRole ? 'inline-block' : 'none' ?>">
                   <option value="">Naipe…</option>
                   <?php foreach (BACKING_VOCAL_NAIPES as $nv): ?>
                     <option value="<?= htmlspecialchars($nv) ?>" <?= ($m['naipe'] ?? '')===$nv ? 'selected' : '' ?>><?= htmlspecialchars($nv) ?></option>
@@ -371,7 +379,7 @@ $actTypeLabels = [
             </form>
             <?php else: ?>
               <div style="font-size:11px;color:var(--text-muted);margin-top:2px">
-                🎵 <?= $m['role'] ? htmlspecialchars($m['role']) : 'Sem função definida' ?><?= (in_array($m['role'], $naipeRoleNames) && $m['naipe']) ? ' (' . htmlspecialchars($m['naipe']) . ')' : '' ?>
+                🎵 <?= $m['role'] ? htmlspecialchars($m['role']) : 'Sem função definida' ?><?= ($mHasNaipeRole && $m['naipe']) ? ' (' . htmlspecialchars($m['naipe']) . ')' : '' ?>
               </div>
             <?php endif; ?>
           </div>
@@ -421,15 +429,19 @@ $actTypeLabels = [
 <?php endif; ?>
 
 <?php
-$naipeRoleNamesJson = json_encode($naipeRoleNames);
 $extraJs = <<<JS
-// Mostrar/ocultar o select de Naipe conforme a função escolhida (só faz
-// sentido pra funções marcadas como "usa naipe" nas Funções da escala)
-const naipeRoleNames = $naipeRoleNamesJson;
-document.querySelectorAll('.role-select').forEach(function (sel) {
-  sel.addEventListener('change', function () {
-    const naipeSel = document.getElementById('naipe-' + this.dataset.memberId);
-    if (naipeSel) naipeSel.style.display = naipeRoleNames.includes(this.value) ? 'inline-block' : 'none';
+// Mostrar/ocultar o select de Naipe conforme as funções marcadas (uma pessoa
+// pode ter mais de uma função; naipe aparece se QUALQUER uma delas usa naipe)
+document.querySelectorAll('.roles-checkbox-group').forEach(function (group) {
+  const naipeSel = document.getElementById('naipe-' + group.dataset.memberId);
+  if (!naipeSel) return;
+  function refresh() {
+    const anyNaipe = Array.from(group.querySelectorAll('.role-checkbox'))
+      .some(function (cb) { return cb.checked && cb.dataset.naipe === '1'; });
+    naipeSel.style.display = anyNaipe ? 'inline-block' : 'none';
+  }
+  group.querySelectorAll('.role-checkbox').forEach(function (cb) {
+    cb.addEventListener('change', refresh);
   });
 });
 JS;

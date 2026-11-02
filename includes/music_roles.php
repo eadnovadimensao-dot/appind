@@ -24,9 +24,41 @@ function ministry_always_include_role_names(PDO $db, int $ministryId): array {
     return array_column(array_filter(get_ministry_roles($db, $ministryId), fn($r) => $r['always_include']), 'name');
 }
 
+/**
+ * Uma pessoa pode exercer mais de uma função fixa no mesmo ministério (ex:
+ * Guitarrista E Diretor Musical) — guardado como lista separada por vírgula
+ * no mesmo campo `role` (member_ministries/ministry_activity_members), sem
+ * precisar de tabela nova. Essas duas funções convertem pra lista e de volta.
+ */
+function role_names_from_string(?string $roles): array {
+    if (!$roles) return [];
+    return array_values(array_filter(array_map('trim', explode(',', $roles)), fn($r) => $r !== ''));
+}
+
+function role_names_to_string(array $roles): ?string {
+    $roles = array_values(array_filter(array_unique(array_map('trim', $roles)), fn($r) => $r !== ''));
+    return $roles ? implode(', ', $roles) : null;
+}
+
+/**
+ * Essa pessoa, com essas funções todas, deve receber o convite normal de
+ * confirmar/recusar presença (pedido de oração sem botão só quando TODAS as
+ * funções dela são "sempre inclui" — se tiver qualquer função de rodízio
+ * junto, ex: Guitarrista + Diretor Musical, ela ainda precisa responder).
+ */
+function role_is_prayer_only(?string $role, array $alwaysIncludeNames): bool {
+    $roles = role_names_from_string($role);
+    if (empty($roles)) return false;
+    foreach ($roles as $r) {
+        if (!in_array($r, $alwaysIncludeNames, true)) return false;
+    }
+    return true;
+}
+
 // Monta o "pool" de candidatos agrupado por função, a partir dos membros do
 // ministério. Usado tanto pelo sorteio avulso (auto_scale.php) quanto pelo
-// sorteio em lote (activity_batch_create.php).
+// sorteio em lote (activity_batch_create.php). Quem tem mais de uma função
+// entra no pool de cada uma delas.
 function build_scale_pool(PDO $db, int $ministryId, int $churchId): array {
     $members = $db->prepare("
         SELECT m.id, m.name, mm.role, mm.naipe
@@ -37,8 +69,9 @@ function build_scale_pool(PDO $db, int $ministryId, int $churchId): array {
     $members->execute([$ministryId, $churchId]);
     $pool = [];
     foreach ($members->fetchAll() as $m) {
-        if (!$m['role']) continue;
-        $pool[$m['role']][] = ['id' => (int)$m['id'], 'name' => $m['name'], 'naipe' => $m['naipe'] ?: null];
+        foreach (role_names_from_string($m['role']) as $roleName) {
+            $pool[$roleName][] = ['id' => (int)$m['id'], 'name' => $m['name'], 'naipe' => $m['naipe'] ?: null];
+        }
     }
     return $pool;
 }
@@ -133,12 +166,21 @@ function draw_naipe_mix(string $roleName, array $candidates, int $needed, array 
 
 // Sorteia uma escala a partir do pool de candidatos e da composição de
 // funções configurada pro ministério, evitando repetir quem serviu na
-// escala anterior (passada em $prevMemberIds) quando dá pra evitar.
-// Retorna ['assignments' => [member_id => role], 'warnings' => [string, ...]].
+// escala anterior (passada em $prevMemberIds) quando dá pra evitar. Quem tem
+// mais de uma função (ex: Guitarrista + Diretor Musical) acumula as duas na
+// mesma escala em vez de uma substituir a outra.
+// Retorna ['assignments' => [member_id => "Papel A, Papel B"], 'warnings' => [string, ...]].
 function draw_scale(PDO $db, int $ministryId, array $pool, array $prevMemberIds, array $blocked = []): array {
     $roles       = get_ministry_roles($db, $ministryId);
-    $assignments = []; // member_id => role
+    $assignments = []; // member_id => [role, ...]
     $warnings    = [];
+
+    $addRole = function (int $memberId, string $role) use (&$assignments) {
+        $assignments[$memberId] = $assignments[$memberId] ?? [];
+        if (!in_array($role, $assignments[$memberId], true)) {
+            $assignments[$memberId][] = $role;
+        }
+    };
 
     // Funções que sempre entram, sem rodízio: escala todo mundo que tem essa função
     foreach (array_filter($roles, fn($r) => $r['always_include']) as $r) {
@@ -148,7 +190,7 @@ function draw_scale(PDO $db, int $ministryId, array $pool, array $prevMemberIds,
             continue;
         }
         foreach ($candidates as $c) {
-            $assignments[$c['id']] = $r['name'];
+            $addRole($c['id'], $r['name']);
         }
     }
 
@@ -196,7 +238,7 @@ function draw_scale(PDO $db, int $ministryId, array $pool, array $prevMemberIds,
         }
 
         foreach ($chosen as $c) {
-            $assignments[$c['id']] = $role;
+            $addRole($c['id'], $role);
         }
 
         if (count($chosen) < $needed) {
@@ -204,5 +246,10 @@ function draw_scale(PDO $db, int $ministryId, array $pool, array $prevMemberIds,
         }
     }
 
-    return ['assignments' => $assignments, 'warnings' => array_values(array_unique($warnings))];
+    $flatAssignments = [];
+    foreach ($assignments as $memberId => $memberRoles) {
+        $flatAssignments[$memberId] = role_names_to_string($memberRoles);
+    }
+
+    return ['assignments' => $flatAssignments, 'warnings' => array_values(array_unique($warnings))];
 }

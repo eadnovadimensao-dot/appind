@@ -168,7 +168,7 @@ function notify_scale_invitation(
     $refuseUrl  = APP_URL . '/respond.php?token=' . $token . '&action=refuse';
     $prazo      = date('d/m/Y H:i', strtotime($tokenData['token_expires_at'] ?? response_deadline($date, $timeStart)));
 
-    $isPrayerRole = in_array(trim($role), ministry_always_include_role_names($db, (int)($mn['id'] ?? 0)), true);
+    $isPrayerRole = role_is_prayer_only($role, ministry_always_include_role_names($db, (int)($mn['id'] ?? 0)));
     $horaLabel = $timeStart ? ' às ' . substr($timeStart, 0, 5) : '';
 
     $whatsappButtons = null;
@@ -513,7 +513,7 @@ function notify_activity_rescheduled(
 
     foreach ($rows as $row) {
         $mid          = (int)$row['member_id'];
-        $isPrayerRole = in_array(trim($row['role'] ?? ''), ministry_always_include_role_names($db, (int)($mn['id'] ?? 0)), true);
+        $isPrayerRole = role_is_prayer_only($row['role'] ?? '', ministry_always_include_role_names($db, (int)($mn['id'] ?? 0)));
         $memberRow    = $db->query("SELECT name, phone FROM members WHERE id=" . $mid)->fetch();
         $memberName   = $memberRow['name']  ?? '';
         $memberPhone  = $memberRow['phone'] ?? '';
@@ -1022,7 +1022,7 @@ function queue_scale_pending_followups(PDO $db): void {
 
     $groups = [];
     foreach ($rows as $r) {
-        if (in_array(trim((string)$r['role']), scale_alwaysin_roles($db, (int)$r['ministry_id']), true)) continue;
+        if (role_is_prayer_only($r['role'] ?? '', scale_alwaysin_roles($db, (int)$r['ministry_id']))) continue;
 
         // Reserva antes de enfileirar: duas execuções seguidas não duplicam o lembrete
         $claim = $db->prepare("UPDATE ministry_activity_members SET reminder_count = reminder_count + 1, last_reminder_at = NOW()
@@ -1080,7 +1080,7 @@ function queue_scale_pending_followups(PDO $db): void {
         $pending->execute([$act['id']]);
         $names = [];
         foreach ($pending->fetchAll() as $p) {
-            if (in_array(trim((string)$p['role']), scale_alwaysin_roles($db, (int)$act['ministry_id']), true)) continue;
+            if (role_is_prayer_only($p['role'] ?? '', scale_alwaysin_roles($db, (int)$act['ministry_id']))) continue;
             $names[] = '• ' . $p['name'] . (trim((string)$p['role']) !== '' ? ' (' . trim($p['role']) . ')' : '');
         }
         if (!$names) continue;
