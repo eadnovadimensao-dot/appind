@@ -5,7 +5,7 @@ auth_check();
 
 $db         = db();
 $ministryId = (int)($_GET['ministry_id'] ?? 0);
-$memberId   = (int)($_GET['member_id'] ?? 0);
+$profileMemberId = (int)($_GET['member_id'] ?? 0);
 
 $stmt = $db->prepare("
     SELECT mn.*, ch.name AS branch_name
@@ -18,13 +18,13 @@ $mn = $stmt->fetch();
 if (!$mn) { header('Location: /pages/ministries/index.php'); exit; }
 
 $mStmt = $db->prepare("SELECT mm.role, m.* FROM member_ministries mm JOIN members m ON m.id = mm.member_id WHERE mm.ministry_id = ? AND mm.member_id = ?");
-$mStmt->execute([$ministryId, $memberId]);
+$mStmt->execute([$ministryId, $profileMemberId]);
 $member = $mStmt->fetch();
 if (!$member) { header('Location: /pages/ministries/view.php?id=' . $ministryId); exit; }
 
 // Só pode ver quem gerencia o ministério, ou a própria pessoa
 $canManage = auth_can_manage_ministry($ministryId);
-$isSelf    = auth_member_id() && (int)auth_member_id() === $memberId;
+$isSelf    = auth_member_id() && (int)auth_member_id() === $profileMemberId;
 if (!$canManage && !$isSelf) {
     http_response_code(403);
     include __DIR__ . '/../../includes/403.php';
@@ -44,7 +44,7 @@ $history = $db->prepare("
     WHERE mam.member_id = ? AND ma.ministry_id = ?
     ORDER BY ma.activity_date DESC, ma.id DESC
 ");
-$history->execute([$memberId, $ministryId]);
+$history->execute([$profileMemberId, $ministryId]);
 $history = $history->fetchAll();
 
 $total     = count($history);
@@ -88,7 +88,7 @@ $initials = strtoupper(implode('', array_map(fn($p) => $p[0], array_slice(explod
         🎵 <?= $member['role'] ? htmlspecialchars($member['role']) : 'Sem função definida' ?>
       </div>
     </div>
-    <a href="/pages/members/view.php?id=<?= $memberId ?>" class="btn btn-secondary">Ver cadastro completo</a>
+    <a href="/pages/members/view.php?id=<?= $profileMemberId ?>" class="btn btn-secondary">Ver cadastro completo</a>
   </div>
 </div>
 
