@@ -130,9 +130,14 @@ function try_checkin_by_reply(PDO $db, string $rawPhone, string $text): ?string 
  * depende de ninguém abrir e salvar o culto.
  */
 function queue_service_checkins_for_today(PDO $db): void {
+    // Sede primeiro, sempre — enquanto todas as filiais dependem do mesmo
+    // número de WhatsApp (Z-API) da Sede, quem fica na frente da fila importa.
+    // Quando a Filial Santos Dumont tiver conexão própria, pode remover esse
+    // ORDER BY (os dois saem "juntos", cada um pelo seu número).
     $services = $db->query("
         SELECT id, church_id, title, service_date, time_start, time_end
         FROM services WHERE service_date = CURDATE() AND status != 'done'
+        ORDER BY (church_id != " . SEDE_ID . ") ASC
     ")->fetchAll();
 
     foreach ($services as $s) {
