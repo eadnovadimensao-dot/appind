@@ -252,7 +252,7 @@ $existingRefs = $existingRefs->fetchAll(PDO::FETCH_COLUMN);
     <div id="items-list">
       <?php foreach ($items as $i => $item): ?>
         <div class="item-row" style="padding:12px 18px;border-bottom:1px solid var(--border);display:grid;grid-template-columns:auto 1fr 160px 160px 80px auto;gap:10px;align-items:center">
-          <div style="cursor:grab;color:var(--text-muted);font-size:18px;padding:0 4px">⠿</div>
+          <div data-drag-handle style="cursor:grab;color:var(--text-muted);font-size:18px;padding:0 4px">⠿</div>
           <input type="text" name="item_name[]" class="form-control" style="font-size:13px"
                  placeholder="Nome do item…" value="<?= htmlspecialchars($item['title'] ?? '') ?>">
           <input type="hidden" name="item_desc[]" value="<?= htmlspecialchars($item['description'] ?? '') ?>">
@@ -359,7 +359,7 @@ function addItem() {
   row.className = 'item-row';
   row.style = 'padding:12px 18px;border-bottom:1px solid var(--border);display:grid;grid-template-columns:auto 1fr 160px 160px 80px auto;gap:10px;align-items:center';
   row.innerHTML = `
-    <div style="cursor:grab;color:var(--text-muted);font-size:18px;padding:0 4px">⠿</div>
+    <div data-drag-handle style="cursor:grab;color:var(--text-muted);font-size:18px;padding:0 4px">⠿</div>
     <input type="text" name="item_name[]" class="form-control" style="font-size:13px" placeholder="Nome do item…">
     <input type="hidden" name="item_desc[]" value="">
     <input type="hidden" name="item_wc[]" value="0">
@@ -369,8 +369,67 @@ function addItem() {
     <button type="button" onclick="this.closest('.item-row').remove();calcTotal()" style="background:none;border:none;color:var(--text-muted);cursor:pointer;font-size:18px;padding:0 4px">×</button>
   `;
   list.appendChild(row);
+  enableItemDrag(row);
   row.querySelector('input[name="item_name[]"]').focus();
 }
+
+// ── Arrastar item pela alça (⠿) pra reordenar a programação ──
+// A linha só vira "draggable" enquanto o mouse está pressionado na alça —
+// assim arrastar texto dentro dos campos continua funcionando normalmente.
+let dragRow = null;
+function enableItemDrag(row) {
+  const handle = row.querySelector('[data-drag-handle]');
+  if (!handle) return;
+  handle.addEventListener('mousedown', () => { row.draggable = true; });
+  row.addEventListener('dragstart', e => {
+    dragRow = row;
+    row.style.opacity = '0.4';
+    e.dataTransfer.effectAllowed = 'move';
+  });
+  row.addEventListener('dragend', () => {
+    row.draggable = false;
+    row.style.opacity = '';
+    dragRow = null;
+  });
+
+  // Celular não dispara a API nativa de drag-and-drop (é só de mouse) —
+  // refaz o mesmo reordenar a partir de toque na alça.
+  handle.addEventListener('touchstart', () => {
+    dragRow = row;
+    row.style.opacity = '0.4';
+  }, { passive: true });
+  handle.addEventListener('touchmove', e => {
+    if (dragRow !== row) return;
+    e.preventDefault();
+    const touch = e.touches[0];
+    const list  = document.getElementById('items-list');
+    const after = [...list.querySelectorAll('.item-row')].filter(r => r !== dragRow).find(r => {
+      const box = r.getBoundingClientRect();
+      return touch.clientY < box.top + box.height / 2;
+    });
+    if (after) list.insertBefore(dragRow, after);
+    else list.appendChild(dragRow);
+  }, { passive: false });
+  handle.addEventListener('touchend', () => {
+    row.style.opacity = '';
+    dragRow = null;
+  });
+}
+document.addEventListener('mouseup', () => {
+  document.querySelectorAll('#items-list .item-row').forEach(r => r.draggable = false);
+});
+document.getElementById('items-list').addEventListener('dragover', e => {
+  e.preventDefault();
+  if (!dragRow) return;
+  const list = document.getElementById('items-list');
+  const after = [...list.querySelectorAll('.item-row')].filter(r => r !== dragRow).find(r => {
+    const box = r.getBoundingClientRect();
+    return e.clientY < box.top + box.height / 2;
+  });
+  if (after) list.insertBefore(dragRow, after);
+  else list.appendChild(dragRow);
+});
+document.querySelectorAll('#items-list .item-row').forEach(enableItemDrag);
 
 function calcTotal() {
   const durs = [...document.querySelectorAll('input[name="item_dur[]"]')]

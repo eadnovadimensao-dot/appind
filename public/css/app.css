@@ -608,7 +608,35 @@ tbody tr:hover td { background: #fafafa; }
   div[style*="display:grid"] {
     /* Forçar 1 coluna para grids inline */
   }
+
+  /* ── Item da programação do culto (supervisor_view.php): colunas fixas
+     (160px+160px+80px) não cabem no celular e empurravam a página inteira
+     pro lado. Empilha em 2 colunas (alça/remover numa linha, resto full-width). */
+  .item-row {
+    grid-template-columns: 1fr auto !important;
+    grid-template-areas:
+      "handle remove"
+      "name name"
+      "type type"
+      "resp resp"
+      "dur dur" !important;
+    row-gap: 10px !important;
+  }
+  .item-row [data-drag-handle] { grid-area: handle; }
+  .item-row input[name="item_name[]"] { grid-area: name; width: 100%; }
+  .item-row select[name="item_type[]"] { grid-area: type; width: 100%; }
+  .item-row select[name="item_resp[]"] { grid-area: resp; width: 100%; }
+  .item-row input[name="item_dur[]"] { grid-area: dur; width: 100%; }
+  .item-row > button { grid-area: remove; }
 }
 
 /* Hamburguer oculto no desktop */
 .sb-hamburger { display: none; }
+
+/* ── Impressão (ex: carteirinha de membro) ── */
+@media print {
+  .sidebar, .topbar, .pagebar, .sb-overlay, .no-print { display: none !important; }
+  .main { margin: 0 !important; }
+  .page { padding: 0 !important; overflow: visible !important; }
+  body { background: white !important; }
+}
