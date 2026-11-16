@@ -39,6 +39,12 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && $user) {
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Ativar conta · Igreja Manager</title>
+  <link rel="manifest" href="/manifest.json">
+  <meta name="theme-color" content="#012a36">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+  <meta name="apple-mobile-web-app-title" content="Nova Dimensão">
+  <link rel="apple-touch-icon" href="/public/img/icon-192.png">
   <link rel="stylesheet" href="/public/css/app.css">
   <style>
     body { display:flex;align-items:center;justify-content:center;min-height:100vh;background:var(--content-bg); }
@@ -63,8 +69,43 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && $user) {
           <div style="font-size:40px;margin-bottom:12px">✅</div>
           <p style="font-size:15px;font-weight:500;margin-bottom:6px">Conta ativada!</p>
           <p style="font-size:13px;color:var(--text-muted);margin-bottom:20px">Sua senha foi criada com sucesso.</p>
+
+          <button id="activate-install-btn" onclick="activateInstallApp()" style="display:none;width:100%;justify-content:center;margin-bottom:10px" class="btn btn-primary">
+            📲 Instalar o app no celular
+          </button>
+          <div id="activate-ios-instructions" style="display:none;background:#F3F4F6;border-radius:8px;padding:12px 14px;font-size:13px;color:var(--text);margin-bottom:16px;text-align:left">
+            Pra instalar no iPhone: toque em <strong>Compartilhar</strong> <span style="font-size:15px">⬆️</span> na barra do Safari e depois em <strong>"Adicionar à Tela de Início"</strong>.
+          </div>
+
           <a href="/login.php" class="btn btn-primary" style="width:100%;justify-content:center">Fazer login</a>
         </div>
+        <script>
+          (function() {
+            var ua = navigator.userAgent.toLowerCase();
+            var isIOS = /iphone|ipad|ipod/.test(ua);
+            var isStandalone = window.navigator.standalone === true || window.matchMedia('(display-mode: standalone)').matches;
+            if (isStandalone) return;
+            if (isIOS) {
+              var box = document.getElementById('activate-ios-instructions');
+              if (box) box.style.display = 'block';
+            }
+          })();
+          window.addEventListener('beforeinstallprompt', function(e) {
+            e.preventDefault();
+            window.deferredInstallPrompt = e;
+            var btn = document.getElementById('activate-install-btn');
+            if (btn) btn.style.display = 'flex';
+          });
+          function activateInstallApp() {
+            if (!window.deferredInstallPrompt) return;
+            window.deferredInstallPrompt.prompt();
+            window.deferredInstallPrompt.userChoice.finally(function() {
+              window.deferredInstallPrompt = null;
+              var btn = document.getElementById('activate-install-btn');
+              if (btn) btn.style.display = 'none';
+            });
+          }
+        </script>
       <?php elseif ($error && !$user): ?>
         <div style="text-align:center;padding:12px 0">
           <div style="font-size:40px;margin-bottom:12px">❌</div>

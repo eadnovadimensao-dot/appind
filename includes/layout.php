@@ -13,6 +13,7 @@ $navItems = [
   ['href' => '/pages/offering.php',            'icon' => 'ti-heart',            'label' => 'Oferta',       'key' => 'offering'],
   ['href' => '/pages/devotional/index.php',    'icon' => 'ti-book',             'label' => 'Devocional',   'key' => 'devotional'],
   ['href' => '/pages/members/index.php',        'icon' => 'ti-users',            'label' => 'Membros',      'key' => 'members'],
+  ['href' => '/pages/members/card.php',         'icon' => 'ti-id-badge-2',       'label' => 'Minha Carteirinha', 'key' => 'card'],
   ['href' => '/pages/families/index.php',       'icon' => 'ti-home',             'label' => 'Famílias',     'key' => 'families'],
   ['href' => '/pages/cells/index.php',          'icon' => 'ti-circles',          'label' => 'Células',      'key' => 'cells'],
   ['href' => '/pages/discipleship/index.php',   'icon' => 'ti-heart-handshake',  'label' => 'Discipulado',  'key' => 'discipleship'],
@@ -108,22 +109,23 @@ if (window.innerWidth <= 900) {
       foreach ($navItems as $item):
         if (in_array($item['key'], ['branches','whatsapp','audit_log']) && $role !== 'supermaster') continue; // Filiais, WhatsApp e auditoria: só supermaster
         if ($item['key'] === 'availability' && !$inAnyMinistry) continue;
+        if ($item['key'] === 'card' && !$memberId) continue; // Carteirinha só existe pra quem tem cadastro de membro vinculado
         if ($role === 'member') {
           // Ministérios agora é um diretório aberto (qualquer um vê quais existem);
           // o que fica restrito é o conteúdo de dentro, filtrado na própria tela.
-          $memberAllowed = ['dashboard','events','communication','offering','devotional','ministries','availability'];
+          $memberAllowed = ['dashboard','events','communication','offering','devotional','ministries','availability','card'];
           if ($relatedCells) $memberAllowed[] = 'cells';
           if ($relatedCells || $hasDiscipleship) $memberAllowed[] = 'discipleship';
           if (!in_array($item['key'], $memberAllowed)) continue;
         }
         if ($role === 'leader') {
-          $leaderAllowed = ['dashboard','events','communication','ministries','offering','devotional','availability'];
+          $leaderAllowed = ['dashboard','events','communication','ministries','offering','devotional','availability','card'];
           if ($relatedCells) $leaderAllowed[] = 'cells';
           if ($relatedCells || $hasDiscipleship) $leaderAllowed[] = 'discipleship';
           if (!in_array($item['key'], $leaderAllowed)) continue;
         }
         if ($role === 'cell_leader') {
-          $cellLeaderAllowed = ['dashboard','events','communication','ministries','offering','devotional','availability'];
+          $cellLeaderAllowed = ['dashboard','events','communication','ministries','offering','devotional','availability','card'];
           if ($relatedCells) $cellLeaderAllowed[] = 'cells';
           if ($relatedCells || $hasDiscipleship) $cellLeaderAllowed[] = 'discipleship';
           if (!in_array($item['key'], $cellLeaderAllowed)) continue;
@@ -220,6 +222,11 @@ if (window.innerWidth <= 900) {
                 style="display:none;align-items:center;justify-content:center;font-size:16px;width:36px;height:36px;padding:0;border-radius:7px;border:1px solid var(--border);background:white;cursor:pointer;color:var(--text)">
           🔔
         </button>
+        <!-- Botão de instalar o app (aparece só quando o navegador oferece, ex: Android/Chrome) -->
+        <button id="install-app-btn" onclick="installApp()" title="Instalar app" aria-label="Instalar app"
+                style="display:none;align-items:center;justify-content:center;font-size:16px;width:36px;height:36px;padding:0;border-radius:7px;border:1px solid var(--border);background:white;cursor:pointer;color:var(--text)">
+          📲
+        </button>
         <!-- Usuário logado -->
         <div style="display:flex;align-items:center;gap:8px;margin-left:8px">
           <?php
@@ -252,3 +259,19 @@ if (window.innerWidth <= 900) {
     <div class="pagebar"><?= htmlspecialchars($pageTitle ?? '') ?></div>
 
     <div class="page">
+    <?php
+      // Incentivo a completar o cadastro (19 perguntas pastorais) — mostra em
+      // toda página até a pessoa responder, menos na própria tela do formulário.
+      $bannerMemberId = auth_member_id();
+      if ($bannerMemberId && ($activePage ?? '') !== 'members') {
+          $bannerDone = (bool)db()->query("SELECT 1 FROM member_profile_answers WHERE member_id = $bannerMemberId AND completed_at IS NOT NULL")->fetchColumn();
+          if (!$bannerDone) {
+    ?>
+      <div style="background:#FEF3C7;border:1px solid #FCD34D;border-radius:8px;padding:10px 16px;margin-bottom:16px;font-size:13px;color:#854F0B;display:flex;align-items:center;justify-content:space-between;gap:10px;flex-wrap:wrap">
+        <span>📝 Complete seu cadastro pra gente te conhecer melhor (e liberar sua carteirinha digital em breve).</span>
+        <a href="/pages/members/profile.php#complete-profile" class="btn btn-primary" style="font-size:12px;padding:5px 12px;flex-shrink:0">Completar agora</a>
+      </div>
+    <?php
+          }
+      }
+    ?>
