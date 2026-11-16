@@ -66,26 +66,28 @@ $statusLabels = [
       $tl = $typeLabels[$s['type']]     ?? ['label'=>$s['type'],   'badge'=>'badge-gray'];
       $sl = $statusLabels[$s['status']] ?? ['label'=>$s['status'], 'badge'=>'badge-gray'];
     ?>
-      <div style="padding:12px 20px;border-bottom:1px solid var(--border)">
-        <div style="font-size:14px;font-weight:500">
-          <?= htmlspecialchars($s['title']) ?>
-          <span class="badge <?= $tl['badge'] ?>" style="font-size:10px"><?= $tl['label'] ?></span>
-          <span class="badge <?= $sl['badge'] ?>" style="font-size:10px"><?= $sl['label'] ?></span>
+      <div style="padding:12px 20px;border-bottom:1px solid var(--border);display:flex;align-items:center;justify-content:space-between;gap:12px;flex-wrap:wrap">
+        <div>
+          <div style="font-size:14px;font-weight:500">
+            <?= htmlspecialchars($s['title']) ?>
+            <span class="badge <?= $tl['badge'] ?>" style="font-size:10px"><?= $tl['label'] ?></span>
+            <span class="badge <?= $sl['badge'] ?>" style="font-size:10px"><?= $sl['label'] ?></span>
+          </div>
+          <?php if ($s['sermon_title']): ?>
+            <div style="font-size:12px;color:var(--text-muted);margin-top:2px">📖 <?= htmlspecialchars($s['sermon_title']) ?></div>
+          <?php endif; ?>
+          <div style="font-size:12px;color:var(--text-muted);margin-top:6px;display:flex;align-items:center;gap:6px;flex-wrap:wrap">
+            <span>
+              <?= date('d/m/Y', strtotime($s['service_date'])) ?>
+              <?= $s['time_start'] ? ' · ' . substr($s['time_start'],0,5) : '' ?>
+            </span>
+            <span>·</span>
+            <span><?= htmlspecialchars($s['preacher_name'] ?? 'Sem pregador definido') ?></span>
+            <span>·</span>
+            <span><?= $s['scale_count'] ?> pessoa(s) na escala</span>
+          </div>
         </div>
-        <?php if ($s['sermon_title']): ?>
-          <div style="font-size:12px;color:var(--text-muted);margin-top:2px">📖 <?= htmlspecialchars($s['sermon_title']) ?></div>
-        <?php endif; ?>
-        <div style="font-size:12px;color:var(--text-muted);margin-top:6px;display:flex;align-items:center;gap:6px;flex-wrap:wrap">
-          <span>
-            <?= date('d/m/Y', strtotime($s['service_date'])) ?>
-            <?= $s['time_start'] ? ' · ' . substr($s['time_start'],0,5) : '' ?>
-          </span>
-          <span>·</span>
-          <span><?= htmlspecialchars($s['preacher_name'] ?? 'Sem pregador definido') ?></span>
-          <span>·</span>
-          <span><?= $s['scale_count'] ?> pessoa(s) na escala</span>
-        </div>
-        <div style="display:flex;gap:8px;flex-wrap:wrap;margin-top:10px">
+        <div style="display:flex;gap:8px;flex-wrap:wrap;flex-shrink:0">
           <a href="/pages/services/view.php?id=<?= $s['id'] ?>" class="btn btn-secondary" style="font-size:12px;padding:5px 12px">Ver</a>
           <?php if ($canEditServices): ?>
           <a href="/pages/services/supervisor_view.php?id=<?= $s['id'] ?>" class="btn btn-secondary" style="font-size:12px;padding:5px 12px">📋 Programação</a>
