@@ -64,6 +64,111 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         exit;
     }
 
+    // Confirmar o supervisor de uma semana (só agora, de fato, o aviso sai —
+    // antes disso é só sugestão de rodízio, não gravada nem avisada a ninguém)
+    if ($action === 'confirm_rotation') {
+        $sunday = $_POST['service_date'] ?? '';
+        $supId  = (int)($_POST['supervisor_id'] ?? 0);
+
+        if ($sunday && $supId) {
+            $supStmt = $db->prepare("
+                SELECT s.id, s.member_id, s.name_alias, m.name AS member_name, m.phone AS member_phone
+                FROM supervisors s
+                JOIN members m ON m.id = s.member_id
+                WHERE s.id = ? AND s.church_id = ?
+            ");
+            $supStmt->execute([$supId, $churchId]);
+            $sup = $supStmt->fetch();
+
+            if ($sup) {
+                $db->prepare("
+                    INSERT INTO supervisor_rotation (church_id, supervisor_id, service_date)
+                    VALUES (?,?,?)
+                ")->execute([$churchId, $supId, $sunday]);
+
+                $supMemberId   = $sup['member_id'];
+                $supName       = $sup['name_alias'] ?: $sup['member_name'];
+                $dateFormatted = date('d/m/Y', strtotime($sunday));
+
+                $tpl = notification_template('supervisor_assigned', [
+                    'nome' => $supName,
+                    'data' => $dateFormatted,
+                ], $churchId);
+
+                // Aviso no mural
+                $db->prepare("
+                    INSERT INTO announcements
+                      (church_id, title, content, type, target_type, target_id, channels, status, created_by, sent_at)
+                    VALUES (?,?,?,'general','member',?,'internal,push','sent',?,NOW())
+                ")->execute([
+                    $churchId,
+                    $tpl['title'],
+                    $tpl['content'] . "\n\n🔗 " . APP_URL . '/pages/services/index.php',
+                    $supMemberId,
+                    $memberId,
+                ]);
+
+                // Push notification direto para o supervisor
+                $autoload = __DIR__ . '/../../vendor/autoload.php';
+                if (file_exists($autoload)) {
+                    require_once $autoload;
+                    $vapidPublic  = setting('vapid_public_key');
+                    $vapidPrivate = setting('vapid_private_key');
+                    $vapidSubject = setting('vapid_subject', 'mailto:admin@igrejanovadimensao.com.br');
+
+                    if ($vapidPublic && $vapidPrivate) {
+                        $subs = $db->prepare("SELECT * FROM push_subscriptions WHERE member_id=?");
+                        $subs->execute([$supMemberId]);
+                        $subscriptions = $subs->fetchAll();
+
+                        if (!empty($subscriptions)) {
+                            $webPush = new \Minishlink\WebPush\WebPush([
+                                'VAPID' => [
+                                    'subject'    => $vapidSubject,
+                                    'publicKey'  => $vapidPublic,
+                                    'privateKey' => $vapidPrivate,
+                                ],
+                            ]);
+                            $payload = json_encode([
+                                'title' => "📋 Culto de $dateFormatted",
+                                'body'  => "Você é o supervisor responsável pela ordem do culto.",
+                                'url'   => APP_URL . '/pages/services/index.php',
+                                'tag'   => 'supervisor-' . $sunday,
+                            ]);
+                            foreach ($subscriptions as $sub) {
+                                $subscription = \Minishlink\WebPush\Subscription::create([
+                                    'endpoint'        => $sub['endpoint'],
+                                    'keys'            => ['p256dh' => $sub['p256dh'], 'auth' => $sub['auth_key']],
+                                    'contentEncoding' => 'aesgcm',
+                                ]);
+                                $webPush->queueNotification($subscription, $payload);
+                            }
+                            foreach ($webPush->flush() as $report) {
+                                if ($report->isSubscriptionExpired()) {
+                                    $db->prepare("DELETE FROM push_subscriptions WHERE endpoint=?")
+                                       ->execute([$report->getRequest()->getUri()->__toString()]);
+                                }
+                            }
+                        }
+                    }
+                }
+
+                // WhatsApp (Z-API)
+                $supPhone = $sup['member_phone'] ?? '';
+                if ($supPhone) {
+                    queue_whatsapp(
+                        $supPhone,
+                        $tpl['title'] . "\n\n" . $tpl['content'] . "\n\n🔗 " . APP_URL . '/pages/services/index.php',
+                        $churchId
+                    );
+                }
+            }
+        }
+
+        header('Location: /pages/services/supervisors.php?saved=1');
+        exit;
+    }
+
     // Toggle ativo/inativo
     if ($action === 'toggle') {
         $id = (int)($_POST['sup_id'] ?? 0);
@@ -106,12 +211,13 @@ for ($i = 0; $i < 8; $i++) {
     $d = strtotime('+7 days', $d);
 }
 
-// Rotação existente no banco
+// Rotação existente no banco (já confirmada por alguém)
 $existingRotation = $db->prepare("
-    SELECT sr.*, s.member_id, m.name AS supervisor_name
+    SELECT sr.*, m.name AS supervisor_name, m2.name AS substituted_name, sv.name_alias
     FROM supervisor_rotation sr
-    JOIN supervisors s ON s.id = sr.supervisor_id
-    JOIN members m     ON m.id = s.member_id
+    JOIN supervisors sv  ON sv.id = sr.supervisor_id
+    JOIN members m       ON m.id  = sv.member_id
+    LEFT JOIN members m2 ON m2.id = sr.substituted_by
     WHERE sr.church_id = ? AND sr.service_date >= CURDATE()
     ORDER BY sr.service_date ASC
 ");
@@ -121,143 +227,33 @@ foreach ($existingRotation->fetchAll() as $r) {
     $rotationMap[$r['service_date']] = $r;
 }
 
-// Gerar/redistribuir rotação automática
-$activeSups = array_values(array_filter($supervisors, fn($s) => $s['active']));
+// Sugestão de rodízio pras semanas que ainda não têm supervisor confirmado —
+// é só um palpite pra facilitar a vida de quem for confirmar; NADA é gravado
+// nem avisado aqui. O aviso só sai quando alguém aperta "Confirmar"
+// (action=confirm_rotation), do jeito que a igreja pediu depois do episódio de
+// 2026-11-15 (cadastrar supervisor já disparava mensagem sem ninguém decidir de fato).
+$activeSups  = array_values(array_filter($supervisors, fn($s) => $s['active']));
+$suggestions = [];
 if (!empty($activeSups)) {
-    $autoSlots = [];
-    foreach ($nextSundays as $sunday) {
-        $slot = $rotationMap[$sunday] ?? null;
-        // Só regera se não for substituição manual
-        if (!$slot || !$slot['is_substitute']) {
-            $autoSlots[] = $sunday;
-        }
-    }
-
-    // Descobrir a última posição usada em semana COM substituição manual ou já passada
     $lastUsedSup = $db->query("
         SELECT supervisor_id FROM supervisor_rotation
         WHERE church_id = $churchId
-          AND (is_substitute = 1 OR service_date < CURDATE())
         ORDER BY service_date DESC LIMIT 1
     ")->fetchColumn();
 
-    $lastIdx = 0;
+    $lastIdx = -1;
     if ($lastUsedSup) {
         foreach ($activeSups as $i => $s) {
             if ($s['id'] == $lastUsedSup) { $lastIdx = $i; break; }
         }
     }
 
-    // Redistribuir as semanas automáticas em round-robin
-    $si = $db->prepare("
-        INSERT INTO supervisor_rotation (church_id, supervisor_id, service_date)
-        VALUES (?,?,?)
-        ON DUPLICATE KEY UPDATE
-          supervisor_id = IF(is_substitute=0, VALUES(supervisor_id), supervisor_id)
-    ");
-
-    foreach ($autoSlots as $sunday) {
+    foreach ($nextSundays as $sunday) {
+        if (isset($rotationMap[$sunday])) continue;
         $lastIdx = ($lastIdx + 1) % count($activeSups);
-        $supId   = $activeSups[$lastIdx]['id'];
-        $si->execute([$churchId, $supId, $sunday]);
-
-        // Notificar o supervisor apenas se a semana mudou ou é nova
-        $prevSup = $rotationMap[$sunday]['supervisor_id'] ?? null;
-        if ($prevSup !== $supId) {
-            $supMemberId   = $activeSups[$lastIdx]['member_id'];
-            $supName       = $activeSups[$lastIdx]['name_alias'] ?: $activeSups[$lastIdx]['member_name'];
-            $dateFormatted = date('d/m/Y', strtotime($sunday));
-
-            $tpl = notification_template('supervisor_assigned', [
-                'nome' => $supName,
-                'data' => $dateFormatted,
-            ], $churchId);
-
-            // Aviso no mural
-            $db->prepare("
-                INSERT INTO announcements
-                  (church_id, title, content, type, target_type, target_id, channels, status, created_by, sent_at)
-                VALUES (?,?,?,'general','member',?,'internal,push','sent',?,NOW())
-            ")->execute([
-                $churchId,
-                $tpl['title'],
-                $tpl['content'] . "\n\n🔗 " . APP_URL . '/pages/services/index.php',
-                $supMemberId,
-                $memberId,
-            ]);
-
-            // Push notification direto para o supervisor
-            $autoload = __DIR__ . '/../../vendor/autoload.php';
-            if (file_exists($autoload)) {
-                require_once $autoload;
-                $vapidPublic  = setting('vapid_public_key');
-                $vapidPrivate = setting('vapid_private_key');
-                $vapidSubject = setting('vapid_subject', 'mailto:admin@igrejanovadimensao.com.br');
-
-                if ($vapidPublic && $vapidPrivate) {
-                    $subs = $db->prepare("SELECT * FROM push_subscriptions WHERE member_id=?");
-                    $subs->execute([$supMemberId]);
-                    $subscriptions = $subs->fetchAll();
-
-                    if (!empty($subscriptions)) {
-                        $webPush = new \Minishlink\WebPush\WebPush([
-                            'VAPID' => [
-                                'subject'    => $vapidSubject,
-                                'publicKey'  => $vapidPublic,
-                                'privateKey' => $vapidPrivate,
-                            ],
-                        ]);
-                        $payload = json_encode([
-                            'title' => "📋 Culto de $dateFormatted",
-                            'body'  => "Você é o supervisor responsável pela ordem do culto.",
-                            'url'   => APP_URL . '/pages/services/index.php',
-                            'tag'   => 'supervisor-' . $sunday,
-                        ]);
-                        foreach ($subscriptions as $sub) {
-                            $subscription = \Minishlink\WebPush\Subscription::create([
-                                'endpoint'        => $sub['endpoint'],
-                                'keys'            => ['p256dh' => $sub['p256dh'], 'auth' => $sub['auth_key']],
-                                'contentEncoding' => 'aesgcm',
-                            ]);
-                            $webPush->queueNotification($subscription, $payload);
-                        }
-                        foreach ($webPush->flush() as $report) {
-                            if ($report->isSubscriptionExpired()) {
-                                $db->prepare("DELETE FROM push_subscriptions WHERE endpoint=?")
-                                   ->execute([$report->getRequest()->getUri()->__toString()]);
-                            }
-                        }
-                    }
-                }
-            }
-
-            // WhatsApp (Z-API)
-            $supPhone = $activeSups[$lastIdx]['member_phone'] ?? '';
-            if ($supPhone) {
-                queue_whatsapp(
-                    $supPhone,
-                    $tpl['title'] . "\n\n" . $tpl['content'] . "\n\n🔗 " . APP_URL . '/pages/services/index.php',
-                    $churchId
-                );
-            }
-        }
+        $suggestions[$sunday] = $activeSups[$lastIdx]['id'];
     }
 }
-
-// Recarregar rotação atualizada
-$rotFull = $db->prepare("
-    SELECT sr.*, m.name AS supervisor_name, m2.name AS substituted_name,
-           sv.name_alias
-    FROM supervisor_rotation sr
-    JOIN supervisors sv ON sv.id = sr.supervisor_id
-    JOIN members m      ON m.id  = sv.member_id
-    LEFT JOIN members m2 ON m2.id = sr.substituted_by
-    WHERE sr.church_id = ? AND sr.service_date >= CURDATE()
-    ORDER BY sr.service_date ASC
-    LIMIT 8
-");
-$rotFull->execute([$churchId]);
-$rotation = $rotFull->fetchAll();
 
 $allMembers = $db->query("SELECT id, name FROM members WHERE church_id=$churchId AND status='active' ORDER BY name")->fetchAll();
 $allCells   = $db->query("SELECT id, name FROM cells WHERE church_id=$churchId AND active=1 ORDER BY name")->fetchAll();
@@ -351,47 +347,77 @@ require_once __DIR__ . '/../../includes/layout.php';
       <div style="padding:14px 18px;border-bottom:1px solid var(--border)">
         <p style="font-weight:500;font-size:14px">📅 Rotação — próximas semanas</p>
       </div>
-      <?php if (empty($rotation)): ?>
-        <div class="empty-state" style="padding:24px">Cadastre supervisores para gerar a rotação.</div>
+      <?php if (empty($rotationMap) && empty($suggestions)): ?>
+        <div class="empty-state" style="padding:24px">Cadastre supervisores para ver sugestões de rodízio.</div>
       <?php else: ?>
-        <?php foreach ($rotation as $r):
-          $isThisWeek = $r['service_date'] === date('Y-m-d', strtotime('next Sunday')) ||
-                        $r['service_date'] === date('Y-m-d');
+        <?php foreach ($nextSundays as $sunday):
+          $confirmed  = $rotationMap[$sunday] ?? null;
+          $isThisWeek = $sunday === date('Y-m-d', strtotime('next Sunday')) || $sunday === date('Y-m-d');
         ?>
           <div style="padding:12px 18px;border-bottom:1px solid var(--border);display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:8px;<?= $isThisWeek?'background:var(--accent-lt)':'' ?>">
             <div>
               <div style="display:flex;align-items:center;gap:8px">
                 <span style="font-size:13px;font-weight:500">
-                  <?= date('d/m/Y', strtotime($r['service_date'])) ?>
+                  <?= date('d/m/Y', strtotime($sunday)) ?>
                 </span>
                 <?php if ($isThisWeek): ?>
                   <span class="badge badge-green">Esta semana</span>
                 <?php endif; ?>
-                <?php if ($r['is_substitute']): ?>
+                <?php if ($confirmed && $confirmed['is_substitute']): ?>
                   <span class="badge badge-amber">Substituição</span>
                 <?php endif; ?>
+                <?php if (!$confirmed): ?>
+                  <span class="badge badge-gray">Sugestão, não confirmada</span>
+                <?php endif; ?>
               </div>
-              <div style="font-size:13px;color:var(--text);margin-top:2px;font-weight:500">
-                <?= htmlspecialchars($r['name_alias'] ?: $r['supervisor_name']) ?>
-              </div>
-              <?php if ($r['notes']): ?>
-                <div style="font-size:11px;color:var(--text-muted);font-style:italic"><?= htmlspecialchars($r['notes']) ?></div>
+              <?php if ($confirmed): ?>
+                <div style="font-size:13px;color:var(--text);margin-top:2px;font-weight:500">
+                  <?= htmlspecialchars($confirmed['name_alias'] ?: $confirmed['supervisor_name']) ?>
+                </div>
+                <?php if ($confirmed['notes']): ?>
+                  <div style="font-size:11px;color:var(--text-muted);font-style:italic"><?= htmlspecialchars($confirmed['notes']) ?></div>
+                <?php endif; ?>
+              <?php else:
+                $suggSupId = $suggestions[$sunday] ?? null;
+                $suggSup   = null;
+                foreach ($activeSups as $s) { if ($s['id'] == $suggSupId) { $suggSup = $s; break; } }
+              ?>
+                <div style="font-size:13px;color:var(--text-muted);margin-top:2px">
+                  Sugestão: <?= $suggSup ? htmlspecialchars($suggSup['name_alias'] ?: $suggSup['member_name']) : '—' ?>
+                </div>
               <?php endif; ?>
             </div>
-            <!-- Trocar supervisor -->
-            <form method="POST" style="display:flex;gap:6px;align-items:center;flex-wrap:wrap">
-              <input type="hidden" name="action" value="substitute">
-              <input type="hidden" name="rotation_id" value="<?= $r['id'] ?>">
-              <select name="new_supervisor_id" class="form-control" style="width:160px;font-size:12px;padding:4px 8px">
-                <?php foreach ($supervisors as $s): if (!$s['active']) continue; ?>
-                  <option value="<?= $s['id'] ?>" <?= $r['supervisor_id']==$s['id']?'selected':''?>>
-                    <?= htmlspecialchars($s['name_alias'] ?: $s['member_name']) ?>
-                  </option>
-                <?php endforeach; ?>
-              </select>
-              <input type="text" name="notes" class="form-control" style="width:120px;font-size:12px;padding:4px 8px" placeholder="Motivo…">
-              <button type="submit" class="btn btn-secondary" style="font-size:12px;padding:5px 10px">Trocar</button>
-            </form>
+
+            <?php if ($confirmed): ?>
+              <!-- Trocar supervisor já confirmado -->
+              <form method="POST" style="display:flex;gap:6px;align-items:center;flex-wrap:wrap">
+                <input type="hidden" name="action" value="substitute">
+                <input type="hidden" name="rotation_id" value="<?= $confirmed['id'] ?>">
+                <select name="new_supervisor_id" class="form-control" style="width:160px;font-size:12px;padding:4px 8px">
+                  <?php foreach ($supervisors as $s): if (!$s['active']) continue; ?>
+                    <option value="<?= $s['id'] ?>" <?= $confirmed['supervisor_id']==$s['id']?'selected':''?>>
+                      <?= htmlspecialchars($s['name_alias'] ?: $s['member_name']) ?>
+                    </option>
+                  <?php endforeach; ?>
+                </select>
+                <input type="text" name="notes" class="form-control" style="width:120px;font-size:12px;padding:4px 8px" placeholder="Motivo…">
+                <button type="submit" class="btn btn-secondary" style="font-size:12px;padding:5px 10px">Trocar</button>
+              </form>
+            <?php elseif (!empty($activeSups)): ?>
+              <!-- Confirmar quem vai ser o supervisor dessa semana (só agora sai o aviso) -->
+              <form method="POST" style="display:flex;gap:6px;align-items:center;flex-wrap:wrap">
+                <input type="hidden" name="action" value="confirm_rotation">
+                <input type="hidden" name="service_date" value="<?= $sunday ?>">
+                <select name="supervisor_id" class="form-control" style="width:160px;font-size:12px;padding:4px 8px">
+                  <?php foreach ($activeSups as $s): ?>
+                    <option value="<?= $s['id'] ?>" <?= $s['id']==$suggSupId?'selected':''?>>
+                      <?= htmlspecialchars($s['name_alias'] ?: $s['member_name']) ?>
+                    </option>
+                  <?php endforeach; ?>
+                </select>
+                <button type="submit" class="btn btn-primary" style="font-size:12px;padding:5px 10px">Confirmar</button>
+              </form>
+            <?php endif; ?>
           </div>
         <?php endforeach; ?>
       <?php endif; ?>
