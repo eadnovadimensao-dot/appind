@@ -2,9 +2,9 @@
 // Movimentação das células: lembrete aos membros no dia da reunião e, depois,
 // cobrança do relatório pro líder. Chamadas a cada minuto pelo cron_whatsapp_queue.php.
 
-// Hora do dia (servidor) a partir da qual o lembrete de "hoje tem célula" é
-// disparado pros membros. Fixo de manhã pra dar tempo de todo mundo se organizar.
-const CELL_MEMBER_REMINDER_HOUR = 9;
+// Quantas horas antes do horário de início da célula o lembrete de "hoje tem
+// célula" é disparado pros membros.
+const CELL_MEMBER_REMINDER_HOURS_BEFORE_START = 4;
 
 // Quantas horas depois do horário de início da célula o líder é cobrado do
 // relatório, se ainda não tiver criado um pra hoje.
@@ -33,19 +33,20 @@ function cell_reminder_already_queued_today(PDO $db, int $cellId, string $kind):
 
 /**
  * Pros membros de cada célula ativa que se reúne hoje: lembrete de que hoje
- * tem célula, a partir de CELL_MEMBER_REMINDER_HOUR. Aditivo e seguro de
- * chamar de novo a cada minuto — só manda uma vez por célula por dia.
+ * tem célula, CELL_MEMBER_REMINDER_HOURS_BEFORE_START antes do horário de
+ * início. Aditivo e seguro de chamar de novo a cada minuto — só manda uma
+ * vez por célula por dia.
  */
 function queue_cell_meeting_reminders_for_today(PDO $db): void {
-    if ((int)date('G') < CELL_MEMBER_REMINDER_HOUR) return;
-
     $today = strtolower(date('l'));
     $cells = $db->query("
         SELECT id, church_id, name, day_of_week, time_start, street, number, neighborhood
-        FROM cells WHERE active = 1 AND day_of_week = " . $db->quote($today) . "
+        FROM cells WHERE active = 1 AND day_of_week = " . $db->quote($today) . " AND time_start IS NOT NULL
     ")->fetchAll();
 
     foreach ($cells as $cell) {
+        $triggerAt = strtotime(date('Y-m-d') . ' ' . $cell['time_start']) - CELL_MEMBER_REMINDER_HOURS_BEFORE_START * 3600;
+        if (time() < $triggerAt) continue;
         if (cell_reminder_already_queued_today($db, (int)$cell['id'], 'cell_meeting')) continue;
 
         $members = $db->prepare("
