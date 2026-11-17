@@ -25,14 +25,14 @@ function bible_reading_suggestion_box_html(array $suggestion): string {
     foreach ($suggestion as $s) {
         $verses = '';
         foreach ($s['verses'] as $v) {
-            $verses .= '<sup style="color:var(--text-muted)">' . (int)$v['verse'] . '</sup> ' . htmlspecialchars($v['text']) . ' ';
+            $verses .= '<sup style="color:var(--accent);font-weight:700">' . (int)$v['verse'] . '</sup> ' . htmlspecialchars($v['text']) . ' ';
         }
         $html .= '<div style="border:1px solid var(--border);border-radius:8px;padding:12px 14px;margin-bottom:10px">'
                 . '<div style="display:flex;align-items:center;justify-content:space-between;gap:12px;flex-wrap:wrap;margin-bottom:8px">'
                 . '<strong style="font-size:13px">' . htmlspecialchars($s['book_name']) . ' ' . (int)$s['chapter'] . '</strong>'
                 . '<button type="button" class="btn btn-primary" style="font-size:12px" onclick="toggleChapter(\'' . $s['book_abbrev'] . '\', ' . (int)$s['chapter'] . ', this)">✓ Marcar como lido</button>'
                 . '</div>'
-                . '<div style="font-size:13px;line-height:1.6;color:var(--text);max-height:260px;overflow-y:auto">' . $verses . '</div>'
+                . '<div style="font-size:16px;line-height:1.7;color:var(--text);max-height:320px;overflow-y:auto">' . $verses . '</div>'
                 . '</div>';
     }
     return $html;
@@ -114,14 +114,14 @@ function renderSuggestionBox(suggestion) {
   suggestion.forEach(s => {
     let verses = '';
     (s.verses || []).forEach(v => {
-      verses += '<sup style="color:var(--text-muted)">' + v.verse + '</sup> ' + escapeHtml(v.text) + ' ';
+      verses += '<sup style="color:var(--accent);font-weight:700">' + v.verse + '</sup> ' + escapeHtml(v.text) + ' ';
     });
     html += '<div style="border:1px solid var(--border);border-radius:8px;padding:12px 14px;margin-bottom:10px">'
           + '<div style="display:flex;align-items:center;justify-content:space-between;gap:12px;flex-wrap:wrap;margin-bottom:8px">'
           + '<strong style="font-size:13px">' + escapeHtml(s.book_name) + ' ' + s.chapter + '</strong>'
           + '<button type="button" class="btn btn-primary" style="font-size:12px" onclick="toggleChapter(\\'' + s.book_abbrev + '\\', ' + s.chapter + ', this)">✓ Marcar como lido</button>'
           + '</div>'
-          + '<div style="font-size:13px;line-height:1.6;color:var(--text);max-height:260px;overflow-y:auto">' + verses + '</div>'
+          + '<div style="font-size:16px;line-height:1.7;color:var(--text);max-height:320px;overflow-y:auto">' + verses + '</div>'
           + '</div>';
   });
   return html;
