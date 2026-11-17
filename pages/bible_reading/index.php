@@ -23,16 +23,10 @@ function bible_reading_suggestion_box_html(array $suggestion): string {
     }
     $html = '<p style="font-size:13px;font-weight:600;margin-bottom:10px">📖 Sugestão de hoje</p>';
     foreach ($suggestion as $s) {
-        $verses = '';
-        foreach ($s['verses'] as $v) {
-            $verses .= '<sup style="color:var(--accent);font-weight:700">' . (int)$v['verse'] . '</sup> ' . htmlspecialchars($v['text']) . ' ';
-        }
-        $html .= '<div style="border:1px solid var(--border);border-radius:8px;padding:12px 14px;margin-bottom:10px">'
-                . '<div style="display:flex;align-items:center;justify-content:space-between;gap:12px;flex-wrap:wrap;margin-bottom:8px">'
-                . '<strong style="font-size:13px">' . htmlspecialchars($s['book_name']) . ' ' . (int)$s['chapter'] . '</strong>'
-                . '<button type="button" class="btn btn-primary" style="font-size:12px" onclick="toggleChapter(\'' . $s['book_abbrev'] . '\', ' . (int)$s['chapter'] . ', this)">✓ Marcar como lido</button>'
-                . '</div>'
-                . '<div style="font-size:16px;line-height:1.7;color:var(--text);max-height:320px;overflow-y:auto">' . $verses . '</div>'
+        $html .= '<div onclick="openChapterModal(\'' . $s['book_abbrev'] . '\', ' . (int)$s['chapter'] . ')" '
+                . 'style="display:flex;align-items:center;justify-content:space-between;gap:10px;padding:10px 12px;border:1px solid var(--border);border-radius:8px;margin-bottom:8px;cursor:pointer">'
+                . '<span style="font-size:13px">📖 ' . htmlspecialchars($s['book_name']) . ' ' . (int)$s['chapter'] . '</span>'
+                . '<span style="font-size:12px;color:var(--accent);font-weight:600">Ler →</span>'
                 . '</div>';
     }
     return $html;
@@ -67,6 +61,8 @@ foreach ($books as $b) {
 $suggestedBooks = array_column($suggestion, 'book_abbrev');
 ?>
 
+<p style="font-size:12px;color:var(--text-muted);margin-bottom:12px">💡 Clique em qualquer capítulo pra ler o texto, mesmo fora da sugestão de hoje.</p>
+
 <?php foreach ($testaments as $t): ?>
   <div class="card" style="margin-bottom:16px">
     <p class="card-title"><?= $t['label'] ?></p>
@@ -88,7 +84,7 @@ $suggestedBooks = array_column($suggestion, 'book_abbrev');
             <button type="button"
                     class="chapter-cell <?= $isRead ? 'done' : '' ?>"
                     data-book="<?= $b['book_abbrev'] ?>" data-chapter="<?= $c ?>"
-                    onclick="toggleChapter('<?= $b['book_abbrev'] ?>', <?= $c ?>, this)"
+                    onclick="openChapterModal('<?= $b['book_abbrev'] ?>', <?= $c ?>)"
                     style="height:34px;border-radius:6px;border:1px solid var(--border);background:<?= $isRead ? 'var(--accent)' : 'white' ?>;color:<?= $isRead ? 'white' : 'var(--text)' ?>;font-size:12px;cursor:pointer">
               <?= $c ?>
             </button>
@@ -98,6 +94,21 @@ $suggestedBooks = array_column($suggestion, 'book_abbrev');
     <?php endforeach; ?>
   </div>
 <?php endforeach; ?>
+
+<!-- Leitor de capítulo: abre pra qualquer capítulo, lido ou não -->
+<div id="chapter-modal-overlay" onclick="if (event.target === this) closeChapterModal()"
+     style="display:none;position:fixed;inset:0;background:rgba(0,0,0,.5);z-index:1000;align-items:center;justify-content:center;padding:16px">
+  <div style="background:white;border-radius:10px;max-width:620px;width:100%;max-height:85vh;display:flex;flex-direction:column;overflow:hidden">
+    <div style="display:flex;align-items:center;justify-content:space-between;gap:10px;padding:14px 18px;border-bottom:1px solid var(--border)">
+      <strong id="modal-title" style="font-size:15px"></strong>
+      <button type="button" onclick="closeChapterModal()" style="border:none;background:none;font-size:22px;line-height:1;cursor:pointer;color:var(--text-muted)">×</button>
+    </div>
+    <div id="modal-body" style="padding:16px 18px;overflow-y:auto;font-size:16px;line-height:1.7;color:var(--text);flex:1"></div>
+    <div style="padding:12px 18px;border-top:1px solid var(--border);display:flex;justify-content:flex-end">
+      <button type="button" id="modal-toggle-btn" class="btn btn-primary" style="font-size:12px" onclick="toggleFromModal()"></button>
+    </div>
+  </div>
+</div>
 
 <?php
 $extraJs = <<<JS
@@ -112,44 +123,75 @@ function renderSuggestionBox(suggestion) {
   }
   let html = '<p style="font-size:13px;font-weight:600;margin-bottom:10px">📖 Sugestão de hoje</p>';
   suggestion.forEach(s => {
-    let verses = '';
-    (s.verses || []).forEach(v => {
-      verses += '<sup style="color:var(--accent);font-weight:700">' + v.verse + '</sup> ' + escapeHtml(v.text) + ' ';
-    });
-    html += '<div style="border:1px solid var(--border);border-radius:8px;padding:12px 14px;margin-bottom:10px">'
-          + '<div style="display:flex;align-items:center;justify-content:space-between;gap:12px;flex-wrap:wrap;margin-bottom:8px">'
-          + '<strong style="font-size:13px">' + escapeHtml(s.book_name) + ' ' + s.chapter + '</strong>'
-          + '<button type="button" class="btn btn-primary" style="font-size:12px" onclick="toggleChapter(\\'' + s.book_abbrev + '\\', ' + s.chapter + ', this)">✓ Marcar como lido</button>'
-          + '</div>'
-          + '<div style="font-size:16px;line-height:1.7;color:var(--text);max-height:320px;overflow-y:auto">' + verses + '</div>'
+    html += '<div onclick="openChapterModal(\\'' + s.book_abbrev + '\\', ' + s.chapter + ')" '
+          + 'style="display:flex;align-items:center;justify-content:space-between;gap:10px;padding:10px 12px;border:1px solid var(--border);border-radius:8px;margin-bottom:8px;cursor:pointer">'
+          + '<span style="font-size:13px">📖 ' + escapeHtml(s.book_name) + ' ' + s.chapter + '</span>'
+          + '<span style="font-size:12px;color:var(--accent);font-weight:600">Ler →</span>'
           + '</div>';
   });
   return html;
 }
 
-function toggleChapter(book, chapter, btn) {
-  const willRead = !btn.classList.contains('done');
+let modalState = { book: null, chapter: null };
+
+function openChapterModal(book, chapter) {
+  modalState = { book: book, chapter: chapter };
+  document.getElementById('modal-title').textContent = 'Carregando…';
+  document.getElementById('modal-body').innerHTML = '';
+  document.getElementById('chapter-modal-overlay').style.display = 'flex';
+  fetch('/pages/bible_reading/chapter_text.php?book_abbrev=' + encodeURIComponent(book) + '&chapter=' + chapter)
+    .then(r => r.json())
+    .then(data => {
+      if (!data.ok) { document.getElementById('modal-title').textContent = 'Não encontrado'; return; }
+      document.getElementById('modal-title').textContent = data.book_name + ' ' + data.chapter;
+      let html = '';
+      data.verses.forEach(v => {
+        html += '<sup style="color:var(--accent);font-weight:700">' + v.verse + '</sup> ' + escapeHtml(v.text) + ' ';
+      });
+      document.getElementById('modal-body').innerHTML = html;
+      updateModalButton(data.is_read);
+    });
+}
+
+function closeChapterModal() {
+  document.getElementById('chapter-modal-overlay').style.display = 'none';
+}
+
+function updateModalButton(isRead) {
+  const btn = document.getElementById('modal-toggle-btn');
+  btn.textContent = isRead ? '✓ Lido (clique p/ desmarcar)' : '✓ Marcar como lido';
+  btn.className = 'btn ' + (isRead ? 'btn-secondary' : 'btn-primary');
+  btn.dataset.read = isRead ? '1' : '0';
+}
+
+function toggleFromModal() {
+  const btn = document.getElementById('modal-toggle-btn');
+  const willRead = btn.dataset.read !== '1';
   const fd = new FormData();
-  fd.append('book_abbrev', book);
-  fd.append('chapter', chapter);
+  fd.append('book_abbrev', modalState.book);
+  fd.append('chapter', modalState.chapter);
   fd.append('done', willRead ? '1' : '0');
   fetch('/pages/bible_reading/toggle.php', { method: 'POST', body: fd })
     .then(r => r.json())
     .then(data => {
       if (!data.ok) return;
-
-      btn.classList.toggle('done', willRead);
-      btn.style.background = willRead ? 'var(--accent)' : 'white';
-      btn.style.color = willRead ? 'white' : 'var(--text)';
+      updateModalButton(willRead);
 
       document.getElementById('total-read').textContent = data.read_count;
       document.getElementById('total-percent').textContent = data.percent;
       document.getElementById('progress-bar').style.width = data.percent + '%';
 
-      const countEl = document.getElementById('book-count-' + book);
-      const iconEl  = document.getElementById('book-icon-' + book);
+      const countEl = document.getElementById('book-count-' + modalState.book);
+      const iconEl  = document.getElementById('book-icon-' + modalState.book);
       if (countEl) countEl.textContent = data.book_read + '/' + data.book_total;
       if (iconEl)   iconEl.textContent = data.book_read === data.book_total ? '✅' : '📖';
+
+      const cell = document.querySelector('.chapter-cell[data-book="' + modalState.book + '"][data-chapter="' + modalState.chapter + '"]');
+      if (cell) {
+        cell.classList.toggle('done', willRead);
+        cell.style.background = willRead ? 'var(--accent)' : 'white';
+        cell.style.color = willRead ? 'white' : 'var(--text)';
+      }
 
       document.getElementById('suggestion-box').innerHTML = renderSuggestionBox(data.suggestion);
     });

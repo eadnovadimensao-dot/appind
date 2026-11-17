@@ -43,8 +43,9 @@ function bible_reading_progress_set(PDO $db, int $memberId): array {
 
 /**
  * Próximos capítulos não lidos na ordem canônica (Gênesis 1 em diante), até
- * BIBLE_READING_DAILY_CHAPTERS, já com o texto de cada capítulo (['verses']).
- * Lista vazia se já leu tudo.
+ * BIBLE_READING_DAILY_CHAPTERS. Lista vazia se já leu tudo. Só a referência —
+ * o texto de cada capítulo é buscado à parte (`chapter_text.php`) quando o
+ * usuário clica pra ler.
  */
 function bible_reading_daily_suggestion(PDO $db, array $progressSet, int $count = BIBLE_READING_DAILY_CHAPTERS): array {
     $out = [];
@@ -52,8 +53,7 @@ function bible_reading_daily_suggestion(PDO $db, array $progressSet, int $count 
         for ($c = 1; $c <= (int)$b['chapters']; $c++) {
             if (count($out) >= $count) return $out;
             if (!isset($progressSet[$b['book_abbrev'] . ':' . $c])) {
-                $verses = bible_get_verses($db, ['book_abbrev' => $b['book_abbrev'], 'chapter' => $c, 'verse_start' => null, 'verse_end' => null]);
-                $out[] = ['book_abbrev' => $b['book_abbrev'], 'book_name' => $b['book_name'], 'chapter' => $c, 'verses' => $verses];
+                $out[] = ['book_abbrev' => $b['book_abbrev'], 'book_name' => $b['book_name'], 'chapter' => $c];
             }
         }
     }
