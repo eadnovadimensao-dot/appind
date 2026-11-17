@@ -12,6 +12,7 @@ $navItems = [
   ['href' => '/dashboard.php',                 'icon' => 'ti-layout-dashboard', 'label' => 'Dashboard',    'key' => 'dashboard'],
   ['href' => '/pages/offering.php',            'icon' => 'ti-heart',            'label' => 'Oferta',       'key' => 'offering'],
   ['href' => '/pages/devotional/index.php',    'icon' => 'ti-book',             'label' => 'Devocional',   'key' => 'devotional'],
+  ['href' => '/pages/bible_reading/index.php',  'icon' => 'ti-book-2',           'label' => 'Leitura Bíblica', 'key' => 'bible_reading'],
   ['href' => '/pages/members/index.php',        'icon' => 'ti-users',            'label' => 'Membros',      'key' => 'members'],
   ['href' => '/pages/members/card.php',         'icon' => 'ti-id-badge-2',       'label' => 'Minha Carteirinha', 'key' => 'card'],
   ['href' => '/pages/families/index.php',       'icon' => 'ti-home',             'label' => 'Famílias',     'key' => 'families'],
@@ -110,22 +111,23 @@ if (window.innerWidth <= 900) {
         if (in_array($item['key'], ['branches','whatsapp','audit_log']) && $role !== 'supermaster') continue; // Filiais, WhatsApp e auditoria: só supermaster
         if ($item['key'] === 'availability' && !$inAnyMinistry) continue;
         if ($item['key'] === 'card' && !$memberId) continue; // Carteirinha só existe pra quem tem cadastro de membro vinculado
+        if ($item['key'] === 'bible_reading' && !$memberId) continue; // Progresso é pessoal, por membro
         if ($role === 'member') {
           // Ministérios agora é um diretório aberto (qualquer um vê quais existem);
           // o que fica restrito é o conteúdo de dentro, filtrado na própria tela.
-          $memberAllowed = ['dashboard','events','communication','offering','devotional','ministries','availability','card'];
+          $memberAllowed = ['dashboard','events','communication','offering','devotional','bible_reading','ministries','availability','card'];
           if ($relatedCells) $memberAllowed[] = 'cells';
           if ($relatedCells || $hasDiscipleship) $memberAllowed[] = 'discipleship';
           if (!in_array($item['key'], $memberAllowed)) continue;
         }
         if ($role === 'leader') {
-          $leaderAllowed = ['dashboard','events','communication','ministries','offering','devotional','availability','card'];
+          $leaderAllowed = ['dashboard','events','communication','ministries','offering','devotional','bible_reading','availability','card'];
           if ($relatedCells) $leaderAllowed[] = 'cells';
           if ($relatedCells || $hasDiscipleship) $leaderAllowed[] = 'discipleship';
           if (!in_array($item['key'], $leaderAllowed)) continue;
         }
         if ($role === 'cell_leader') {
-          $cellLeaderAllowed = ['dashboard','events','communication','ministries','offering','devotional','availability','card'];
+          $cellLeaderAllowed = ['dashboard','events','communication','ministries','offering','devotional','bible_reading','availability','card'];
           if ($relatedCells) $cellLeaderAllowed[] = 'cells';
           if ($relatedCells || $hasDiscipleship) $cellLeaderAllowed[] = 'discipleship';
           if (!in_array($item['key'], $cellLeaderAllowed)) continue;
