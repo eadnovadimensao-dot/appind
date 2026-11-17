@@ -106,6 +106,20 @@ try {
 } catch (\Throwable $e) {
     error_log('cron acompanhamento visitante: ' . $e->getMessage());
 }
+// 4e) Lembra os membros no dia da célula que hoje tem reunião
+try {
+    require_once __DIR__ . '/includes/cell_reminders.php';
+    queue_cell_meeting_reminders_for_today($db);
+} catch (\Throwable $e) {
+    error_log('cron lembrete célula: ' . $e->getMessage());
+}
+// 4f) Cobra o líder pelo relatório da célula, 2h depois do início
+try {
+    require_once __DIR__ . '/includes/cell_reminders.php';
+    queue_cell_report_reminders_for_today($db);
+} catch (\Throwable $e) {
+    error_log('cron relatório de célula: ' . $e->getMessage());
+}
 // 5) Backup diário do banco (a partir das 3h, uma vez por dia)
 try {
     require_once __DIR__ . '/includes/backup.php';
