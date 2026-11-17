@@ -5,6 +5,7 @@
 require_once __DIR__ . '/../config/database.php';
 require_once __DIR__ . '/auth.php';
 require_once __DIR__ . '/discipleship.php';
+require_once __DIR__ . '/nd_news.php';
 auth_check();
 auth_member_redirect(); // bloqueia membro de acessar páginas restritas
 
@@ -22,6 +23,7 @@ $navItems = [
   ['href' => '/pages/events/index.php',         'icon' => 'ti-calendar',         'label' => 'Agenda',       'key' => 'events'],
   ['href' => '/pages/services/index.php',       'icon' => 'ti-building-church',  'label' => 'Cultos',       'key' => 'services'],
   ['href' => '/pages/communication/index.php',  'icon' => 'ti-bell',             'label' => 'Comunicação',  'key' => 'communication'],
+  ['href' => '/pages/nd_news/index.php',        'icon' => 'ti-video',            'label' => 'ND News',      'key' => 'nd_news'],
   ['href' => '/pages/ministries/index.php',     'icon' => 'ti-star',             'label' => 'Ministérios',  'key' => 'ministries'],
   ['href' => '/pages/availability/index.php',   'icon' => 'ti-calendar-off',     'label' => 'Disponibilidade', 'key' => 'availability'],
   ['href' => '/pages/users/index.php',          'icon' => 'ti-lock',             'label' => 'Usuários',     'key' => 'users'],
@@ -112,22 +114,26 @@ if (window.innerWidth <= 900) {
         if ($item['key'] === 'availability' && !$inAnyMinistry) continue;
         if ($item['key'] === 'card' && !$memberId) continue; // Carteirinha só existe pra quem tem cadastro de membro vinculado
         if ($item['key'] === 'bible_reading' && !$memberId) continue; // Progresso é pessoal, por membro
+        $canCreateNews = $memberId ? auth_can_create_nd_news() : false;
         if ($role === 'member') {
           // Ministérios agora é um diretório aberto (qualquer um vê quais existem);
           // o que fica restrito é o conteúdo de dentro, filtrado na própria tela.
           $memberAllowed = ['dashboard','events','communication','offering','devotional','bible_reading','ministries','availability','card'];
           if ($relatedCells) $memberAllowed[] = 'cells';
           if ($relatedCells || $hasDiscipleship) $memberAllowed[] = 'discipleship';
+          if ($canCreateNews) $memberAllowed[] = 'nd_news';
           if (!in_array($item['key'], $memberAllowed)) continue;
         }
         if ($role === 'leader') {
           $leaderAllowed = ['dashboard','events','communication','ministries','offering','devotional','bible_reading','availability','card'];
+          if ($canCreateNews) $leaderAllowed[] = 'nd_news';
           if ($relatedCells) $leaderAllowed[] = 'cells';
           if ($relatedCells || $hasDiscipleship) $leaderAllowed[] = 'discipleship';
           if (!in_array($item['key'], $leaderAllowed)) continue;
         }
         if ($role === 'cell_leader') {
           $cellLeaderAllowed = ['dashboard','events','communication','ministries','offering','devotional','bible_reading','availability','card'];
+          if ($canCreateNews) $cellLeaderAllowed[] = 'nd_news';
           if ($relatedCells) $cellLeaderAllowed[] = 'cells';
           if ($relatedCells || $hasDiscipleship) $cellLeaderAllowed[] = 'discipleship';
           if (!in_array($item['key'], $cellLeaderAllowed)) continue;

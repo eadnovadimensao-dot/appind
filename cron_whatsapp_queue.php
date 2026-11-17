@@ -120,6 +120,13 @@ try {
 } catch (\Throwable $e) {
     error_log('cron relatório de célula: ' . $e->getMessage());
 }
+// 4g) Apaga do servidor os stories do ND News que já venceram
+try {
+    require_once __DIR__ . '/includes/nd_news.php';
+    nd_news_expire_due($db);
+} catch (\Throwable $e) {
+    error_log('cron expirar ND News: ' . $e->getMessage());
+}
 // 5) Backup diário do banco (a partir das 3h, uma vez por dia)
 try {
     require_once __DIR__ . '/includes/backup.php';

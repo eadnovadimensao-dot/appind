@@ -2,11 +2,13 @@
 require_once __DIR__ . '/config/database.php';
 require_once __DIR__ . '/includes/auth.php';
 require_once __DIR__ . '/includes/mini_charts.php';
+require_once __DIR__ . '/includes/nd_news.php';
 auth_check();
 
 $db         = db();
 $churchId   = current_church_id();
 $canFinance = auth_can('manage_finance');
+$ndNewsItems = nd_news_active_items($db);
 
 // ── Tendências (últimos 6 meses) ─────────────────────────────
 $monthAbbrevPt = ['Jan','Fev','Mar','Abr','Mai','Jun','Jul','Ago','Set','Out','Nov','Dez'];
@@ -126,6 +128,20 @@ require_once __DIR__ . '/includes/layout.php';
   <div style="background:#FEF3C7;border:1px solid #FCD34D;border-radius:8px;padding:12px 16px;margin-bottom:20px;font-size:13px;color:#854F0B">
     🔒 Você não tem permissão para acessar essa área.
   </div>
+<?php endif; ?>
+
+<?php if ($ndNewsItems): ?>
+<!-- ND News: stories em video -->
+<div style="display:flex;gap:14px;overflow-x:auto;padding:4px 2px 16px;margin-bottom:4px">
+  <?php foreach ($ndNewsItems as $i => $it): ?>
+    <div onclick="openNdStories(<?= $i ?>)" style="flex-shrink:0;text-align:center;cursor:pointer;width:64px">
+      <div style="width:56px;height:56px;border-radius:50%;background:linear-gradient(45deg,#F58529,#DD2A7B,#8134AF,#515BD4);display:flex;align-items:center;justify-content:center;margin:0 auto 4px;padding:2px">
+        <div style="width:100%;height:100%;border-radius:50%;background:white;display:flex;align-items:center;justify-content:center;font-size:20px">🎥</div>
+      </div>
+      <div style="font-size:11px;color:var(--text);overflow:hidden;text-overflow:ellipsis;white-space:nowrap"><?= htmlspecialchars($it['title']) ?></div>
+    </div>
+  <?php endforeach; ?>
+</div>
 <?php endif; ?>
 
 <!-- KPIs -->
@@ -260,4 +276,101 @@ require_once __DIR__ . '/includes/layout.php';
 
 </div>
 
-<?php require_once __DIR__ . '/includes/layout-footer.php'; ?>
+<?php if ($ndNewsItems): ?>
+<style>
+@keyframes ndFadeUp { from { opacity:0; transform:translateY(14px); } to { opacity:1; transform:translateY(0); } }
+.nd-anim { opacity:0; animation: ndFadeUp .5s ease forwards; }
+.nd-anim-1 { animation-delay: .15s; }
+.nd-anim-2 { animation-delay: .35s; }
+.nd-anim-3 { animation-delay: .55s; }
+</style>
+
+<!-- Visualizador de stories em tela cheia -->
+<div id="nd-stories-overlay" style="display:none;position:fixed;inset:0;background:#000;z-index:2000;align-items:center;justify-content:center">
+  <div style="position:relative;width:100%;max-width:420px;height:100%;background:#000;overflow:hidden">
+    <div id="nd-progress-row" style="position:absolute;top:10px;left:10px;right:10px;display:flex;gap:4px;z-index:3"></div>
+    <button type="button" onclick="closeNdStories()" style="position:absolute;top:18px;right:12px;z-index:3;background:none;border:none;color:white;font-size:28px;line-height:1;cursor:pointer">×</button>
+    <video id="nd-story-video" style="width:100%;height:100%;object-fit:contain;background:#000" playsinline></video>
+    <div id="nd-story-overlay-text" style="position:absolute;left:0;right:0;bottom:0;padding:24px 18px 32px;background:linear-gradient(to top, rgba(0,0,0,.75), transparent)"></div>
+    <div onclick="prevNdStory()" style="position:absolute;left:0;top:40px;bottom:0;width:30%;z-index:2"></div>
+    <div onclick="nextNdStory()" style="position:absolute;right:0;top:40px;bottom:0;width:30%;z-index:2"></div>
+  </div>
+</div>
+<?php endif; ?>
+
+<?php
+if ($ndNewsItems):
+$ndStoriesJson = json_encode(array_map(fn($it) => [
+    'title'       => $it['title'],
+    'event_date'  => $it['event_date'] ? date_pt($it['event_date']) : null,
+    'description' => $it['description'],
+    'video'       => $it['video_path'],
+], $ndNewsItems), JSON_UNESCAPED_UNICODE | JSON_HEX_TAG);
+
+$extraJs = <<<JS
+const ndStories = {$ndStoriesJson};
+let ndIndex = 0;
+
+function ndEscapeHtml(s) {
+  return String(s || '').replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
+}
+
+function openNdStories(startIndex) {
+  ndIndex = startIndex;
+  document.getElementById('nd-stories-overlay').style.display = 'flex';
+  ndRenderStory();
+}
+
+function closeNdStories() {
+  document.getElementById('nd-stories-overlay').style.display = 'none';
+  document.getElementById('nd-story-video').pause();
+}
+
+function nextNdStory() {
+  ndIndex++;
+  if (ndIndex >= ndStories.length) { closeNdStories(); return; }
+  ndRenderStory();
+}
+
+function prevNdStory() {
+  ndIndex = Math.max(0, ndIndex - 1);
+  ndRenderStory();
+}
+
+function ndRenderStory() {
+  const s = ndStories[ndIndex];
+
+  const row = document.getElementById('nd-progress-row');
+  row.innerHTML = '';
+  ndStories.forEach((_, i) => {
+    const bar = document.createElement('div');
+    bar.style.flex = '1';
+    bar.style.height = '3px';
+    bar.style.borderRadius = '2px';
+    bar.style.background = 'rgba(255,255,255,.35)';
+    bar.style.overflow = 'hidden';
+    if (i < ndIndex) bar.innerHTML = '<div style="width:100%;height:100%;background:white"></div>';
+    if (i === ndIndex) bar.innerHTML = '<div id="nd-progress-fill" style="width:0%;height:100%;background:white"></div>';
+    row.appendChild(bar);
+  });
+
+  const video = document.getElementById('nd-story-video');
+  video.src = s.video;
+  video.currentTime = 0;
+  video.play().catch(() => {});
+
+  let html = '<div class="nd-anim nd-anim-1" style="color:white;font-size:18px;font-weight:700">' + ndEscapeHtml(s.title) + '</div>';
+  if (s.event_date) html += '<div class="nd-anim nd-anim-2" style="color:rgba(255,255,255,.9);font-size:13px;margin-top:4px">📅 ' + ndEscapeHtml(s.event_date) + '</div>';
+  if (s.description) html += '<div class="nd-anim nd-anim-3" style="color:rgba(255,255,255,.92);font-size:13px;margin-top:6px;line-height:1.4">' + ndEscapeHtml(s.description) + '</div>';
+  document.getElementById('nd-story-overlay-text').innerHTML = html;
+}
+
+document.getElementById('nd-story-video').addEventListener('ended', nextNdStory);
+document.getElementById('nd-story-video').addEventListener('timeupdate', function () {
+  const fill = document.getElementById('nd-progress-fill');
+  if (fill && this.duration) fill.style.width = (this.currentTime / this.duration * 100) + '%';
+});
+JS;
+endif;
+require_once __DIR__ . '/includes/layout-footer.php';
+?>
