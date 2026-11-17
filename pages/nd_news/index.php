@@ -8,7 +8,7 @@ $db       = db();
 $memberId = auth_member_id();
 $canCreate = auth_can_create_nd_news();
 
-$items = nd_news_active_items($db);
+$items = nd_news_active_items($db); // gerenciamento: mostra todos, sem filtro de visibilidade
 
 $pageTitle  = 'ND News';
 $activePage = 'nd_news';
@@ -40,6 +40,7 @@ require_once __DIR__ . '/../../includes/layout.php';
           <div style="font-size:14px;font-weight:600"><?= htmlspecialchars($it['title']) ?></div>
           <div style="font-size:12px;color:var(--text-muted)">
             <?= $it['event_date'] ? date_pt($it['event_date']) . ' · ' : '' ?>por <?= htmlspecialchars($it['author_name']) ?> · expira em <?= date('d/m/Y H:i', strtotime($it['expires_at'])) ?>
+            · <?= $it['visibility'] === 'sede' ? '🏛️ Só Sede' : '🌐 Todas as igrejas' ?>
           </div>
         </div>
       </div>

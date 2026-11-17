@@ -8,7 +8,7 @@ auth_check();
 $db         = db();
 $churchId   = current_church_id();
 $canFinance = auth_can('manage_finance');
-$ndNewsItems = nd_news_active_items($db);
+$ndNewsItems = nd_news_active_items($db, $churchId);
 
 // ── Tendências (últimos 6 meses) ─────────────────────────────
 $monthAbbrevPt = ['Jan','Fev','Mar','Abr','Mai','Jun','Jul','Ago','Set','Out','Nov','Dez'];
@@ -132,7 +132,9 @@ require_once __DIR__ . '/includes/layout.php';
 
 <?php if ($ndNewsItems): ?>
 <!-- ND News: stories em video -->
-<div style="display:flex;gap:14px;overflow-x:auto;padding:4px 2px 16px;margin-bottom:4px">
+<div class="card" style="margin-bottom:20px">
+  <p class="card-title">📰 ND News</p>
+  <div style="display:flex;gap:14px;overflow-x:auto;padding:4px 2px 0">
   <?php foreach ($ndNewsItems as $i => $it): ?>
     <div onclick="openNdStories(<?= $i ?>)" style="flex-shrink:0;text-align:center;cursor:pointer;width:64px">
       <div style="width:56px;height:56px;border-radius:50%;background:linear-gradient(45deg,#F58529,#DD2A7B,#8134AF,#515BD4);display:flex;align-items:center;justify-content:center;margin:0 auto 4px;padding:2px">
@@ -141,6 +143,7 @@ require_once __DIR__ . '/includes/layout.php';
       <div style="font-size:11px;color:var(--text);overflow:hidden;text-overflow:ellipsis;white-space:nowrap"><?= htmlspecialchars($it['title']) ?></div>
     </div>
   <?php endforeach; ?>
+  </div>
 </div>
 <?php endif; ?>
 

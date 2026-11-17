@@ -21,14 +21,24 @@ function auth_can_create_nd_news(): bool {
     return $cache[$memberId];
 }
 
-/** Stories ainda válidos, mais recentes primeiro. */
-function nd_news_active_items(PDO $db): array {
-    return $db->query("
-        SELECT n.*, m.name AS author_name
-        FROM nd_news n JOIN members m ON m.id = n.created_by
-        WHERE n.expires_at > NOW()
-        ORDER BY n.created_at DESC
-    ")->fetchAll();
+/**
+ * Stories ainda válidos, mais recentes primeiro. Sem $viewerChurchId, traz
+ * todos (uso administrativo, pra gerenciar). Com $viewerChurchId, filtra pela
+ * visibilidade (vale pro carrossel do Dashboard, que é o feed de verdade):
+ * visibility='all' aparece pra qualquer igreja; visibility='sede' só aparece
+ * pra quem está vendo como a Sede (independe de qual igreja criou o story).
+ */
+function nd_news_active_items(PDO $db, ?int $viewerChurchId = null): array {
+    $sql    = "SELECT n.*, m.name AS author_name FROM nd_news n JOIN members m ON m.id = n.created_by WHERE n.expires_at > NOW()";
+    $params = [];
+    if ($viewerChurchId !== null) {
+        $sql     .= " AND (n.visibility = 'all' OR (n.visibility = 'sede' AND ? = " . SEDE_ID . "))";
+        $params[] = $viewerChurchId;
+    }
+    $sql .= " ORDER BY n.created_at DESC";
+    $stmt = $db->prepare($sql);
+    $stmt->execute($params);
+    return $stmt->fetchAll();
 }
 
 /**

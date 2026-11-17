@@ -18,6 +18,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     $eventDate   = trim($_POST['event_date'] ?? '') ?: null;
     $description = trim($_POST['description'] ?? '') ?: null;
     $expiresAt   = trim($_POST['expires_at'] ?? '');
+    $visibility  = ($_POST['visibility'] ?? '') === 'sede' ? 'sede' : 'all';
 
     if ($title === '') $errors[] = 'Dê um nome pro story.';
     if ($expiresAt === '' || strtotime($expiresAt) <= time()) $errors[] = 'A data de expiração precisa ser no futuro.';
@@ -47,9 +48,9 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 
     if (empty($errors)) {
         $db->prepare("
-            INSERT INTO nd_news (church_id, title, event_date, description, video_path, expires_at, created_by, created_at)
-            VALUES (?,?,?,?,?,?,?,NOW())
-        ")->execute([current_church_id(), $title, $eventDate, $description, $videoPath, date('Y-m-d H:i:s', strtotime($expiresAt)), $memberId]);
+            INSERT INTO nd_news (church_id, visibility, title, event_date, description, video_path, expires_at, created_by, created_at)
+            VALUES (?,?,?,?,?,?,?,?,NOW())
+        ")->execute([current_church_id(), $visibility, $title, $eventDate, $description, $videoPath, date('Y-m-d H:i:s', strtotime($expiresAt)), $memberId]);
 
         header('Location: /pages/nd_news/index.php?saved=1');
         exit;
@@ -90,6 +91,16 @@ require_once __DIR__ . '/../../includes/layout.php';
     <div class="form-group" style="margin-bottom:0">
       <label class="form-label">Mais informações</label>
       <textarea name="description" class="form-control" rows="3" placeholder="Horário, local, detalhes…"><?= htmlspecialchars($_POST['description'] ?? '') ?></textarea>
+    </div>
+  </div>
+
+  <div class="card" style="margin-bottom:16px">
+    <div class="form-group" style="margin-bottom:0">
+      <label class="form-label">Quem vê este story?</label>
+      <select name="visibility" class="form-control">
+        <option value="all" <?= ($_POST['visibility'] ?? 'all') === 'all' ? 'selected' : '' ?>>🌐 Todas as igrejas (Sede + filiais)</option>
+        <option value="sede" <?= ($_POST['visibility'] ?? '') === 'sede' ? 'selected' : '' ?>>🏛️ Só a Sede</option>
+      </select>
     </div>
   </div>
 
