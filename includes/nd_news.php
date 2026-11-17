@@ -56,3 +56,77 @@ function nd_news_expire_due(PDO $db): void {
         $db->prepare("DELETE FROM nd_news WHERE id = ?")->execute([$r['id']]);
     }
 }
+
+/** Última vez que esse membro abriu o visualizador de stories (null = nunca). */
+function nd_news_last_seen(PDO $db, int $memberId): ?string {
+    $stmt = $db->prepare("SELECT last_seen_at FROM nd_news_views WHERE member_id = ?");
+    $stmt->execute([$memberId]);
+    return $stmt->fetchColumn() ?: null;
+}
+
+/** Marca "visto agora" — chamado assim que o visualizador abre (tela cheia), não por story individual. */
+function nd_news_mark_seen(PDO $db, int $memberId): void {
+    $db->prepare("
+        INSERT INTO nd_news_views (member_id, last_seen_at) VALUES (?, NOW())
+        ON DUPLICATE KEY UPDATE last_seen_at = NOW()
+    ")->execute([$memberId]);
+}
+
+/** Algum story da lista é mais novo que a última vez que o membro viu? */
+function nd_news_has_unseen(array $items, ?string $lastSeenAt): bool {
+    if (!$items) return false;
+    if ($lastSeenAt === null) return true;
+    $lastSeenTs = strtotime($lastSeenAt);
+    foreach ($items as $it) {
+        if (strtotime($it['created_at']) > $lastSeenTs) return true;
+    }
+    return false;
+}
+
+/**
+ * Push notification de story novo pra quem tem notificação ativada — respeita
+ * a visibilidade do story (só Sede, ou todas as igrejas). Mesmo padrão de
+ * push já usado em includes/announcements.php.
+ */
+function nd_news_notify_new_story(PDO $db, array $item): void {
+    $vapidPublic  = setting('vapid_public_key');
+    $vapidPrivate = setting('vapid_private_key');
+    $vapidSubject = setting('vapid_subject', 'mailto:admin@igrejanovadimensao.com.br');
+    if (!$vapidPublic || !$vapidPrivate) return;
+
+    $autoload = __DIR__ . '/../vendor/autoload.php';
+    if (!file_exists($autoload)) return;
+    require_once $autoload;
+
+    $sql = "SELECT ps.* FROM push_subscriptions ps JOIN members m ON m.id = ps.member_id WHERE 1=1";
+    if (($item['visibility'] ?? 'all') === 'sede') $sql .= " AND m.church_id = " . SEDE_ID;
+    $subscriptions = $db->query($sql)->fetchAll();
+    if (!$subscriptions) return;
+
+    $webPush = new \Minishlink\WebPush\WebPush([
+        'VAPID' => ['subject' => $vapidSubject, 'publicKey' => $vapidPublic, 'privateKey' => $vapidPrivate],
+    ]);
+
+    $payload = json_encode([
+        'title' => '📰 Novo story no ND News',
+        'body'  => mb_substr($item['title'], 0, 120),
+        'url'   => '/dashboard.php?story=' . (int)$item['id'],
+        'tag'   => 'nd-news-' . $item['id'],
+    ]);
+
+    foreach ($subscriptions as $sub) {
+        $subscription = \Minishlink\WebPush\Subscription::create([
+            'endpoint'        => $sub['endpoint'],
+            'keys'            => ['p256dh' => $sub['p256dh'], 'auth' => $sub['auth_key']],
+            'contentEncoding' => 'aesgcm',
+        ]);
+        $webPush->queueNotification($subscription, $payload);
+    }
+
+    foreach ($webPush->flush() as $report) {
+        if ($report->isSubscriptionExpired()) {
+            $db->prepare("DELETE FROM push_subscriptions WHERE endpoint=?")
+               ->execute([$report->getRequest()->getUri()->__toString()]);
+        }
+    }
+}

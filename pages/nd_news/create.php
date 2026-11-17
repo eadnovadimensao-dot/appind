@@ -52,6 +52,12 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             VALUES (?,?,?,?,?,?,?,?,NOW())
         ")->execute([current_church_id(), $visibility, $title, $eventDate, $description, $videoPath, date('Y-m-d H:i:s', strtotime($expiresAt)), $memberId]);
 
+        try {
+            nd_news_notify_new_story($db, ['id' => $db->lastInsertId(), 'title' => $title, 'visibility' => $visibility]);
+        } catch (\Throwable $e) {
+            error_log('ND News push: ' . $e->getMessage());
+        }
+
         header('Location: /pages/nd_news/index.php?saved=1');
         exit;
     }

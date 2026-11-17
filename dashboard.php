@@ -8,7 +8,11 @@ auth_check();
 $db         = db();
 $churchId   = current_church_id();
 $canFinance = auth_can('manage_finance');
-$ndNewsItems = nd_news_active_items($db, $churchId);
+$ndNewsItems  = nd_news_active_items($db, $churchId);
+$ndMemberId   = auth_member_id();
+$ndLastSeenAt = $ndMemberId ? nd_news_last_seen($db, $ndMemberId) : null;
+$ndHasUnseen  = nd_news_has_unseen($ndNewsItems, $ndLastSeenAt);
+$ndLastSeenTs = $ndLastSeenAt ? strtotime($ndLastSeenAt) : 0;
 
 // ── Tendências (últimos 6 meses) ─────────────────────────────
 $monthAbbrevPt = ['Jan','Fev','Mar','Abr','Mai','Jun','Jul','Ago','Set','Out','Nov','Dez'];
@@ -132,18 +136,29 @@ require_once __DIR__ . '/includes/layout.php';
 
 <?php if ($ndNewsItems): ?>
 <!-- ND News: stories em video -->
-<div class="card" style="margin-bottom:20px">
+<div class="card" style="margin-bottom:12px">
   <p class="card-title">📰 ND News</p>
   <div style="display:flex;gap:14px;overflow-x:auto;padding:4px 2px 0">
-  <?php foreach ($ndNewsItems as $i => $it): ?>
+  <?php foreach ($ndNewsItems as $i => $it):
+      $isUnseen = strtotime($it['created_at']) > $ndLastSeenTs;
+      $ring     = $isUnseen ? 'linear-gradient(45deg,#F58529,#DD2A7B,#8134AF,#515BD4)' : 'var(--border)';
+  ?>
     <div onclick="openNdStories(<?= $i ?>)" style="flex-shrink:0;text-align:center;cursor:pointer;width:64px">
-      <div style="width:56px;height:56px;border-radius:50%;background:linear-gradient(45deg,#F58529,#DD2A7B,#8134AF,#515BD4);display:flex;align-items:center;justify-content:center;margin:0 auto 4px;padding:2px">
+      <div style="width:56px;height:56px;border-radius:50%;background:<?= $ring ?>;display:flex;align-items:center;justify-content:center;margin:0 auto 4px;padding:2px">
         <div style="width:100%;height:100%;border-radius:50%;background:white;display:flex;align-items:center;justify-content:center;font-size:20px">🎥</div>
       </div>
       <div style="font-size:11px;color:var(--text);overflow:hidden;text-overflow:ellipsis;white-space:nowrap"><?= htmlspecialchars($it['title']) ?></div>
     </div>
   <?php endforeach; ?>
   </div>
+</div>
+
+<div id="nd-push-nudge" style="display:none;margin-bottom:20px;background:#E1F0F5;border:1px solid #9FCBDC;border-radius:8px;padding:12px 16px;font-size:13px;color:#0B4E66;align-items:center;justify-content:space-between;gap:12px;flex-wrap:wrap">
+  <span>🔔 Ative as notificações pra saber na hora quando tiver um story novo no ND News.</span>
+  <span style="display:flex;gap:8px;flex-shrink:0">
+    <button type="button" class="btn btn-primary" style="font-size:12px" onclick="enablePushNotifications();document.getElementById('nd-push-nudge').style.display='none'">Ativar</button>
+    <button type="button" class="btn btn-secondary" style="font-size:12px" onclick="ndDismissPushNudge()">Agora não</button>
+  </span>
 </div>
 <?php endif; ?>
 
@@ -304,15 +319,30 @@ require_once __DIR__ . '/includes/layout.php';
 <?php
 if ($ndNewsItems):
 $ndStoriesJson = json_encode(array_map(fn($it) => [
+    'id'          => (int)$it['id'],
     'title'       => $it['title'],
     'event_date'  => $it['event_date'] ? date_pt($it['event_date']) : null,
     'description' => $it['description'],
     'video'       => $it['video_path'],
 ], $ndNewsItems), JSON_UNESCAPED_UNICODE | JSON_HEX_TAG);
 
+// Clicou num push de story novo? /dashboard.php?story=<id> abre direto nele.
+$ndAutoOpenIndex = 'null';
+if (isset($_GET['story'])) {
+    foreach ($ndNewsItems as $i => $it) {
+        if ((int)$it['id'] === (int)$_GET['story']) { $ndAutoOpenIndex = $i; break; }
+    }
+}
+$ndHasUnseenJs = $ndHasUnseen ? 'true' : 'false';
+
 $extraJs = <<<JS
 const ndStories = {$ndStoriesJson};
 let ndIndex = 0;
+
+function ndDismissPushNudge() {
+  document.getElementById('nd-push-nudge').style.display = 'none';
+  try { localStorage.setItem('nd_push_nudge_dismissed', '1'); } catch (e) {}
+}
 
 function ndEscapeHtml(s) {
   return String(s || '').replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
@@ -322,6 +352,7 @@ function openNdStories(startIndex) {
   ndIndex = startIndex;
   document.getElementById('nd-stories-overlay').style.display = 'flex';
   ndRenderStory();
+  fetch('/pages/nd_news/mark_seen.php', { method: 'POST' }).catch(() => {});
 }
 
 function closeNdStories() {
@@ -373,6 +404,25 @@ document.getElementById('nd-story-video').addEventListener('timeupdate', functio
   const fill = document.getElementById('nd-progress-fill');
   if (fill && this.duration) fill.style.width = (this.currentTime / this.duration * 100) + '%';
 });
+
+// Veio de um push de story novo (/dashboard.php?story=<id>)? Abre direto nele.
+const ndAutoOpenIndex = {$ndAutoOpenIndex};
+if (ndAutoOpenIndex !== null) openNdStories(ndAutoOpenIndex);
+
+// Tem story novo e a pessoa ainda não ativou push? Convida a ativar.
+if ({$ndHasUnseenJs} && 'serviceWorker' in navigator && 'PushManager' in window) {
+  navigator.serviceWorker.getRegistration().then(function (reg) {
+    if (!reg) return;
+    reg.pushManager.getSubscription().then(function (sub) {
+      if (sub) return;
+      let dismissed = false;
+      try { dismissed = localStorage.getItem('nd_push_nudge_dismissed') === '1'; } catch (e) {}
+      if (dismissed) return;
+      const nudge = document.getElementById('nd-push-nudge');
+      if (nudge) nudge.style.display = 'flex';
+    });
+  }).catch(() => {});
+}
 JS;
 endif;
 require_once __DIR__ . '/includes/layout-footer.php';
