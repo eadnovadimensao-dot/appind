@@ -13,7 +13,30 @@ $progress   = bible_reading_progress_set($db, $memberId);
 $total      = bible_reading_total_chapters($db);
 $readCount  = count($progress);
 $percent    = $total ? round($readCount / $total * 100) : 0;
-$suggestion = bible_reading_next_suggestion($db, $progress);
+$suggestion = bible_reading_daily_suggestion($db, $progress);
+
+/** Mesma estrutura usada no JS (ver renderSuggestionBox) pra ficar igual depois de marcar/desmarcar. */
+function bible_reading_suggestion_box_html(array $suggestion): string {
+    if (!$suggestion) {
+        return '<div style="padding:12px 14px;border:1px solid var(--accent);border-radius:8px;font-size:13px;color:var(--accent)">'
+             . '🎉 Você já marcou a Bíblia inteira como lida!</div>';
+    }
+    $html = '<p style="font-size:13px;font-weight:600;margin-bottom:10px">📖 Sugestão de hoje</p>';
+    foreach ($suggestion as $s) {
+        $verses = '';
+        foreach ($s['verses'] as $v) {
+            $verses .= '<sup style="color:var(--text-muted)">' . (int)$v['verse'] . '</sup> ' . htmlspecialchars($v['text']) . ' ';
+        }
+        $html .= '<div style="border:1px solid var(--border);border-radius:8px;padding:12px 14px;margin-bottom:10px">'
+                . '<div style="display:flex;align-items:center;justify-content:space-between;gap:12px;flex-wrap:wrap;margin-bottom:8px">'
+                . '<strong style="font-size:13px">' . htmlspecialchars($s['book_name']) . ' ' . (int)$s['chapter'] . '</strong>'
+                . '<button type="button" class="btn btn-primary" style="font-size:12px" onclick="toggleChapter(\'' . $s['book_abbrev'] . '\', ' . (int)$s['chapter'] . ', this)">✓ Marcar como lido</button>'
+                . '</div>'
+                . '<div style="font-size:13px;line-height:1.6;color:var(--text);max-height:260px;overflow-y:auto">' . $verses . '</div>'
+                . '</div>';
+    }
+    return $html;
+}
 
 $pageTitle  = 'Leitura Bíblica';
 $activePage = 'bible_reading';
@@ -32,23 +55,7 @@ require_once __DIR__ . '/../../includes/layout.php';
     <div id="progress-bar" style="height:100%;border-radius:4px;background:var(--accent);width:<?= $percent ?>%"></div>
   </div>
 
-  <div id="suggestion-box" style="margin-top:16px">
-    <?php if ($suggestion): ?>
-      <div style="padding:12px 14px;border:1px solid var(--border);border-radius:8px;display:flex;align-items:center;justify-content:space-between;gap:12px;flex-wrap:wrap">
-        <div style="font-size:13px">
-          📖 Próximo capítulo sugerido: <strong><?= htmlspecialchars($suggestion['book_name']) ?> <?= $suggestion['chapter'] ?></strong>
-        </div>
-        <button type="button" class="btn btn-primary" style="font-size:12px"
-                onclick="toggleChapter('<?= $suggestion['book_abbrev'] ?>', <?= $suggestion['chapter'] ?>, this)">
-          ✓ Marcar como lido
-        </button>
-      </div>
-    <?php else: ?>
-      <div style="padding:12px 14px;border:1px solid var(--accent);border-radius:8px;font-size:13px;color:var(--accent)">
-        🎉 Você já marcou a Bíblia inteira como lida!
-      </div>
-    <?php endif; ?>
-  </div>
+  <div id="suggestion-box" style="margin-top:16px"><?= bible_reading_suggestion_box_html($suggestion) ?></div>
 </div>
 
 <?php
@@ -57,6 +64,7 @@ foreach ($books as $b) {
     $t = (int)$b['book_order'] < 39 ? 'AT' : 'NT';
     $testaments[$t]['books'][] = $b;
 }
+$suggestedBooks = array_column($suggestion, 'book_abbrev');
 ?>
 
 <?php foreach ($testaments as $t): ?>
@@ -66,7 +74,7 @@ foreach ($books as $b) {
         $bookRead  = 0;
         for ($c = 1; $c <= (int)$b['chapters']; $c++) if (isset($progress[$b['book_abbrev'] . ':' . $c])) $bookRead++;
         $bookDone  = $bookRead === (int)$b['chapters'];
-        $isCurrent = $suggestion && $suggestion['book_abbrev'] === $b['book_abbrev'];
+        $isCurrent = in_array($b['book_abbrev'], $suggestedBooks, true);
     ?>
       <details <?= $isCurrent ? 'open' : '' ?> style="border-bottom:1px solid var(--border)">
         <summary style="padding:10px 0;cursor:pointer;display:flex;align-items:center;justify-content:space-between;gap:10px;font-size:13px">
@@ -93,6 +101,32 @@ foreach ($books as $b) {
 
 <?php
 $extraJs = <<<JS
+function escapeHtml(s) {
+  return String(s).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
+}
+
+function renderSuggestionBox(suggestion) {
+  if (!suggestion || !suggestion.length) {
+    return '<div style="padding:12px 14px;border:1px solid var(--accent);border-radius:8px;font-size:13px;color:var(--accent)">'
+         + '🎉 Você já marcou a Bíblia inteira como lida!</div>';
+  }
+  let html = '<p style="font-size:13px;font-weight:600;margin-bottom:10px">📖 Sugestão de hoje</p>';
+  suggestion.forEach(s => {
+    let verses = '';
+    (s.verses || []).forEach(v => {
+      verses += '<sup style="color:var(--text-muted)">' + v.verse + '</sup> ' + escapeHtml(v.text) + ' ';
+    });
+    html += '<div style="border:1px solid var(--border);border-radius:8px;padding:12px 14px;margin-bottom:10px">'
+          + '<div style="display:flex;align-items:center;justify-content:space-between;gap:12px;flex-wrap:wrap;margin-bottom:8px">'
+          + '<strong style="font-size:13px">' + escapeHtml(s.book_name) + ' ' + s.chapter + '</strong>'
+          + '<button type="button" class="btn btn-primary" style="font-size:12px" onclick="toggleChapter(\\'' + s.book_abbrev + '\\', ' + s.chapter + ', this)">✓ Marcar como lido</button>'
+          + '</div>'
+          + '<div style="font-size:13px;line-height:1.6;color:var(--text);max-height:260px;overflow-y:auto">' + verses + '</div>'
+          + '</div>';
+  });
+  return html;
+}
+
 function toggleChapter(book, chapter, btn) {
   const willRead = !btn.classList.contains('done');
   const fd = new FormData();
@@ -117,15 +151,7 @@ function toggleChapter(book, chapter, btn) {
       if (countEl) countEl.textContent = data.book_read + '/' + data.book_total;
       if (iconEl)   iconEl.textContent = data.book_read === data.book_total ? '✅' : '📖';
 
-      const box = document.getElementById('suggestion-box');
-      if (data.suggestion) {
-        box.innerHTML = '<div style="padding:12px 14px;border:1px solid var(--border);border-radius:8px;display:flex;align-items:center;justify-content:space-between;gap:12px;flex-wrap:wrap">'
-          + '<div style="font-size:13px">📖 Próximo capítulo sugerido: <strong>' + data.suggestion.book_name + ' ' + data.suggestion.chapter + '</strong></div>'
-          + '<button type="button" class="btn btn-primary" style="font-size:12px" onclick="toggleChapter(\\'' + data.suggestion.book_abbrev + '\\', ' + data.suggestion.chapter + ', this)">✓ Marcar como lido</button>'
-          + '</div>';
-      } else {
-        box.innerHTML = '<div style="padding:12px 14px;border:1px solid var(--accent);border-radius:8px;font-size:13px;color:var(--accent)">🎉 Você já marcou a Bíblia inteira como lida!</div>';
-      }
+      document.getElementById('suggestion-box').innerHTML = renderSuggestionBox(data.suggestion);
     });
 }
 JS;

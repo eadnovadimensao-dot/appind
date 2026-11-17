@@ -1,8 +1,13 @@
 <?php
 // Leitura Bíblica: checklist pessoal de capítulos lidos, sem data nem prazo.
-// Cada membro marca o que já leu, no próprio ritmo. A "sugestão" de próximo
-// capítulo é sempre relativa ao progresso da própria pessoa (ordem canônica,
-// Gênesis a Apocalipse), nunca a um calendário compartilhado.
+// Cada membro marca o que já leu, no próprio ritmo. A "sugestão do dia" é
+// sempre relativa ao progresso da própria pessoa (ordem canônica, Gênesis a
+// Apocalipse), nunca a um calendário compartilhado.
+require_once __DIR__ . '/bible.php';
+
+// Capítulos sugeridos por dia: a Bíblia tem 1189 capítulos, e a média usada
+// pelos planos de leitura em 1 ano mais comuns é ~3,26 capítulos/dia.
+const BIBLE_READING_DAILY_CHAPTERS = 3;
 
 /**
  * Estrutura da Bíblia a partir do que já está carregado em bible_verses:
@@ -36,14 +41,21 @@ function bible_reading_progress_set(PDO $db, int $memberId): array {
     return $set;
 }
 
-/** Primeiro capítulo não lido na ordem canônica (Gênesis 1 em diante). Null se já leu tudo. */
-function bible_reading_next_suggestion(PDO $db, array $progressSet): ?array {
+/**
+ * Próximos capítulos não lidos na ordem canônica (Gênesis 1 em diante), até
+ * BIBLE_READING_DAILY_CHAPTERS, já com o texto de cada capítulo (['verses']).
+ * Lista vazia se já leu tudo.
+ */
+function bible_reading_daily_suggestion(PDO $db, array $progressSet, int $count = BIBLE_READING_DAILY_CHAPTERS): array {
+    $out = [];
     foreach (bible_reading_books($db) as $b) {
         for ($c = 1; $c <= (int)$b['chapters']; $c++) {
+            if (count($out) >= $count) return $out;
             if (!isset($progressSet[$b['book_abbrev'] . ':' . $c])) {
-                return ['book_abbrev' => $b['book_abbrev'], 'book_name' => $b['book_name'], 'chapter' => $c];
+                $verses = bible_get_verses($db, ['book_abbrev' => $b['book_abbrev'], 'chapter' => $c, 'verse_start' => null, 'verse_end' => null]);
+                $out[] = ['book_abbrev' => $b['book_abbrev'], 'book_name' => $b['book_name'], 'chapter' => $c, 'verses' => $verses];
             }
         }
     }
-    return null;
+    return $out;
 }
