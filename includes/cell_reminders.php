@@ -10,6 +10,10 @@ const CELL_MEMBER_REMINDER_HOURS_BEFORE_START = 4;
 // relatório, se ainda não tiver criado um pra hoje.
 const CELL_REPORT_REMINDER_HOURS_AFTER_START = 2;
 
+// A cada quantas horas o lembrete se repete, enquanto o relatório não for
+// criado (só dentro do mesmo dia — some sozinho quando o dia vira).
+const CELL_REPORT_REMINDER_REPEAT_HOURS = 2;
+
 /** Nome do dia da semana em português, a partir do valor salvo em cells.day_of_week. */
 function cell_day_label(?string $dayOfWeek): string {
     static $days = ['monday' => 'Segunda', 'tuesday' => 'Terça', 'wednesday' => 'Quarta',
@@ -76,9 +80,25 @@ function queue_cell_meeting_reminders_for_today(PDO $db): void {
 }
 
 /**
- * CELL_REPORT_REMINDER_HOURS_AFTER_START depois do início de cada célula que
- * se reuniu hoje: se o líder ainda não criou o relatório do dia, manda
- * lembrete com o link direto pra criação. Aditivo, chamado a cada minuto.
+ * Quando foi o último lembrete de relatório mandado hoje pra essa célula
+ * (null se nenhum ainda).
+ */
+function cell_last_report_reminder_at_today(PDO $db, int $cellId): ?string {
+    $stmt = $db->prepare("
+        SELECT MAX(created_at) FROM whatsapp_queue
+        WHERE service_id = ? AND kind = 'cell_report' AND created_at >= CURDATE()
+    ");
+    $stmt->execute([$cellId]);
+    return $stmt->fetchColumn() ?: null;
+}
+
+/**
+ * A partir de CELL_REPORT_REMINDER_HOURS_AFTER_START depois do início de
+ * cada célula que se reúne hoje, cobra o líder pelo relatório do dia — e
+ * continua cobrando a cada CELL_REPORT_REMINDER_REPEAT_HOURS enquanto ele
+ * não criar o relatório (para sozinho quando o relatório existe ou quando o
+ * dia vira, já que a célula deixa de bater com o dia da semana de hoje).
+ * Aditivo, chamado a cada minuto.
  */
 function queue_cell_report_reminders_for_today(PDO $db): void {
     $today = strtolower(date('l'));
@@ -88,13 +108,15 @@ function queue_cell_report_reminders_for_today(PDO $db): void {
     ")->fetchAll();
 
     foreach ($cells as $cell) {
-        $triggerAt = strtotime(date('Y-m-d') . ' ' . $cell['time_start']) + CELL_REPORT_REMINDER_HOURS_AFTER_START * 3600;
-        if (time() < $triggerAt) continue;
-        if (cell_reminder_already_queued_today($db, (int)$cell['id'], 'cell_report')) continue;
-
         $already = $db->prepare("SELECT 1 FROM cell_reports WHERE cell_id = ? AND report_date = CURDATE() LIMIT 1");
         $already->execute([$cell['id']]);
         if ($already->fetchColumn()) continue; // líder já lançou o relatório de hoje
+
+        $lastAt  = cell_last_report_reminder_at_today($db, (int)$cell['id']);
+        $nextDue = $lastAt
+            ? strtotime($lastAt) + CELL_REPORT_REMINDER_REPEAT_HOURS * 3600
+            : strtotime(date('Y-m-d') . ' ' . $cell['time_start']) + CELL_REPORT_REMINDER_HOURS_AFTER_START * 3600;
+        if (time() < $nextDue) continue;
 
         $leaders = $db->prepare("
             SELECT m.name, m.phone FROM cell_leaders cl JOIN members m ON m.id = cl.member_id
@@ -104,14 +126,20 @@ function queue_cell_report_reminders_for_today(PDO $db): void {
         $leaders = $leaders->fetchAll();
         if (!$leaders) continue;
 
-        $link = APP_URL . '/pages/cells/report_create.php?cell_id=' . $cell['id'];
+        $link   = APP_URL . '/pages/cells/report_create.php?cell_id=' . $cell['id'];
+        $isRepeat = $lastAt !== null;
 
         foreach ($leaders as $l) {
             $first = explode(' ', trim($l['name']))[0];
-            $msg = "Olá, {$first}! 👋\n\n"
-                 . "📋 Como foi a Célula *{$cell['name']}* hoje?\n\n"
-                 . "O relatório ajuda a liderança a acompanhar e cuidar de cada célula de verdade. Leva só 1 minuto:\n"
-                 . "👉 {$link}";
+            $msg = $isRepeat
+                ? "Oi, {$first}! 👋\n\n"
+                  . "📋 Ainda não recebi o relatório da Célula *{$cell['name']}* de hoje.\n\n"
+                  . "Pode mandar quando puder? Leva só 1 minuto:\n"
+                  . "👉 {$link}"
+                : "Olá, {$first}! 👋\n\n"
+                  . "📋 Como foi a Célula *{$cell['name']}* hoje?\n\n"
+                  . "O relatório ajuda a liderança a acompanhar e cuidar de cada célula de verdade. Leva só 1 minuto:\n"
+                  . "👉 {$link}";
             queue_whatsapp($l['phone'], $msg, (int)$cell['church_id'], null, 0, (int)$cell['id'], 'cell_report');
         }
     }

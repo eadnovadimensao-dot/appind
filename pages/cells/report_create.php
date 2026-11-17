@@ -114,9 +114,9 @@ require_once __DIR__ . '/../../includes/layout.php';
 
   <!-- Não houve reunião -->
   <div class="card" style="margin-bottom:16px" id="block-not-happened">
-    <p class="card-title">Por que a célula não se reuniu?</p>
+    <p class="card-title">Por que a célula não se reuniu? *</p>
     <div class="form-group" style="margin-bottom:0">
-      <textarea name="no_meeting_reason" class="form-control" rows="3"
+      <textarea name="no_meeting_reason" id="no_meeting_reason" class="form-control" rows="3"
                 placeholder="Ex: feriado, líder viajou, poucos confirmaram…"><?= htmlspecialchars($_POST['no_meeting_reason'] ?? '') ?></textarea>
     </div>
   </div>
@@ -211,6 +211,7 @@ function setHappened(v) {
   document.getElementById('block-not-happened').style.display = v ? 'none' : 'block';
   document.getElementById('btn-happened').className = 'btn ' + (v ? 'btn-primary' : 'btn-secondary');
   document.getElementById('btn-not-happened').className = 'btn ' + (!v ? 'btn-primary' : 'btn-secondary');
+  document.getElementById('no_meeting_reason').required = !v;
 }
 setHappened(document.getElementById('happened').value === '1');
 
