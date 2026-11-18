@@ -41,15 +41,14 @@
     let timerId = null;
     let countInRemaining = 0;
 
-    // Botão de parar dentro da barra de rolagem (já fixa na tela) — some
-    // quando parado, aparece tocando. No Modo Culto, se a banda sai do
-    // click, dá pra parar com um toque sem rolar a tela até o topo da
-    // música e perder o lugar da letra/cifra.
+    // Play/pause do metrônomo dentro da barra de rolagem (já fixa na tela) —
+    // sempre visível, pra nunca precisar rolar a tela até o topo da música
+    // (e perder o lugar da letra/cifra) só pra tocar ou parar o clique nela.
     const floatBtn = document.createElement('button');
     floatBtn.type = 'button';
-    floatBtn.className = 'metronome-float';
-    floatBtn.setAttribute('aria-label', 'Parar metrônomo');
-    floatBtn.innerHTML = '<span class="metronome-float-beat"></span><span class="metronome-float-icon">⏸</span>';
+    floatBtn.className = 'metronome-float visible';
+    floatBtn.setAttribute('aria-label', 'Tocar/parar metrônomo');
+    floatBtn.innerHTML = '<span class="metronome-float-beat"></span><span class="metronome-float-icon">▶</span>';
     const autoscrollBar = document.getElementById('autoscroll-bar');
     if (autoscrollBar) {
       autoscrollBar.insertBefore(floatBtn, autoscrollBar.firstChild);
@@ -57,7 +56,10 @@
       document.body.appendChild(floatBtn); // sem barra de rolagem na página — mantém flutuante
     }
     const floatBeatEl = floatBtn.querySelector('.metronome-float-beat');
-    floatBtn.addEventListener('click', function () { stop(); });
+    const floatIconEl = floatBtn.querySelector('.metronome-float-icon');
+    floatBtn.addEventListener('click', function () {
+      isPlaying ? stop() : start();
+    });
 
     // Desenha um "pulso" (bolinha) por tempo do compasso — o primeiro
     // sempre marcado como acento, pra mostrar visualmente onde cai o "1".
@@ -135,7 +137,8 @@
       scheduler();
       toggleBtn.textContent = '⏸';
       widget.classList.add('playing');
-      floatBtn.classList.add('visible');
+      floatBtn.classList.add('playing');
+      floatIconEl.textContent = '⏸';
     }
 
     function stop() {
@@ -146,7 +149,8 @@
       widget.classList.remove('counting-in');
       pulseDots.forEach(function (d) { d.classList.remove('active'); });
       if (beatNumberEl) beatNumberEl.textContent = '';
-      floatBtn.classList.remove('visible');
+      floatBtn.classList.remove('playing');
+      floatIconEl.textContent = '▶';
     }
 
     toggleBtn.addEventListener('click', function () {

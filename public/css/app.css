@@ -386,17 +386,18 @@ tbody tr:hover td { background: #fafafa; }
 .metronome-checkbox { cursor: pointer; }
 .metronome-checkbox input { cursor: pointer; }
 
-/* ── Botão flutuante do metrônomo — some quando parado, some em cima da
-   barra de rolagem automática, pra parar o click sem rolar a tela até a
-   música (útil ao vivo, se a banda sai do click no meio da apresentação) ── */
+/* ── Play/pause flutuante do metrônomo — sempre visível, some em cima da
+   barra de rolagem automática, pra tocar/parar o click sem rolar a tela até
+   a música (útil ao vivo: retomar o click no meio sem perder o lugar) ── */
 .metronome-float {
   display: none; position: fixed; right: 16px; bottom: 88px; z-index: 50;
   width: 58px; height: 58px; border-radius: 50%; border: none;
-  background: var(--red); color: white; cursor: pointer;
+  background: var(--accent); color: white; cursor: pointer;
   flex-direction: column; align-items: center; justify-content: center; gap: 3px;
   box-shadow: 0 4px 16px rgba(0,0,0,.28);
 }
 .metronome-float.visible { display: flex; }
+.metronome-float.playing { background: var(--red); }
 .metronome-float-icon { font-size: 19px; line-height: 1; }
 .metronome-float-beat {
   width: 9px; height: 9px; border-radius: 50%; background: rgba(255,255,255,.45);
@@ -411,15 +412,17 @@ tbody tr:hover td { background: #fafafa; }
   display: flex; align-items: center; justify-content: center; flex-shrink: 0;
 }
 
-/* Quando a página já tem a barra de rolagem fixa, o botão de parar o
-   metrônomo entra nela em vez de flutuar separado — mesmo visual dos
-   outros botões da barra, só que vermelho (chama atenção pra "parar"). */
+/* Quando a página já tem a barra de rolagem fixa, o play/pause do metrônomo
+   entra nela em vez de flutuar separado — mesmo visual dos outros botões da
+   barra; verde parado (convida a tocar), vermelho tocando (convida a parar). */
 .autoscroll-bar .metronome-float {
   position: static; width: auto; height: auto; border-radius: 8px;
   flex-direction: row; gap: 6px; padding: 10px 12px; box-shadow: none;
-  background: var(--red); color: white; border-color: var(--red);
+  background: var(--accent); color: white; border-color: var(--accent);
 }
-.autoscroll-bar .metronome-float:hover { background: var(--red); }
+.autoscroll-bar .metronome-float:hover { background: var(--accent); }
+.autoscroll-bar .metronome-float.playing { background: var(--red); border-color: var(--red); }
+.autoscroll-bar .metronome-float.playing:hover { background: var(--red); }
 .autoscroll-bar .metronome-float.visible { display: flex; }
 
 /* ── Grid de materiais/repertório — 1 coluna no mobile, várias no desktop ── */
