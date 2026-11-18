@@ -130,21 +130,21 @@ $backHref     = $isOwn ? '/pages/members/profile.php' : '/pages/members/view.php
     </div>
 
     <!-- Dados -->
-    <div style="padding:20px;text-align:center">
-      <div style="font-size:19px;font-weight:700;color:var(--text);line-height:1.3;margin-bottom:10px">
+    <div style="padding:14px 20px;text-align:center">
+      <div style="font-size:19px;font-weight:700;color:var(--text);line-height:1.3;margin-bottom:4px">
         <?php if (!empty($m['ministerial_office'])): ?>
           <?= htmlspecialchars(ministerial_office_label($m['ministerial_office'], $m['gender'])) ?>
         <?php endif; ?>
         <?= htmlspecialchars($m['name']) ?>
       </div>
 
-      <div style="font-size:12px;color:var(--text-muted);line-height:1.6">
+      <div style="font-size:12px;color:var(--text-muted);line-height:1.4">
         <?php if ($m['join_date']): ?>Membro desde <?= date('Y', strtotime($m['join_date'])) ?><?php endif; ?>
       </div>
 
-      <div style="margin:18px 0;border-top:1px dashed var(--border)"></div>
+      <div style="margin:8px 0;border-top:1px dashed var(--border)"></div>
 
-      <div id="card-qr" style="display:flex;justify-content:center;margin-bottom:8px"></div>
+      <div id="card-qr" style="display:flex;justify-content:center;margin-bottom:4px"></div>
       <div style="font-size:10px;color:var(--text-muted)">Escaneie para verificar a autenticidade</div>
       <div style="font-size:10px;color:var(--text-muted);margin-top:2px">ID #<?= $m['id'] ?></div>
     </div>
