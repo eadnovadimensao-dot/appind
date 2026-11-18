@@ -121,7 +121,7 @@ $backHref     = $isOwn ? '/pages/members/profile.php' : '/pages/members/view.php
     </div>
 
     <!-- Foto em destaque -->
-    <div style="height:340px;background:var(--accent-lt)">
+    <div style="height:290px;background:var(--accent-lt)">
       <?php if ($m['photo_url']): ?>
         <img src="<?= htmlspecialchars($m['photo_url']) ?>" style="width:100%;height:100%;object-fit:cover;display:block">
       <?php else: ?>
@@ -150,14 +150,14 @@ $backHref     = $isOwn ? '/pages/members/profile.php' : '/pages/members/view.php
     </div>
 
     <?php if ($churchAddress || $churchCnpj): ?>
-      <div style="padding:14px 20px;background:var(--accent-lt);text-align:center;font-size:10px;color:var(--text-muted);line-height:1.6">
+      <div style="padding:14px 20px;background:var(--accent-lt);text-align:center;font-size:12px;color:var(--text-muted);line-height:1.6">
         <?php if ($churchAddress): ?><?= htmlspecialchars($churchAddress) ?><br><?php endif; ?>
         <?php if ($churchCnpj): ?>CNPJ <?= htmlspecialchars($churchCnpj) ?><?php endif; ?>
       </div>
     <?php endif; ?>
 
-    <div style="padding:12px 20px;text-align:center;font-size:9px;color:var(--text-muted);line-height:1.5;border-top:1px dashed var(--border)">
-      Esta carteirinha identifica o(a) portador(a) como membro desta igreja, assegurando-lhe o direito de visita e assistência religiosa a enfermos internados, nos termos da Lei Federal nº 9.982/2000 e do art. 5º, VII, da Constituição Federal.
+    <div style="padding:12px 20px;text-align:center;font-size:11px;color:var(--text-muted);line-height:1.5;border-top:1px dashed var(--border)">
+      Esta carteirinha identifica o(a) portador(a) como membro desta igreja, assegurando-lhe o direito de visita e assistência religiosa a enfermos internados, nos termos da <strong>Lei Federal nº 9.982/2000</strong> e do art. 5º, VII, da Constituição Federal.
     </div>
   </div>
 
