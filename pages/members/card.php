@@ -15,13 +15,7 @@ if (!$isOwn && !auth_member_can_view_member($targetId)) {
     exit;
 }
 
-$stmt = $db->prepare("
-    SELECT m.*, c.name AS cell_name, ch.name AS branch_name
-    FROM members m
-    LEFT JOIN cells c     ON c.id  = m.cell_id
-    LEFT JOIN churches ch ON ch.id = m.church_id
-    WHERE m.id = ? AND m.church_id = ?
-");
+$stmt = $db->prepare("SELECT * FROM members WHERE id = ? AND church_id = ?");
 $stmt->execute([$targetId, current_church_id()]);
 $m = $stmt->fetch();
 
@@ -145,9 +139,7 @@ $backHref     = $isOwn ? '/pages/members/profile.php' : '/pages/members/view.php
       </div>
 
       <div style="font-size:12px;color:var(--text-muted);line-height:1.6">
-        <?php if ($m['join_date']): ?>Membro desde <?= date('Y', strtotime($m['join_date'])) ?><br><?php endif; ?>
-        <?php if ($m['cell_name']): ?>Célula: <?= htmlspecialchars($m['cell_name']) ?><br><?php endif; ?>
-        <?php if ($m['branch_name']): ?><?= htmlspecialchars($m['branch_name']) ?><?php endif; ?>
+        <?php if ($m['join_date']): ?>Membro desde <?= date('Y', strtotime($m['join_date'])) ?><?php endif; ?>
       </div>
 
       <div style="margin:18px 0;border-top:1px dashed var(--border)"></div>
