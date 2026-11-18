@@ -45,8 +45,10 @@ if (!$needsProfile && !$notActive && empty($m['card_token'])) {
 }
 
 $initials     = strtoupper(implode('', array_map(fn($p) => $p[0], array_slice(explode(' ', $m['name']), 0, 2))));
-$churchName   = setting('church_name', APP_NAME, (int)$m['church_id']);
-$logoUrl      = setting('church_logo_url', '', (int)$m['church_id']);
+$churchName    = setting('church_name', APP_NAME, (int)$m['church_id']);
+$logoUrl       = setting('church_logo_url', '', (int)$m['church_id']);
+$churchAddress = setting('church_address', '', (int)$m['church_id']);
+$churchCnpj    = setting('church_cnpj', '', (int)$m['church_id']);
 $verifyUrl    = APP_URL . '/verify.php?t=' . ($m['card_token'] ?? '');
 $backHref     = $isOwn ? '/pages/members/profile.php' : '/pages/members/view.php?id=' . $m['id'];
 ?>
@@ -153,6 +155,17 @@ $backHref     = $isOwn ? '/pages/members/profile.php' : '/pages/members/view.php
       <div id="card-qr" style="display:flex;justify-content:center;margin-bottom:8px"></div>
       <div style="font-size:10px;color:var(--text-muted)">Escaneie para verificar a autenticidade</div>
       <div style="font-size:10px;color:var(--text-muted);margin-top:2px">ID #<?= $m['id'] ?></div>
+    </div>
+
+    <?php if ($churchAddress || $churchCnpj): ?>
+      <div style="padding:14px 20px;background:var(--accent-lt);text-align:center;font-size:10px;color:var(--text-muted);line-height:1.6">
+        <?php if ($churchAddress): ?><?= htmlspecialchars($churchAddress) ?><br><?php endif; ?>
+        <?php if ($churchCnpj): ?>CNPJ <?= htmlspecialchars($churchCnpj) ?><?php endif; ?>
+      </div>
+    <?php endif; ?>
+
+    <div style="padding:12px 20px;text-align:center;font-size:9px;color:var(--text-muted);line-height:1.5;border-top:1px dashed var(--border)">
+      Esta carteirinha identifica o(a) portador(a) como membro desta igreja, assegurando-lhe o direito de visita e assistência religiosa a enfermos internados, nos termos da Lei Federal nº 9.982/2000 e do art. 5º, VII, da Constituição Federal.
     </div>
   </div>
 

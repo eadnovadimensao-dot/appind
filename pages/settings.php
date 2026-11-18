@@ -20,7 +20,7 @@ if (isset($_GET['remove_logo'])) {
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     $fields = [
         'church_name', 'church_initials', 'church_logo_url',
-        'church_address', 'church_phone', 'church_email', 'church_website',
+        'church_address', 'church_cnpj', 'church_phone', 'church_email', 'church_website',
         'smtp_host', 'smtp_port', 'smtp_user', 'smtp_pass',
         'zapi_instance_id', 'zapi_token', 'zapi_client_token',
         'pix_key', 'pix_key_type', 'pix_receiver_name', 'pix_receiver_city',
@@ -195,6 +195,12 @@ require_once __DIR__ . '/../includes/layout.php';
       </div>
     </div>
     <div class="form-row">
+      <div class="form-group">
+        <label class="form-label">CNPJ</label>
+        <input type="text" name="church_cnpj" class="form-control"
+               placeholder="00.000.000/0000-00"
+               value="<?= htmlspecialchars($s['church_cnpj'] ?? '') ?>">
+      </div>
       <div class="form-group">
         <label class="form-label">E-mail</label>
         <input type="email" name="church_email" class="form-control"
