@@ -150,8 +150,13 @@ $backHref     = $isOwn ? '/pages/members/profile.php' : '/pages/members/view.php
     </div>
 
     <?php if ($churchAddress || $churchCnpj): ?>
-      <div style="padding:14px 20px;background:var(--accent-lt);text-align:center;font-size:12px;color:var(--text-muted);line-height:1.6">
-        <?php if ($churchAddress): ?><?= htmlspecialchars($churchAddress) ?><br><?php endif; ?>
+      <div style="padding:14px 20px;background:var(--accent-lt);text-align:center;font-size:14px;color:var(--text-muted);line-height:1.6">
+        <?php if ($churchAddress):
+          $addressParts = explode(' - ', $churchAddress, 2);
+        ?>
+          <?= htmlspecialchars($addressParts[0]) ?><br>
+          <?php if (!empty($addressParts[1])): ?><?= htmlspecialchars($addressParts[1]) ?><br><?php endif; ?>
+        <?php endif; ?>
         <?php if ($churchCnpj): ?>CNPJ <?= htmlspecialchars($churchCnpj) ?><?php endif; ?>
       </div>
     <?php endif; ?>

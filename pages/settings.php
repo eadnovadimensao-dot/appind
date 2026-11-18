@@ -184,7 +184,7 @@ require_once __DIR__ . '/../includes/layout.php';
       <div class="form-group">
         <label class="form-label">Endereço</label>
         <input type="text" name="church_address" class="form-control"
-               placeholder="Rua, número, bairro, cidade"
+               placeholder="Rua, número - Bairro - Cidade - CEP"
                value="<?= htmlspecialchars($s['church_address'] ?? '') ?>">
       </div>
       <div class="form-group">
