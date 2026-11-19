@@ -90,6 +90,27 @@ function urlBase64ToUint8Array(base64String) {
   const rawData = window.atob(base64);
   return Uint8Array.from([...rawData].map(c => c.charCodeAt(0)));
 }
+// Instalar app (PWA) — aparece sozinho quando o navegador permite (ex: Android/Chrome)
+let deferredInstallPrompt = null;
+window.addEventListener('beforeinstallprompt', function(e) {
+  e.preventDefault();
+  deferredInstallPrompt = e;
+  const btn = document.getElementById('install-app-btn');
+  if (btn) btn.style.display = 'flex';
+});
+function installApp() {
+  if (!deferredInstallPrompt) return;
+  deferredInstallPrompt.prompt();
+  deferredInstallPrompt.userChoice.finally(() => {
+    deferredInstallPrompt = null;
+    const btn = document.getElementById('install-app-btn');
+    if (btn) btn.style.display = 'none';
+  });
+}
+window.addEventListener('appinstalled', function() {
+  const btn = document.getElementById('install-app-btn');
+  if (btn) btn.style.display = 'none';
+});
 </script>
 </body>
 </html>
