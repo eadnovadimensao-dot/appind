@@ -6,18 +6,21 @@ auth_check();
 $db = db();
 $id = (int)($_GET['id'] ?? 0);
 
+// Reivindica o envio atomicamente (status='draft' -> 'sent') antes de despachar,
+// pra duplo clique / requisições simultâneas não disparem o envio duas vezes.
 if (in_array(auth_role(), ['supermaster','admin'])) {
-    $stmt = $db->prepare("SELECT * FROM announcements WHERE id=? AND church_id=? AND status='draft'");
-    $stmt->execute([$id, current_church_id()]);
+    $claim = $db->prepare("UPDATE announcements SET status='sent', sent_at=NOW() WHERE id=? AND church_id=? AND status='draft'");
+    $claim->execute([$id, current_church_id()]);
 } else {
-    $stmt = $db->prepare("SELECT * FROM announcements WHERE id=? AND church_id=? AND created_by=? AND status='draft'");
-    $stmt->execute([$id, current_church_id(), auth_member_id()]);
+    $claim = $db->prepare("UPDATE announcements SET status='sent', sent_at=NOW() WHERE id=? AND church_id=? AND created_by=? AND status='draft'");
+    $claim->execute([$id, current_church_id(), auth_member_id()]);
 }
-$announcement = $stmt->fetch();
 
-if ($announcement) {
-    dispatchAnnouncement($db, $announcement);
-    $db->prepare("UPDATE announcements SET status='sent', sent_at=NOW() WHERE id=?")->execute([$id]);
+if ($claim->rowCount() === 1) {
+    $stmt = $db->prepare("SELECT * FROM announcements WHERE id=?");
+    $stmt->execute([$id]);
+    $announcement = $stmt->fetch();
+    if ($announcement) dispatchAnnouncement($db, $announcement);
 }
 
 header('Location: /pages/communication/list.php');

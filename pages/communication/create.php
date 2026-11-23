@@ -55,6 +55,19 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         $status      = $sendNow ? 'sent' : 'draft';
         $sentAt      = $sendNow ? date('Y-m-d H:i:s') : null;
 
+        // Guarda contra duplo clique / duplo submit: mesmo autor e mesmo conteúdo em menos de 10s
+        $dup = $db->prepare("
+            SELECT id FROM announcements
+            WHERE church_id = ? AND created_by = ? AND title = ? AND content = ?
+              AND target_type = ? AND COALESCE(target_id,0) = COALESCE(?,0)
+              AND created_at >= DATE_SUB(NOW(), INTERVAL 10 SECOND)
+        ");
+        $dup->execute([$churchId, $memberId, $title, $content, $targetType, $targetId]);
+        if ($dup->fetchColumn()) {
+            header('Location: /pages/communication/index.php?sent=1');
+            exit;
+        }
+
         $db->prepare("
             INSERT INTO announcements
               (church_id, title, content, type, target_type, target_id, channels, status, created_by, sent_at)
@@ -260,6 +273,13 @@ document.querySelector('[name=content]').addEventListener('input', updateWaPrevi
 
 // Inicializar
 updateTargetId();
+
+// Evitar duplo clique / duplo submit no envio
+document.querySelector('form').addEventListener('submit', function() {
+  this.querySelectorAll('button[type=submit]').forEach(function(btn) {
+    btn.disabled = true;
+  });
+});
 JS;
 require_once __DIR__ . '/../../includes/layout.php';
 require_once __DIR__ . '/../../includes/layout-footer.php';
