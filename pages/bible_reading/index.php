@@ -42,9 +42,9 @@ require_once __DIR__ . '/../../includes/layout.php';
     <div>
       <div style="font-size:24px;font-weight:700"><span id="total-read"><?= $readCount ?></span> <span style="font-size:14px;font-weight:400;color:var(--text-muted)">/ <?= $total ?> capítulos</span></div>
     </div>
-    <div style="text-align:right;margin-left:auto">
+    <div class="bible-header-right" style="text-align:right;margin-left:auto">
       <div style="font-size:28px;font-weight:700;color:var(--accent)"><span id="total-percent"><?= $percent ?></span>%</div>
-      <div style="display:flex;gap:8px;justify-content:flex-end;flex-wrap:wrap;margin-top:6px">
+      <div class="bible-action-buttons" style="display:flex;gap:8px;justify-content:flex-end;flex-wrap:wrap;margin-top:6px">
         <a href="/pages/bible_reading/ranking.php" class="btn btn-secondary" style="font-size:12px">🏆 Ranking</a>
         <a href="/pages/bible_reading/groups.php" class="btn btn-secondary" style="font-size:12px">👥 Grupos</a>
       </div>
