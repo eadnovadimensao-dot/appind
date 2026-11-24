@@ -21,6 +21,13 @@ if (!$bookRow || $chapter < 1 || $chapter > (int)$bookRow['chapters']) {
     exit;
 }
 
+$planId = bible_reading_member_plan($db, $memberId);
+
+// Pra avisar só no exato momento da conclusão (nunca de novo depois), confere
+// se o plano AINDA tinha capítulo não lido antes deste toggle.
+$progressBefore = bible_reading_progress_set($db, $memberId);
+$wasAlreadyDone = $done && empty(bible_reading_daily_suggestion($db, $progressBefore, 1, $planId));
+
 if ($done) {
     $db->prepare("INSERT IGNORE INTO bible_reading_progress (member_id, book_abbrev, chapter, read_at) VALUES (?,?,?,NOW())")
        ->execute([$memberId, $bookAbbrev, $chapter]);
@@ -33,8 +40,11 @@ $progress   = bible_reading_progress_set($db, $memberId);
 $total      = bible_reading_total_chapters($db);
 $readCount  = count($progress);
 $percent    = $total ? round($readCount / $total * 100) : 0;
-$planId     = bible_reading_member_plan($db, $memberId);
 $suggestion = bible_reading_daily_suggestion($db, $progress, BIBLE_READING_DAILY_CHAPTERS, $planId);
+
+if ($done && !$wasAlreadyDone && empty($suggestion)) {
+    bible_reading_notify_plan_completed($db, $memberId, $planId);
+}
 
 $bookRead = 0;
 for ($c = 1; $c <= (int)$bookRow['chapters']; $c++) if (isset($progress[$bookAbbrev . ':' . $c])) $bookRead++;

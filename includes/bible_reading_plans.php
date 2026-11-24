@@ -26,6 +26,25 @@ const BIBLE_READING_PLAN_DESCRIPTIONS = [
 /** Planos que são só um TRECHO da Bíblia (não cobrem os 1189 capítulos) — usado pra mensagem de conclusão certa. */
 const BIBLE_READING_PARTIAL_PLANS = ['gospels', 'wisdom', 'starting_faith'];
 
+/** Avisa por WhatsApp quando o membro acaba de concluir um plano (chamado só no momento exato da conclusão). */
+function bible_reading_notify_plan_completed(PDO $db, int $memberId, string $planId): void {
+    $m = $db->prepare("SELECT name, phone, church_id FROM members WHERE id = ?");
+    $m->execute([$memberId]);
+    $m = $m->fetch();
+    if (!$m || empty($m['phone'])) return;
+
+    $first = explode(' ', trim($m['name']))[0];
+    $label = BIBLE_READING_PLAN_LABELS[$planId] ?? $planId;
+
+    if (in_array($planId, BIBLE_READING_PARTIAL_PLANS, true)) {
+        $msg = "Olá, {$first}! 🎉\n\nVocê concluiu o plano de leitura *{$label}*!\n\nQue bênção! Escolha outro plano na Leitura Bíblica do app e continue a jornada.";
+    } else {
+        $msg = "Olá, {$first}! 🎉\n\nQue alegria! Você acabou de concluir a leitura de *toda a Bíblia* através do plano *{$label}*.\n\nParabéns pela perseverança! Que tal escolher outro plano no app e continuar lendo?";
+    }
+
+    queue_whatsapp($m['phone'], $msg, (int)$m['church_id'], null, 0, null, 'bible_reading_plan_completed');
+}
+
 /** Sequência completa (todos os capítulos do plano, uma vez cada) pro plano dado. */
 function bible_reading_plan_sequence(PDO $db, string $planId): array {
     $books = bible_reading_books($db);
