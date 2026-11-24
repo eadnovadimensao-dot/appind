@@ -4,6 +4,7 @@
 // sempre relativa ao progresso da própria pessoa (ordem canônica, Gênesis a
 // Apocalipse), nunca a um calendário compartilhado.
 require_once __DIR__ . '/bible.php';
+require_once __DIR__ . '/bible_reading_plans.php';
 
 // Capítulos sugeridos por dia: a Bíblia tem 1189 capítulos, e a média usada
 // pelos planos de leitura em 1 ano mais comuns é ~3,26 capítulos/dia.
@@ -47,15 +48,21 @@ function bible_reading_progress_set(PDO $db, int $memberId): array {
  * o texto de cada capítulo é buscado à parte (`chapter_text.php`) quando o
  * usuário clica pra ler.
  */
-function bible_reading_daily_suggestion(PDO $db, array $progressSet, int $count = BIBLE_READING_DAILY_CHAPTERS): array {
+function bible_reading_daily_suggestion(PDO $db, array $progressSet, int $count = BIBLE_READING_DAILY_CHAPTERS, string $planId = 'canonical'): array {
     $out = [];
-    foreach (bible_reading_books($db) as $b) {
-        for ($c = 1; $c <= (int)$b['chapters']; $c++) {
-            if (count($out) >= $count) return $out;
-            if (!isset($progressSet[$b['book_abbrev'] . ':' . $c])) {
-                $out[] = ['book_abbrev' => $b['book_abbrev'], 'book_name' => $b['book_name'], 'chapter' => $c];
-            }
+    foreach (bible_reading_plan_sequence($db, $planId) as $item) {
+        if (count($out) >= $count) return $out;
+        if (!isset($progressSet[$item['book_abbrev'] . ':' . $item['chapter']])) {
+            $out[] = $item;
         }
     }
     return $out;
+}
+
+/** Plano de leitura escolhido pelo membro (padrão: canonical, se nunca escolheu). */
+function bible_reading_member_plan(PDO $db, int $memberId): string {
+    $stmt = $db->prepare("SELECT bible_reading_plan_id FROM members WHERE id = ?");
+    $stmt->execute([$memberId]);
+    $plan = $stmt->fetchColumn();
+    return ($plan && isset(BIBLE_READING_PLAN_LABELS[$plan])) ? $plan : 'canonical';
 }

@@ -13,7 +13,8 @@ $progress   = bible_reading_progress_set($db, $memberId);
 $total      = bible_reading_total_chapters($db);
 $readCount  = count($progress);
 $percent    = $total ? round($readCount / $total * 100) : 0;
-$suggestion = bible_reading_daily_suggestion($db, $progress);
+$planId     = bible_reading_member_plan($db, $memberId);
+$suggestion = bible_reading_daily_suggestion($db, $progress, BIBLE_READING_DAILY_CHAPTERS, $planId);
 
 /** Mesma estrutura usada no JS (ver renderSuggestionBox) pra ficar igual depois de marcar/desmarcar. */
 function bible_reading_suggestion_box_html(array $suggestion): string {
@@ -52,7 +53,16 @@ require_once __DIR__ . '/../../includes/layout.php';
     <div id="progress-bar" style="height:100%;border-radius:4px;background:var(--accent);width:<?= $percent ?>%"></div>
   </div>
 
-  <div id="suggestion-box" style="margin-top:16px"><?= bible_reading_suggestion_box_html($suggestion) ?></div>
+  <form method="POST" action="/pages/bible_reading/set_plan.php" style="margin-top:16px;display:flex;align-items:center;gap:8px">
+    <label class="form-label" style="margin:0;font-size:12px;color:var(--text-muted)">Plano de leitura:</label>
+    <select name="plan_id" class="form-control" style="font-size:12px;width:auto" onchange="this.form.submit()">
+      <?php foreach (BIBLE_READING_PLAN_LABELS as $pid => $label): ?>
+        <option value="<?= $pid ?>" <?= $pid === $planId ? 'selected' : '' ?>><?= htmlspecialchars($label) ?></option>
+      <?php endforeach; ?>
+    </select>
+  </form>
+
+  <div id="suggestion-box" style="margin-top:12px"><?= bible_reading_suggestion_box_html($suggestion) ?></div>
 </div>
 
 <?php

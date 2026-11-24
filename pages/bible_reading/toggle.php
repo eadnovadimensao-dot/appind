@@ -33,7 +33,8 @@ $progress   = bible_reading_progress_set($db, $memberId);
 $total      = bible_reading_total_chapters($db);
 $readCount  = count($progress);
 $percent    = $total ? round($readCount / $total * 100) : 0;
-$suggestion = bible_reading_daily_suggestion($db, $progress);
+$planId     = bible_reading_member_plan($db, $memberId);
+$suggestion = bible_reading_daily_suggestion($db, $progress, BIBLE_READING_DAILY_CHAPTERS, $planId);
 
 $bookRead = 0;
 for ($c = 1; $c <= (int)$bookRow['chapters']; $c++) if (isset($progress[$bookAbbrev . ':' . $c])) $bookRead++;
