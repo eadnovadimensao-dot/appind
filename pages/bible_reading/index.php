@@ -41,7 +41,6 @@ require_once __DIR__ . '/../../includes/layout.php';
   <div style="display:flex;align-items:center;justify-content:space-between;gap:16px;flex-wrap:wrap;margin-bottom:12px">
     <div>
       <div style="font-size:24px;font-weight:700"><span id="total-read"><?= $readCount ?></span> <span style="font-size:14px;font-weight:400;color:var(--text-muted)">/ <?= $total ?> capítulos</span></div>
-      <div style="font-size:13px;color:var(--text-muted)">Sua Bíblia inteira, no seu ritmo. Sem data nem prazo.</div>
     </div>
     <div style="text-align:right;margin-left:auto">
       <div style="font-size:28px;font-weight:700;color:var(--accent)"><span id="total-percent"><?= $percent ?></span>%</div>
