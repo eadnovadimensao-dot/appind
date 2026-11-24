@@ -5,20 +5,36 @@
 // progresso próprio, só uma sequência de sugestão diferente.
 
 const BIBLE_READING_PLAN_LABELS = [
-    'canonical' => 'Bíblia Completa',
-    'mixed'     => 'Bíblia Variada',
-    'chrono'    => 'Ordem Cronológica',
+    'canonical'      => 'Bíblia Completa',
+    'mixed'          => 'Bíblia Variada',
+    'chrono'         => 'Ordem Cronológica',
+    'gospels'        => 'Evangelhos',
+    'wisdom'         => 'Sabedoria',
+    'starting_faith' => 'Começando na Fé',
 ];
 
-/** Sequência completa (todos os 1189 capítulos, uma vez cada) pro plano dado. */
+/** Planos que são só um TRECHO da Bíblia (não cobrem os 1189 capítulos) — usado pra mensagem de conclusão certa. */
+const BIBLE_READING_PARTIAL_PLANS = ['gospels', 'wisdom', 'starting_faith'];
+
+/** Sequência completa (todos os capítulos do plano, uma vez cada) pro plano dado. */
 function bible_reading_plan_sequence(PDO $db, string $planId): array {
     $books = bible_reading_books($db);
     if ($planId === 'mixed')  return bible_reading_mixed_sequence($books);
     if ($planId === 'chrono') return bible_reading_chrono_sequence($books);
+    if ($planId === 'gospels')        return bible_reading_books_range_sequence($books, 39, 42); // Mateus..João
+    if ($planId === 'wisdom')         return bible_reading_books_range_sequence($books, 17, 21); // Jó..Cânticos
+    if ($planId === 'starting_faith') return bible_reading_books_range_sequence($books, 42, 44); // João, Atos, Romanos
 
     // canonical (padrão): ordem natural dos livros, Gênesis → Apocalipse
+    return bible_reading_books_range_sequence($books, 0, 65);
+}
+
+/** Capítulos, em ordem natural, dos livros cujo book_order cai em [$minOrder, $maxOrder]. */
+function bible_reading_books_range_sequence(array $books, int $minOrder, int $maxOrder): array {
     $seq = [];
     foreach ($books as $b) {
+        $order = (int)$b['book_order'];
+        if ($order < $minOrder || $order > $maxOrder) continue;
         for ($c = 1; $c <= (int)$b['chapters']; $c++) {
             $seq[] = ['book_abbrev' => $b['book_abbrev'], 'book_name' => $b['book_name'], 'chapter' => $c];
         }

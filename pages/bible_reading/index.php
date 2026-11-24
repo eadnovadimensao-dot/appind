@@ -16,11 +16,13 @@ $percent    = $total ? round($readCount / $total * 100) : 0;
 $planId     = bible_reading_member_plan($db, $memberId);
 $suggestion = bible_reading_daily_suggestion($db, $progress, BIBLE_READING_DAILY_CHAPTERS, $planId);
 
-/** Mesma estrutura usada no JS (ver renderSuggestionBox) pra ficar igual depois de marcar/desmarcar. */
-function bible_reading_suggestion_box_html(array $suggestion): string {
+/** Mesma estrutura usada no JS (ver renderCurrentSuggestionBox) pra ficar igual depois de marcar/desmarcar. */
+function bible_reading_suggestion_box_html(array $suggestion, bool $wholeDone, string $planLabel): string {
     if (!$suggestion) {
-        return '<div style="padding:12px 14px;border:1px solid var(--accent);border-radius:8px;font-size:13px;color:var(--accent)">'
-             . '🎉 Você já marcou a Bíblia inteira como lida!</div>';
+        $msg = $wholeDone
+            ? '🎉 Você já marcou a Bíblia inteira como lida!'
+            : '🎉 Você concluiu o plano "' . htmlspecialchars($planLabel) . '"! Escolha outro plano acima pra continuar.';
+        return '<div style="padding:12px 14px;border:1px solid var(--accent);border-radius:8px;font-size:13px;color:var(--accent)">' . $msg . '</div>';
     }
     $html = '<p style="font-size:13px;font-weight:600;margin-bottom:10px">📖 Sugestão de hoje</p>';
     foreach ($suggestion as $s) {
@@ -62,7 +64,7 @@ require_once __DIR__ . '/../../includes/layout.php';
     </select>
   </form>
 
-  <div id="suggestion-box" style="margin-top:12px"><?= bible_reading_suggestion_box_html($suggestion) ?></div>
+  <div id="suggestion-box" style="margin-top:12px"><?= bible_reading_suggestion_box_html($suggestion, $readCount >= $total, BIBLE_READING_PLAN_LABELS[$planId]) ?></div>
 </div>
 
 <?php
@@ -73,6 +75,8 @@ foreach ($books as $b) {
 }
 $suggestedBooks   = array_column($suggestion, 'book_abbrev');
 $suggestionJson   = json_encode(array_map(fn($s) => array_merge($s, ['read' => false]), $suggestion));
+$wholeDoneJson    = json_encode($readCount >= $total);
+$planLabelJson    = json_encode(BIBLE_READING_PLAN_LABELS[$planId]);
 ?>
 
 <p style="font-size:12px;color:var(--text-muted);margin-bottom:12px">💡 Clique em qualquer capítulo pra ler o texto, mesmo fora da sugestão de hoje.</p>
@@ -140,8 +144,10 @@ function escapeHtml(s) {
   return String(s).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
 }
 
-let currentSuggestion   = $suggestionJson;
+let currentSuggestion    = $suggestionJson;
 let lastServerSuggestion = currentSuggestion;
+let wholeDone            = $wholeDoneJson;
+let planLabel            = $planLabelJson;
 
 // A sugestão de hoje fica fixa (não troca de capítulo assim que você marca um
 // como lido): cada item vira "✓ Lido" no lugar, e só quando os 3 estiverem
@@ -150,8 +156,10 @@ let lastServerSuggestion = currentSuggestion;
 function renderCurrentSuggestionBox() {
   const box = document.getElementById('suggestion-box');
   if (!currentSuggestion.length) {
-    box.innerHTML = '<div style="padding:12px 14px;border:1px solid var(--accent);border-radius:8px;font-size:13px;color:var(--accent)">'
-                   + '🎉 Você já marcou a Bíblia inteira como lida!</div>';
+    const msg = wholeDone
+      ? '🎉 Você já marcou a Bíblia inteira como lida!'
+      : '🎉 Você concluiu o plano "' + escapeHtml(planLabel) + '"! Escolha outro plano acima pra continuar.';
+    box.innerHTML = '<div style="padding:12px 14px;border:1px solid var(--accent);border-radius:8px;font-size:13px;color:var(--accent)">' + msg + '</div>';
     return;
   }
   const allRead = currentSuggestion.every(s => s.read);
@@ -277,6 +285,7 @@ function toggleFromModal() {
       }
 
       lastServerSuggestion = data.suggestion;
+      wholeDone = data.whole_done;
       const idx = currentSuggestion.findIndex(s => s.book_abbrev === modalState.book && s.chapter === modalState.chapter);
       if (idx !== -1) currentSuggestion[idx].read = willRead;
       renderCurrentSuggestionBox();

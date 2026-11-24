@@ -46,4 +46,5 @@ echo json_encode([
     'book_read'  => $bookRead,
     'book_total' => (int)$bookRow['chapters'],
     'suggestion' => $suggestion,
+    'whole_done' => $readCount >= $total,
 ]);
