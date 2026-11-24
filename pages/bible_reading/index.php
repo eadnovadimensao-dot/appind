@@ -45,7 +45,8 @@ require_once __DIR__ . '/../../includes/layout.php';
     </div>
     <div style="text-align:right">
       <div style="font-size:28px;font-weight:700;color:var(--accent)"><span id="total-percent"><?= $percent ?></span>%</div>
-      <a href="/pages/bible_reading/ranking.php" style="font-size:12px;color:var(--accent);font-weight:600">🏆 Ver ranking</a>
+      <div><a href="/pages/bible_reading/ranking.php" style="font-size:12px;color:var(--accent);font-weight:600">🏆 Ver ranking</a></div>
+      <div><a href="/pages/bible_reading/groups.php" style="font-size:12px;color:var(--accent);font-weight:600">👥 Grupos de leitura</a></div>
     </div>
   </div>
   <div style="height:8px;border-radius:4px;background:var(--border);overflow:hidden">
