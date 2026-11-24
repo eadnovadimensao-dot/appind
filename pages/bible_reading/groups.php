@@ -32,13 +32,31 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && $memberId) {
     } elseif ($action === 'leave') {
         $db->prepare("UPDATE members SET bible_reading_group_id = NULL WHERE id = ?")->execute([$memberId]);
     } elseif ($action === 'add_member') {
-        $groupId       = (int)($_POST['group_id'] ?? 0);
-        $newMemberId   = (int)($_POST['new_member_id'] ?? 0);
-        $isCreator = $db->prepare("SELECT 1 FROM bible_reading_groups WHERE id = ? AND church_id = ? AND created_by = ?");
-        $isCreator->execute([$groupId, $churchId, $memberId]);
-        if ($newMemberId && $isCreator->fetchColumn()) {
+        $groupId     = (int)($_POST['group_id'] ?? 0);
+        $newMemberId = (int)($_POST['new_member_id'] ?? 0);
+        $group = $db->prepare("SELECT name FROM bible_reading_groups WHERE id = ? AND church_id = ? AND created_by = ?");
+        $group->execute([$groupId, $churchId, $memberId]);
+        $group = $group->fetch();
+        if ($newMemberId && $group) {
             $db->prepare("UPDATE members SET bible_reading_group_id = ? WHERE id = ? AND church_id = ?")
                ->execute([$groupId, $newMemberId, $churchId]);
+
+            $new = $db->prepare("SELECT name, phone FROM members WHERE id = ? AND church_id = ?");
+            $new->execute([$newMemberId, $churchId]);
+            $new = $new->fetch();
+            $adder = $db->prepare("SELECT name FROM members WHERE id = ?");
+            $adder->execute([$memberId]);
+            $adderName = $adder->fetchColumn();
+
+            if ($new && !empty($new['phone'])) {
+                $first = explode(' ', trim($new['name']))[0];
+                $link  = APP_URL . '/pages/bible_reading/groups.php';
+                $msg   = "Olá, {$first}! 📖\n\n"
+                       . "{$adderName} te incluiu no grupo de leitura bíblica *{$group['name']}*.\n\n"
+                       . "Você continua lendo no seu próprio ritmo, só que agora com o ranking do grupo pra acompanhar junto.\n\n"
+                       . $link;
+                queue_whatsapp($new['phone'], $msg, $churchId, null, 0, null, 'bible_reading_group_added');
+            }
         }
     } elseif ($action === 'delete_group') {
         $groupId   = (int)($_POST['group_id'] ?? 0);
