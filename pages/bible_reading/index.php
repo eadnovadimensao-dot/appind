@@ -43,7 +43,10 @@ require_once __DIR__ . '/../../includes/layout.php';
       <div style="font-size:24px;font-weight:700"><span id="total-read"><?= $readCount ?></span> <span style="font-size:14px;font-weight:400;color:var(--text-muted)">/ <?= $total ?> capítulos</span></div>
       <div style="font-size:13px;color:var(--text-muted)">Sua Bíblia inteira, no seu ritmo. Sem data nem prazo.</div>
     </div>
-    <div style="font-size:28px;font-weight:700;color:var(--accent)"><span id="total-percent"><?= $percent ?></span>%</div>
+    <div style="text-align:right">
+      <div style="font-size:28px;font-weight:700;color:var(--accent)"><span id="total-percent"><?= $percent ?></span>%</div>
+      <a href="/pages/bible_reading/ranking.php" style="font-size:12px;color:var(--accent);font-weight:600">🏆 Ver ranking</a>
+    </div>
   </div>
   <div style="height:8px;border-radius:4px;background:var(--border);overflow:hidden">
     <div id="progress-bar" style="height:100%;border-radius:4px;background:var(--accent);width:<?= $percent ?>%"></div>
@@ -103,7 +106,17 @@ $suggestedBooks = array_column($suggestion, 'book_abbrev');
       <strong id="modal-title" style="font-size:15px"></strong>
       <button type="button" onclick="closeChapterModal()" style="border:none;background:none;font-size:22px;line-height:1;cursor:pointer;color:var(--text-muted)">×</button>
     </div>
-    <div id="modal-body" style="padding:16px 18px;overflow-y:auto;font-size:16px;line-height:1.7;color:var(--text);flex:1"></div>
+    <div id="modal-body" style="padding:16px 18px;overflow-y:auto;font-size:16px;line-height:1.7;color:var(--text);flex:1">
+      <div id="modal-verses"></div>
+      <div style="margin-top:18px;padding-top:14px;border-top:1px solid var(--border)">
+        <p style="font-size:13px;font-weight:600;margin-bottom:8px">💬 Comentários</p>
+        <div id="modal-comments" style="margin-bottom:10px"></div>
+        <div style="display:flex;gap:8px">
+          <input type="text" id="modal-comment-input" placeholder="Compartilhe o que esse capítulo falou com você…" style="flex:1;font-size:13px;padding:8px 10px;border:1px solid var(--border);border-radius:6px">
+          <button type="button" class="btn btn-secondary" style="font-size:12px" onclick="postChapterComment()">Comentar</button>
+        </div>
+      </div>
+    </div>
     <div style="padding:12px 18px;border-top:1px solid var(--border);display:flex;justify-content:flex-end">
       <button type="button" id="modal-toggle-btn" class="btn btn-primary" style="font-size:12px" onclick="toggleFromModal()"></button>
     </div>
@@ -137,7 +150,9 @@ let modalState = { book: null, chapter: null };
 function openChapterModal(book, chapter) {
   modalState = { book: book, chapter: chapter };
   document.getElementById('modal-title').textContent = 'Carregando…';
-  document.getElementById('modal-body').innerHTML = '';
+  document.getElementById('modal-verses').innerHTML = '';
+  document.getElementById('modal-comments').innerHTML = '';
+  document.getElementById('modal-comment-input').value = '';
   document.getElementById('chapter-modal-overlay').style.display = 'flex';
   fetch('/pages/bible_reading/chapter_text.php?book_abbrev=' + encodeURIComponent(book) + '&chapter=' + chapter)
     .then(r => r.json())
@@ -148,8 +163,47 @@ function openChapterModal(book, chapter) {
       data.verses.forEach(v => {
         html += '<sup style="color:var(--accent);font-weight:700">' + v.verse + '</sup> ' + escapeHtml(v.text) + ' ';
       });
-      document.getElementById('modal-body').innerHTML = html;
+      document.getElementById('modal-verses').innerHTML = html;
       updateModalButton(data.is_read);
+    });
+  loadChapterComments();
+}
+
+function renderComments(comments) {
+  if (!comments || !comments.length) {
+    document.getElementById('modal-comments').innerHTML = '<p style="font-size:12px;color:var(--text-muted)">Nenhum comentário ainda. Seja o primeiro.</p>';
+    return;
+  }
+  let html = '';
+  comments.forEach(c => {
+    html += '<div style="padding:8px 10px;border:1px solid var(--border);border-radius:8px;margin-bottom:6px">'
+          + '<div style="font-size:12px;font-weight:600">' + escapeHtml(c.member_name) + '</div>'
+          + '<div style="font-size:13px;margin-top:2px">' + escapeHtml(c.comment) + '</div>'
+          + '</div>';
+  });
+  document.getElementById('modal-comments').innerHTML = html;
+}
+
+function loadChapterComments() {
+  fetch('/pages/bible_reading/comments.php?book_abbrev=' + encodeURIComponent(modalState.book) + '&chapter=' + modalState.chapter)
+    .then(r => r.json())
+    .then(data => { if (data.ok) renderComments(data.comments); });
+}
+
+function postChapterComment() {
+  const input = document.getElementById('modal-comment-input');
+  const text  = input.value.trim();
+  if (!text) return;
+  const fd = new FormData();
+  fd.append('book_abbrev', modalState.book);
+  fd.append('chapter', modalState.chapter);
+  fd.append('comment', text);
+  fetch('/pages/bible_reading/comments.php', { method: 'POST', body: fd })
+    .then(r => r.json())
+    .then(data => {
+      if (!data.ok) return;
+      input.value = '';
+      renderComments(data.comments);
     });
 }
 
