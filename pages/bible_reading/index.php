@@ -55,13 +55,17 @@ require_once __DIR__ . '/../../includes/layout.php';
     <div id="progress-bar" style="height:100%;border-radius:4px;background:var(--accent);width:<?= $percent ?>%"></div>
   </div>
 
-  <form method="POST" action="/pages/bible_reading/set_plan.php" style="margin-top:16px;display:flex;align-items:center;gap:8px">
-    <label class="form-label" style="margin:0;font-size:12px;color:var(--text-muted)">Plano de leitura:</label>
-    <select name="plan_id" class="form-control" style="font-size:12px;width:auto" onchange="this.form.submit()">
-      <?php foreach (BIBLE_READING_PLAN_LABELS as $pid => $label): ?>
-        <option value="<?= $pid ?>" <?= $pid === $planId ? 'selected' : '' ?>><?= htmlspecialchars($label) ?></option>
-      <?php endforeach; ?>
-    </select>
+  <form method="POST" action="/pages/bible_reading/set_plan.php" style="margin-top:16px">
+    <div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap">
+      <label class="form-label" style="margin:0;font-size:12px;color:var(--text-muted)">Plano de leitura:</label>
+      <select name="plan_id" id="plan-select" class="form-control" style="font-size:12px;width:auto" onchange="updatePlanDescription()">
+        <?php foreach (BIBLE_READING_PLAN_LABELS as $pid => $label): ?>
+          <option value="<?= $pid ?>" data-desc="<?= htmlspecialchars(BIBLE_READING_PLAN_DESCRIPTIONS[$pid]) ?>" <?= $pid === $planId ? 'selected' : '' ?>><?= htmlspecialchars($label) ?></option>
+        <?php endforeach; ?>
+      </select>
+      <button type="submit" id="plan-confirm-btn" class="btn btn-secondary" style="font-size:12px;display:none">Trocar plano</button>
+    </div>
+    <p id="plan-description" style="font-size:12px;color:var(--text-muted);margin-top:8px"><?= htmlspecialchars(BIBLE_READING_PLAN_DESCRIPTIONS[$planId]) ?></p>
   </form>
 
   <div id="suggestion-box" style="margin-top:12px"><?= bible_reading_suggestion_box_html($suggestion, $readCount >= $total, BIBLE_READING_PLAN_LABELS[$planId]) ?></div>
@@ -77,6 +81,7 @@ $suggestedBooks   = array_column($suggestion, 'book_abbrev');
 $suggestionJson   = json_encode(array_map(fn($s) => array_merge($s, ['read' => false]), $suggestion));
 $wholeDoneJson    = json_encode($readCount >= $total);
 $planLabelJson    = json_encode(BIBLE_READING_PLAN_LABELS[$planId]);
+$planIdJson       = json_encode($planId);
 ?>
 
 <p style="font-size:12px;color:var(--text-muted);margin-bottom:12px">💡 Clique em qualquer capítulo pra ler o texto, mesmo fora da sugestão de hoje.</p>
@@ -142,6 +147,15 @@ $planLabelJson    = json_encode(BIBLE_READING_PLAN_LABELS[$planId]);
 $extraJs = <<<JS
 function escapeHtml(s) {
   return String(s).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
+}
+
+const activePlanId = $planIdJson;
+
+function updatePlanDescription() {
+  const select = document.getElementById('plan-select');
+  const opt    = select.options[select.selectedIndex];
+  document.getElementById('plan-description').textContent = opt.dataset.desc;
+  document.getElementById('plan-confirm-btn').style.display = (opt.value !== activePlanId) ? 'inline-flex' : 'none';
 }
 
 let currentSuggestion    = $suggestionJson;

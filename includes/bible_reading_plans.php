@@ -13,6 +13,16 @@ const BIBLE_READING_PLAN_LABELS = [
     'starting_faith' => 'Começando na Fé',
 ];
 
+/** Explicação curta de cada plano, mostrada ao escolher no seletor. */
+const BIBLE_READING_PLAN_DESCRIPTIONS = [
+    'canonical'      => 'A Bíblia inteira (1189 capítulos), na ordem em que ela é impressa: Gênesis até Apocalipse.',
+    'mixed'          => 'A Bíblia inteira, mas intercalando um pouco de cada tipo a cada dia: histórico do Antigo Testamento, Novo Testamento, Salmos/Provérbios e profetas, pra variar e não ficar preso só num tipo de leitura.',
+    'chrono'         => 'A Bíblia inteira, reorganizada pra seguir a ordem em que os fatos aconteceram de verdade (ex: Jó encaixado perto de Gênesis, Salmos de Davi junto da história dele, cartas de Paulo no momento em que ele as escreveu).',
+    'gospels'        => 'Só a vida de Jesus: Mateus, Marcos, Lucas e João (89 capítulos). Bom pra quem quer um plano mais curto, focado em Jesus.',
+    'wisdom'         => 'Os livros de sabedoria e poesia: Jó, Salmos, Provérbios, Eclesiastes e Cânticos (243 capítulos).',
+    'starting_faith' => 'Pra quem está começando na fé: João, Atos e Romanos (65 capítulos), uma boa porta de entrada antes de ler a Bíblia inteira.',
+];
+
 /** Planos que são só um TRECHO da Bíblia (não cobrem os 1189 capítulos) — usado pra mensagem de conclusão certa. */
 const BIBLE_READING_PARTIAL_PLANS = ['gospels', 'wisdom', 'starting_faith'];
 
