@@ -61,7 +61,8 @@ foreach ($books as $b) {
     $t = (int)$b['book_order'] < 39 ? 'AT' : 'NT';
     $testaments[$t]['books'][] = $b;
 }
-$suggestedBooks = array_column($suggestion, 'book_abbrev');
+$suggestedBooks   = array_column($suggestion, 'book_abbrev');
+$suggestionJson   = json_encode(array_map(fn($s) => array_merge($s, ['read' => false]), $suggestion));
 ?>
 
 <p style="font-size:12px;color:var(--text-muted);margin-bottom:12px">💡 Clique em qualquer capítulo pra ler o texto, mesmo fora da sugestão de hoje.</p>
@@ -129,20 +130,38 @@ function escapeHtml(s) {
   return String(s).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
 }
 
-function renderSuggestionBox(suggestion) {
-  if (!suggestion || !suggestion.length) {
-    return '<div style="padding:12px 14px;border:1px solid var(--accent);border-radius:8px;font-size:13px;color:var(--accent)">'
-         + '🎉 Você já marcou a Bíblia inteira como lida!</div>';
+let currentSuggestion   = $suggestionJson;
+let lastServerSuggestion = currentSuggestion;
+
+// A sugestão de hoje fica fixa (não troca de capítulo assim que você marca um
+// como lido): cada item vira "✓ Lido" no lugar, e só quando os 3 estiverem
+// concluídos aparece o botão pra puxar a próxima leva. Isso evita a confusão
+// de um capítulo novo substituir o que acabou de ser lido no meio da lista.
+function renderCurrentSuggestionBox() {
+  const box = document.getElementById('suggestion-box');
+  if (!currentSuggestion.length) {
+    box.innerHTML = '<div style="padding:12px 14px;border:1px solid var(--accent);border-radius:8px;font-size:13px;color:var(--accent)">'
+                   + '🎉 Você já marcou a Bíblia inteira como lida!</div>';
+    return;
   }
+  const allRead = currentSuggestion.every(s => s.read);
   let html = '<p style="font-size:13px;font-weight:600;margin-bottom:10px">📖 Sugestão de hoje</p>';
-  suggestion.forEach(s => {
+  currentSuggestion.forEach(s => {
     html += '<div onclick="openChapterModal(\\'' + s.book_abbrev + '\\', ' + s.chapter + ')" '
-          + 'style="display:flex;align-items:center;justify-content:space-between;gap:10px;padding:10px 12px;border:1px solid var(--border);border-radius:8px;margin-bottom:8px;cursor:pointer">'
-          + '<span style="font-size:13px">📖 ' + escapeHtml(s.book_name) + ' ' + s.chapter + '</span>'
-          + '<span style="font-size:12px;color:var(--accent);font-weight:600">Ler →</span>'
+          + 'style="display:flex;align-items:center;justify-content:space-between;gap:10px;padding:10px 12px;border:1px solid var(--border);border-radius:8px;margin-bottom:8px;cursor:pointer' + (s.read ? ';opacity:.55' : '') + '">'
+          + '<span style="font-size:13px' + (s.read ? ';text-decoration:line-through' : '') + '">📖 ' + escapeHtml(s.book_name) + ' ' + s.chapter + '</span>'
+          + '<span style="font-size:12px;color:' + (s.read ? 'var(--text-muted)' : 'var(--accent)') + ';font-weight:600">' + (s.read ? '✓ Lido' : 'Ler →') + '</span>'
           + '</div>';
   });
-  return html;
+  if (allRead) {
+    html += '<button type="button" class="btn btn-primary" style="font-size:12px;width:100%" onclick="loadNextSuggestion()">🎉 Concluído! Ver próxima sugestão</button>';
+  }
+  box.innerHTML = html;
+}
+
+function loadNextSuggestion() {
+  currentSuggestion = lastServerSuggestion.map(s => Object.assign({}, s, { read: false }));
+  renderCurrentSuggestionBox();
 }
 
 let modalState = { book: null, chapter: null };
@@ -247,7 +266,10 @@ function toggleFromModal() {
         cell.style.color = willRead ? 'white' : 'var(--text)';
       }
 
-      document.getElementById('suggestion-box').innerHTML = renderSuggestionBox(data.suggestion);
+      lastServerSuggestion = data.suggestion;
+      const idx = currentSuggestion.findIndex(s => s.book_abbrev === modalState.book && s.chapter === modalState.chapter);
+      if (idx !== -1) currentSuggestion[idx].read = willRead;
+      renderCurrentSuggestionBox();
     });
 }
 JS;
