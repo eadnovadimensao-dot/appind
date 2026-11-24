@@ -57,10 +57,9 @@ require_once __DIR__ . '/../../includes/layout.php';
 
   <form method="POST" action="/pages/bible_reading/set_plan.php" style="margin-top:16px">
     <div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap">
-      <label class="form-label" style="margin:0;font-size:12px;color:var(--text-muted)">Plano de leitura:</label>
-      <select name="plan_id" id="plan-select" class="form-control" style="font-size:12px;width:auto" onchange="updatePlanDescription()">
+      <select name="plan_id" id="plan-select" aria-label="Plano de leitura" class="form-control" style="font-size:12px;flex:1;min-width:160px" onchange="updatePlanDescription()">
         <?php foreach (BIBLE_READING_PLAN_LABELS as $pid => $label): ?>
-          <option value="<?= $pid ?>" data-desc="<?= htmlspecialchars(BIBLE_READING_PLAN_DESCRIPTIONS[$pid]) ?>" <?= $pid === $planId ? 'selected' : '' ?>><?= htmlspecialchars($label) ?></option>
+          <option value="<?= $pid ?>" data-desc="<?= htmlspecialchars(BIBLE_READING_PLAN_DESCRIPTIONS[$pid]) ?>" <?= $pid === $planId ? 'selected' : '' ?>>📖 <?= htmlspecialchars($label) ?></option>
         <?php endforeach; ?>
       </select>
       <button type="submit" id="plan-confirm-btn" class="btn btn-secondary" style="font-size:12px;display:none">Trocar plano</button>
