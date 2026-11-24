@@ -633,7 +633,7 @@ tbody tr:hover td { background: #fafafa; }
   .item-row > button { grid-area: remove; }
 
   /* ── Leitura Bíblica: ranking/grupos ocupam a largura toda ── */
-  .bible-action-buttons a { flex: 1; text-align: center; }
+  .bible-action-buttons a { flex: 1; justify-content: center; }
 }
 
 /* Hamburguer oculto no desktop */
