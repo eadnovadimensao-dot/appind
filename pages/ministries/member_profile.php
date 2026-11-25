@@ -50,21 +50,26 @@ $history = $history->fetchAll();
 $total     = count($history);
 $accepted  = 0;
 $refused   = 0;
+$swapped   = 0;
 $pending   = 0;
 $roleCount = [];
 foreach ($history as $h) {
     if ($h['status'] === 'confirmed') $accepted++;
     elseif ($h['status'] === 'refused') $refused++;
+    elseif ($h['status'] === 'swapped') $swapped++;
     else $pending++;
     if ($h['role']) $roleCount[$h['role']] = ($roleCount[$h['role']] ?? 0) + 1;
 }
 arsort($roleCount);
+// Troca (substituição por imprevisto) não entra na conta de recusa — nem toda
+// troca é recusa, então só "refused" (a pessoa avisou formalmente que não ia) conta.
 $answered    = $accepted + $refused;
 $confirmRate = $answered > 0 ? round($accepted / $answered * 100) : null;
 
 $statusLabels = [
     'confirmed' => ['label' => 'Confirmou',  'badge' => 'badge-green'],
     'refused'   => ['label' => 'Recusou',    'badge' => 'badge-red'],
+    'swapped'   => ['label' => 'Troca',      'badge' => 'badge-amber'],
     'pending'   => ['label' => 'Aguardando', 'badge' => 'badge-gray'],
 ];
 $typeLabels = ['culto' => 'Culto', 'ensaio' => 'Ensaio'];
@@ -108,6 +113,11 @@ $initials = strtoupper(implode('', array_map(fn($p) => $p[0], array_slice(explod
     <div class="kpi-icon">❌</div>
     <div class="kpi-label">Recusas</div>
     <div class="kpi-value"><?= $refused ?></div>
+  </div>
+  <div class="kpi">
+    <div class="kpi-icon">🔄</div>
+    <div class="kpi-label">Trocas (imprevisto)</div>
+    <div class="kpi-value"><?= $swapped ?></div>
   </div>
   <div class="kpi">
     <div class="kpi-icon">⏳</div>

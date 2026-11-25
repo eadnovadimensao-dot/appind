@@ -33,10 +33,14 @@ $showReasonForm = false;
 if (!$row) {
     $error = 'Link inválido ou expirado.';
 } elseif ($row['status'] !== 'pending') {
-    // Já respondeu
-    $success = $row['status'] === 'confirmed'
-        ? '✅ Você já confirmou sua presença nesta atividade.'
-        : '❌ Você já registrou que não poderá participar.';
+    // Já respondeu (ou já foi substituído por outra pessoa)
+    if ($row['status'] === 'confirmed') {
+        $success = '✅ Você já confirmou sua presença nesta atividade.';
+    } elseif ($row['status'] === 'swapped') {
+        $success = 'Você já foi substituído(a) nesta atividade. Tudo certo!';
+    } else {
+        $success = '❌ Você já registrou que não poderá participar.';
+    }
 } elseif (strtotime($row['token_expires_at']) < time()) {
     $error = 'Este link expirou. Acesse o sistema para responder.';
 } elseif ($action === 'refuse' && empty($_POST['reason'])) {

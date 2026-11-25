@@ -15,8 +15,19 @@ $act = $stmt->fetch();
 // Só tira gente da escala enquanto a atividade ainda está agendada — depois
 // de realizada/cancelada, a escala vira histórico e não deve mudar.
 if ($act && $memberId && $act['status'] === 'scheduled' && auth_can_manage_ministry((int)$act['ministry_id'])) {
-    $db->prepare("DELETE FROM ministry_activity_members WHERE activity_id = ? AND member_id = ?")
-       ->execute([$activityId, $memberId]);
+    // Em vez de apagar a linha, marca como 'swapped' (troca) pra manter o
+    // histórico — tirar da escala pra substituir nem sempre é recusa (pode
+    // ser imprevisto: trabalho, saúde, etc), então não conta como 'refused'.
+    // Se a pessoa já tinha recusado formalmente (clicou no link), mantém
+    // 'refused' como está — já é o registro correto.
+    $cur = $db->prepare("SELECT status FROM ministry_activity_members WHERE activity_id = ? AND member_id = ?");
+    $cur->execute([$activityId, $memberId]);
+    $curStatus = $cur->fetchColumn();
+
+    if ($curStatus !== false && $curStatus !== 'refused') {
+        $db->prepare("UPDATE ministry_activity_members SET status = 'swapped', confirm_token = NULL WHERE activity_id = ? AND member_id = ?")
+           ->execute([$activityId, $memberId]);
+    }
 
     // Cancela convite de escala e lembrete de check-in já enfileirados pra essa
     // pessoa nessa atividade — senão a mensagem chega mesmo depois de ela ter

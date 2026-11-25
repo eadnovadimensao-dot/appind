@@ -387,6 +387,7 @@ if ($act['activity_type'] === 'culto' && $act['is_music_ministry'] && count($son
           'pending'   => ['label'=>'Pendente',      'badge'=>'badge-gray'],
           'confirmed' => ['label'=>'✓ Confirmado',  'badge'=>'badge-green'],
           'refused'   => ['label'=>'✗ Recusou',     'badge'=>'badge-red'],
+          'swapped'   => ['label'=>'🔄 Troca',       'badge'=>'badge-amber'],
       ];
       $eventAt = $act['time_start'] ? strtotime($act['activity_date'] . ' ' . $act['time_start']) : null;
     ?>
@@ -413,7 +414,7 @@ if ($act['activity_type'] === 'culto' && $act['is_music_ministry'] && count($son
             <a href="/pages/ministries/activity_remove_member.php?activity_id=<?= $id ?>&member_id=<?= $s['id'] ?>"
                style="font-size:18px;color:var(--text-muted);text-decoration:none;line-height:1;flex-shrink:0"
                title="Tirar da escala"
-               data-confirm="Tirar <?= htmlspecialchars($s['name']) ?> da escala? Pra substituir, use '+ Adicionar / Substituir' logo depois.">×</a>
+               data-confirm="Tirar <?= htmlspecialchars($s['name']) ?> da escala? Isso fica registrado como troca no histórico (não como recusa). Pra substituir, use '+ Adicionar / Substituir' logo depois.">×</a>
           <?php endif; ?>
         </div>
         <div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap;margin-top:8px;margin-left:46px">
