@@ -277,6 +277,13 @@ tbody tr:hover td { background: #fafafa; }
 }
 .chord-sheet .chord { color: var(--accent-dk); font-weight: 700; }
 [data-theme="dark"] .chord-sheet .chord { color: #34D399; } /* verde escuro fica ilegível no fundo escuro */
+/* Nota isolada (não acorde pleno, ex: trecho de walking bass/riff) — mesma
+   cor do acorde normal, mas mais leve/itálico pra diferenciar à vista.
+   Os parênteses são só visuais (CSS), o texto do span continua "F#" puro
+   pra transpor igual a qualquer acorde. */
+.chord-sheet .chord-note { font-weight: 400; font-style: italic; opacity: .8; }
+.chord-sheet .chord-note::before { content: "("; }
+.chord-sheet .chord-note::after { content: ")"; }
 .chord-controls {
   display: flex; align-items: center; gap: 10px; margin-bottom: 14px; flex-wrap: wrap;
 }

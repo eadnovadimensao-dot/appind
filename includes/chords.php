@@ -165,19 +165,39 @@ function chord_token_looks_like_chord(string $token): bool {
     return (bool)preg_match('/^[A-G][#b]?[a-zA-Z0-9]*(\/[A-G][#b]?)?$/', $token);
 }
 
-/** A linha inteira é só acordes (com espaço entre eles)? */
+/**
+ * Nota isolada (não acorde pleno) — ex: um trecho de walking bass/riff onde
+ * só se toca a nota, sem a harmonia do acorde junto. Convenção de digitação:
+ * a nota entre parênteses, ex "(F#)". Pedido explícito do usuário: cifras
+ * como a do Chart Builder às vezes marcam essas notas com um número grudado
+ * (F#1, G1...) que não é acorde nenhum — isso vira "(F#)", "(G)" aqui.
+ */
+function chord_token_is_single_note(string $token): bool {
+    return (bool)preg_match('/^\(([A-G][#b]?)\)$/', $token);
+}
+
+/** A linha inteira é só acordes/notas isoladas (com espaço entre eles)? */
 function is_chord_line(string $line): bool {
     $trimmed = trim($line);
     if ($trimmed === '') return false;
     foreach (preg_split('/\s+/', $trimmed) as $token) {
-        if (!chord_token_looks_like_chord($token)) return false;
+        if (!chord_token_looks_like_chord($token) && !chord_token_is_single_note($token)) return false;
     }
     return true;
 }
 
-/** Marca cada acorde da linha com <span class="chord">, preservando o espaçamento original (alinha com a letra embaixo). */
+/**
+ * Marca cada acorde da linha com <span class="chord">, preservando o
+ * espaçamento original (alinha com a letra embaixo). Uma nota isolada
+ * "(F#)" vira <span class="chord chord-note">F#</span> — os parênteses na
+ * tela são só CSS (::before/::after), pra manter o texto do span
+ * transponível igual a qualquer outro acorde.
+ */
 function render_chord_line(string $line): string {
     return preg_replace_callback('/\S+/', function ($m) {
+        if (preg_match('/^\(([A-G][#b]?)\)$/', $m[0], $nm)) {
+            return '<span class="chord chord-note">' . htmlspecialchars($nm[1]) . '</span>';
+        }
         return '<span class="chord">' . htmlspecialchars($m[0]) . '</span>';
     }, $line);
 }
