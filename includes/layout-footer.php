@@ -66,19 +66,16 @@ if ('serviceWorker' in navigator && 'PushManager' in window && PUSH_VAPID_PUBLIC
       }
 
       // Notification.permission === 'default': nunca decidiu. Mostra o botão discreto
-      // e, uma vez por sessão, o modal cheio — pra não passar despercebido.
+      // e o modal cheio em toda página, até ela decidir (ativar ou negar no navegador).
       const btn = document.getElementById('enable-push-btn');
       if (btn) btn.style.display = 'flex';
-      if (!sessionStorage.getItem('nd_push_modal_shown')) {
-        showPushModal();
-      }
+      showPushModal();
     });
   }).catch(() => {});
 }
 
 function showPushModal() {
   if (document.getElementById('push-modal-overlay')) return;
-  sessionStorage.setItem('nd_push_modal_shown', '1');
 
   const overlay = document.createElement('div');
   overlay.id = 'push-modal-overlay';
