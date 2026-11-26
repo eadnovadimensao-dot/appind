@@ -51,36 +51,87 @@ if (window.innerWidth <= 768) {
   });
 }
 // Push notifications
-if ('serviceWorker' in navigator && 'PushManager' in window) {
-  const VAPID_PUBLIC = '<?= setting('vapid_public_key') ?>';
+const PUSH_VAPID_PUBLIC = '<?= setting('vapid_public_key') ?>';
+if ('serviceWorker' in navigator && 'PushManager' in window && PUSH_VAPID_PUBLIC) {
   navigator.serviceWorker.register('/sw.js').then(reg => {
-    if (!VAPID_PUBLIC) return;
     reg.pushManager.getSubscription().then(sub => {
-      if (sub) return;
+      if (sub) return; // já ativado, nunca mais incomoda essa pessoa
+
+      if (Notification.permission === 'denied') return; // ela já recusou no navegador, nada a fazer
+
+      if (Notification.permission === 'granted') {
+        // Permissão já concedida antes mas sem subscription válida (ex: expirou) — refaz sem perguntar de novo
+        subscribePush(reg);
+        return;
+      }
+
+      // Notification.permission === 'default': nunca decidiu. Mostra o botão discreto
+      // e, uma vez por sessão, o modal cheio — pra não passar despercebido.
       const btn = document.getElementById('enable-push-btn');
       if (btn) btn.style.display = 'flex';
+      if (!sessionStorage.getItem('nd_push_modal_shown')) {
+        showPushModal();
+      }
     });
   }).catch(() => {});
 }
+
+function showPushModal() {
+  if (document.getElementById('push-modal-overlay')) return;
+  sessionStorage.setItem('nd_push_modal_shown', '1');
+
+  const overlay = document.createElement('div');
+  overlay.id = 'push-modal-overlay';
+  overlay.style.cssText = 'position:fixed;inset:0;background:rgba(0,0,0,.55);z-index:9999;display:flex;align-items:center;justify-content:center;padding:16px';
+  overlay.innerHTML = `
+    <div style="background:white;border-radius:14px;max-width:360px;width:100%;padding:24px;text-align:center;box-shadow:0 10px 40px rgba(0,0,0,.2)">
+      <div style="font-size:40px;margin-bottom:8px">🔔</div>
+      <p style="font-weight:600;font-size:16px;margin-bottom:8px;color:var(--text)">Ativar notificações</p>
+      <p style="font-size:13px;color:var(--text-muted);margin-bottom:20px;line-height:1.5">
+        Ative para receber avisos de escala, comunicados e novidades direto no seu celular/computador, mesmo com o app fechado.
+      </p>
+      <button id="push-modal-accept" style="width:100%;padding:12px;border-radius:8px;border:none;background:var(--accent);color:white;font-weight:600;font-size:14px;cursor:pointer;margin-bottom:8px">
+        Ativar notificações
+      </button>
+      <button id="push-modal-dismiss" style="width:100%;padding:10px;border-radius:8px;border:none;background:transparent;color:var(--text-muted);font-size:13px;cursor:pointer">
+        Agora não
+      </button>
+    </div>
+  `;
+  document.body.appendChild(overlay);
+
+  document.getElementById('push-modal-accept').addEventListener('click', function() {
+    enablePushNotifications();
+  });
+  document.getElementById('push-modal-dismiss').addEventListener('click', closePushModal);
+}
+
+function closePushModal() {
+  const overlay = document.getElementById('push-modal-overlay');
+  if (overlay) overlay.remove();
+}
+
+function subscribePush(reg) {
+  return reg.pushManager.subscribe({
+    userVisibleOnly: true,
+    applicationServerKey: urlBase64ToUint8Array(PUSH_VAPID_PUBLIC)
+  }).then(newSub => fetch('/api/push/subscribe.php', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(newSub)
+  })).then(() => {
+    const btn = document.getElementById('enable-push-btn');
+    if (btn) btn.style.display = 'none';
+  }).catch(() => {});
+}
+
 function enablePushNotifications() {
   if (!('serviceWorker' in navigator) || !('PushManager' in window)) return;
-  const VAPID_PUBLIC = '<?= setting('vapid_public_key') ?>';
   navigator.serviceWorker.ready.then(reg => {
     Notification.requestPermission().then(perm => {
+      closePushModal();
       if (perm !== 'granted') return;
-      reg.pushManager.subscribe({
-        userVisibleOnly: true,
-        applicationServerKey: urlBase64ToUint8Array(VAPID_PUBLIC)
-      }).then(newSub => {
-        fetch('/api/push/subscribe.php', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify(newSub)
-        }).then(() => {
-          const btn = document.getElementById('enable-push-btn');
-          if (btn) { btn.innerHTML = '✅'; setTimeout(() => btn.style.display = 'none', 2000); }
-        });
-      }).catch(() => {});
+      subscribePush(reg);
     });
   });
 }

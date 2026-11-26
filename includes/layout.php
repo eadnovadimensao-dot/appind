@@ -226,7 +226,7 @@ if (window.innerWidth <= 900) {
           </a>
         <?php endif; ?>
         <!-- Botão de ativar push (aparece só se não ativado) -->
-        <button id="enable-push-btn" onclick="enablePushNotifications()" title="Ativar notificações" aria-label="Ativar notificações"
+        <button id="enable-push-btn" onclick="showPushModal()" title="Ativar notificações" aria-label="Ativar notificações"
                 style="display:none;align-items:center;justify-content:center;font-size:16px;width:36px;height:36px;padding:0;border-radius:7px;border:1px solid var(--border);background:white;cursor:pointer;color:var(--text)">
           🔔
         </button>
